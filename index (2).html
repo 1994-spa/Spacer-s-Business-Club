@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spacer's Business Club · Espace partenaire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #FAF7F2;
+    --bg-soft: #F1ECE2;
+    --ink: #0A1628;
+    --ink-soft: #4A5568;
+    --ink-muted: #8A8478;
+    --gold: #C8932B;
+    --gold-soft: #E8C977;
+    --red: #B23A48;
+    --green: #3A8264;
+    --line: #E5DED1;
+    --card: #FFFFFF;
+    --shadow-sm: 0 1px 2px rgba(10, 22, 40, 0.04), 0 0 0 1px rgba(10, 22, 40, 0.04);
+    --shadow-md: 0 8px 24px rgba(10, 22, 40, 0.06), 0 0 0 1px rgba(10, 22, 40, 0.04);
+    --shadow-lg: 0 24px 48px rgba(10, 22, 40, 0.08), 0 0 0 1px rgba(10, 22, 40, 0.04);
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-lg: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 12% -8%, rgba(200, 147, 43, 0.08), transparent 35%),
+      radial-gradient(circle at 92% 6%, rgba(178, 58, 72, 0.05), transparent 40%),
+      var(--bg);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* Typography */
+  .display {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .display-italic {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-variation-settings: "opsz" 144;
+    font-weight: 400;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  /* Layout */
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Header */
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: rgba(250, 247, 242, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    gap: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-mark {
+    width: 36px; height: 36px;
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    font-style: italic;
+  }
+  .brand-text {
+    line-height: 1.1;
+  }
+  .brand-text strong {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+    display: block;
+  }
+  .brand-text span {
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .partner-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px 6px 6px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    background: var(--card);
+    cursor: pointer;
+    font-size: 13px;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .partner-pill:hover { border-color: var(--gold); }
+  .partner-pill .avatar {
+    width: 28px; height: 28px;
+    border-radius: 100px;
+    background: linear-gradient(135deg, var(--gold), var(--red));
+    color: white;
+    display: grid; place-items: center;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .partner-pill svg { width: 12px; height: 12px; opacity: 0.5; }
+
+  /* Hero */
+  .hero {
+    padding: 56px 0 32px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 48px;
+    align-items: end;
+  }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding: 32px 0 24px; gap: 24px; }
+  }
+
+  .hero-greeting .eyebrow {
+    margin-bottom: 14px;
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: var(--bg-soft);
+    color: var(--ink-soft);
+  }
+  .hero-greeting h1 {
+    font-size: clamp(38px, 5.5vw, 64px);
+  }
+  .hero-greeting h1 em {
+    color: var(--gold);
+  }
+  .hero-meta {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 100px;
+    background: var(--green);
+  }
+
+  .contract-card {
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .contract-card::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    border-radius: 100%;
+    background: radial-gradient(circle, rgba(200, 147, 43, 0.25), transparent 70%);
+    pointer-events: none;
+  }
+  .contract-card .level-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 100px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+  }
+  .contract-card .level-badge .star {
+    width: 14px; height: 14px;
+    fill: var(--gold);
+  }
+  .contract-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 14px 0 4px;
+  }
+  .contract-card .saison {
+    font-size: 13px;
+    opacity: 0.65;
+    margin-bottom: 22px;
+  }
+  .contract-meta {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+  }
+  .contract-meta div { display: flex; flex-direction: column; gap: 2px; }
+  .contract-meta strong { font-size: 15px; font-weight: 600; }
+  .contract-meta span { opacity: 0.6; }
+
+  /* Section title */
+  .section-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .section-title h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(24px, 3vw, 32px);
+    letter-spacing: -0.02em;
+  }
+  .section-title h2 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+  .section-title a {
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .section-title a:hover { color: var(--gold); border-color: var(--gold); }
+
+  section { margin-top: 56px; }
+
+  /* Wallet ROI */
+  .wallet-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1024px) { .wallet-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .wallet-tile {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .wallet-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .wallet-tile .icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--bg-soft);
+    display: grid; place-items: center;
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+  .wallet-tile .label {
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .wallet-tile .value {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .wallet-tile .value .total {
+    color: var(--ink-muted);
+    font-size: 18px;
+    font-weight: 400;
+  }
+  .progress {
+    margin-top: 14px;
+    height: 6px;
+    background: var(--bg-soft);
+    border-radius: 100px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-soft));
+    transition: width 0.6s ease;
+  }
+  .progress-bar.danger { background: linear-gradient(90deg, var(--red), #D87080); }
+  .progress-bar.full { background: linear-gradient(90deg, var(--green), #6FB495); }
+  .progress-meta {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Tickie ticketing module */
+  .tickie-frame {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .tickie-frame .frame-header {
+    padding: 20px 24px;
+    background: var(--ink);
+    color: var(--bg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .tickie-frame .frame-header h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+  }
+  .api-pill {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 700;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 100px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .api-pill .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 100px;
+    background: #6FE095;
+    box-shadow: 0 0 0 0 #6FE095;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(111, 224, 149, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(111, 224, 149, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(111, 224, 149, 0); }
+  }
+
+  .matches-list { padding: 8px; }
+  .match-row {
+    padding: 18px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 18px;
+    align-items: center;
+    border-radius: var(--radius);
+    transition: background 0.2s;
+  }
+  .match-row + .match-row { border-top: 1px solid var(--line); }
+  .match-row:hover { background: var(--bg); }
+
+  .match-date {
+    text-align: center;
+    width: 56px;
+    padding: 8px 0;
+    background: var(--bg-soft);
+    border-radius: var(--radius-sm);
+  }
+  .match-date .day {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .match-date .month {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .match-info h4 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .match-info p {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 3px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .match-allocation {
+    text-align: right;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .match-allocation strong {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+    display: block;
+  }
+  .btn-reserve {
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-reserve:hover { background: var(--ink); color: var(--bg); transform: translateY(-1px); }
+  .btn-reserve.disabled {
+    background: var(--bg-soft);
+    color: var(--ink-muted);
+    cursor: not-allowed;
+  }
+  .btn-reserve.disabled:hover { transform: none; background: var(--bg-soft); color: var(--ink-muted); }
+
+  @media (max-width: 700px) {
+    .match-row { grid-template-columns: auto 1fr; grid-template-rows: auto auto; }
+    .match-allocation { grid-column: 2; text-align: left; }
+    .btn-reserve { grid-column: 1 / -1; justify-self: stretch; }
+  }
+
+  /* Two-column section: shop + B2B */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Shop card */
+  .shop-card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 600px) { .shop-card { grid-template-columns: 1fr; } }
+
+  .shop-visual {
+    background: linear-gradient(135deg, #2A1F3D 0%, #5B2D52 50%, #C8932B 100%);
+    color: white;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .shop-visual::after {
+    content: '';
+    position: absolute;
+    bottom: -50px; left: -50px;
+    width: 200px; height: 200px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100%;
+  }
+  .shop-visual::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -40px;
+    width: 220px; height: 220px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 100%;
+  }
+  .shop-visual .tag {
+    display: inline-block;
+    padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 100px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 700;
+    backdrop-filter: blur(10px);
+    align-self: flex-start;
+  }
+  .shop-visual h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    position: relative;
+    z-index: 2;
+  }
+  .shop-visual h3 em { font-style: italic; opacity: 0.85; }
+  .shop-body {
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .shop-body p {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+  .shop-credit {
+    background: var(--bg-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .shop-credit strong {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 14px 22px;
+    border-radius: 100px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--gold); color: var(--ink); }
+  .btn-primary .stripe-mark {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-left: 8px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  /* B2B intro */
+  .b2b-card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .b2b-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle at 80% 20%, rgba(200, 147, 43, 0.12), transparent 60%);
+    pointer-events: none;
+  }
+  .b2b-card .badge-new {
+    background: var(--gold);
+    color: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 4px 10px;
+    border-radius: 100px;
+    align-self: flex-start;
+  }
+  .b2b-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin: 16px 0 8px;
+    line-height: 1.15;
+  }
+  .b2b-card h3 em { color: var(--red); }
+  .b2b-card p { color: var(--ink-soft); font-size: 14px; flex: 1; margin-bottom: 20px; }
+  .b2b-stats {
+    display: flex;
+    gap: 24px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 20px;
+  }
+  .b2b-stats div { flex: 1; }
+  .b2b-stats strong {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 500;
+    display: block;
+    line-height: 1;
+  }
+  .b2b-stats span { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+
+  /* 3-column: News / Forum / Events */
+  .three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 1024px) { .three-col { grid-template-columns: 1fr; } }
+
+  .col-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .col-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .col-card h3::before {
+    content: '';
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 100%;
+  }
+  .col-list { display: flex; flex-direction: column; gap: 14px; }
+  .col-item {
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .col-item:last-child { padding-bottom: 0; border-bottom: none; }
+  .col-item .meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .col-item .meta .unread {
+    background: var(--red);
+    color: white;
+    padding: 1px 8px;
+    border-radius: 100px;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 10px;
+  }
+  .col-item h4 {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .col-item p { font-size: 12px; color: var(--ink-soft); }
+
+  /* Side nav (desktop) / bottom nav (mobile) */
+  .bottom-nav {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    border-radius: 100px;
+    padding: 8px;
+    display: flex;
+    gap: 4px;
+    box-shadow: var(--shadow-lg);
+    z-index: 40;
+  }
+  .bottom-nav a {
+    width: 44px; height: 44px;
+    border-radius: 100px;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .bottom-nav a.active, .bottom-nav a:hover {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .bottom-nav svg { width: 18px; height: 18px; }
+
+  /* Stripe scenario indicator */
+  .stripe-scenario {
+    background: var(--bg-soft);
+    border: 1px dashed var(--ink-muted);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .stripe-scenario strong { color: var(--ink); font-weight: 700; }
+  .stripe-scenario .icn {
+    width: 28px; height: 28px;
+    background: var(--card);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
+  /* Footer note */
+  .footer-note {
+    text-align: center;
+    margin-top: 80px;
+    padding: 32px 0;
+    border-top: 1px solid var(--line);
+    color: var(--ink-muted);
+    font-size: 12px;
+  }
+  .footer-note .display-italic {
+    color: var(--gold);
+    font-size: 14px;
+  }
+
+  /* Animation on load */
+  .fade-up {
+    animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up:nth-child(1) { animation-delay: 0.05s; }
+  .fade-up:nth-child(2) { animation-delay: 0.12s; }
+  .fade-up:nth-child(3) { animation-delay: 0.20s; }
+  .fade-up:nth-child(4) { animation-delay: 0.28s; }
+
+  /* Mockup ribbon */
+  .mockup-ribbon {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: var(--red);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    z-index: 60;
+    box-shadow: var(--shadow-md);
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-ribbon">Maquette V0</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">S</div>
+      <div class="brand-text">
+        <strong>Spacer's Business Club</strong>
+        <span>Espace partenaire</span>
+      </div>
+    </div>
+    <div class="partner-pill">
+      <div class="avatar">GA</div>
+      <div>
+        <strong style="font-size:13px;">Garage Auto Sud-Ouest</strong>
+        <div style="font-size:11px;color:var(--ink-muted);">Marc Lefèvre · Dirigeant</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-greeting fade-up">
+      <span class="eyebrow">Saison 2025/2026 · Journée 14</span>
+      <h1 class="display">Bonjour Marc, <em class="display-italic">prêt pour le prochain match&nbsp;?</em></h1>
+      <div class="hero-meta">
+        <span><span class="dot"></span> Statut contrat actif</span>
+        <span>· 156 partenaires actifs dans le club</span>
+        <span>· Renouvellement dans 87 jours</span>
+      </div>
+    </div>
+    <div class="contract-card fade-up">
+      <div class="level-badge">
+        <svg class="star" viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9.5 17,14.5 18.5,22 12,18 5.5,22 7,14.5 2,9.5 9,9"/></svg>
+        Niveau Or
+      </div>
+      <h3>Pack Premium Volley</h3>
+      <div class="saison">Contrat 2025/2026 · 8 500 € HT</div>
+      <div class="contract-meta">
+        <div><strong>27 oct. 2025</strong><span>Date d'effet</span></div>
+        <div><strong>30 juin 2026</strong><span>Échéance</span></div>
+        <div><strong>3</strong><span>Contacts liés</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WALLET ROI -->
+  <section>
+    <div class="section-title">
+      <h2 class="display">Mon contrat <em>en un coup d'œil</em></h2>
+      <a href="#">Voir le détail des avantages →</a>
+    </div>
+    <div class="wallet-grid">
+      <div class="wallet-tile fade-up">
+        <div class="icon">🎟️</div>
+        <div class="label">Billets standard</div>
+        <div class="value">14<span class="total"> / 20</span></div>
+        <div class="progress"><div class="progress-bar" style="width:70%"></div></div>
+        <div class="progress-meta"><span>70% utilisés</span><span>6 restants</span></div>
+      </div>
+      <div class="wallet-tile fade-up">
+        <div class="icon">🥂</div>
+        <div class="label">Places VIP</div>
+        <div class="value">3<span class="total"> / 8</span></div>
+        <div class="progress"><div class="progress-bar" style="width:37%"></div></div>
+        <div class="progress-meta"><span>37% utilisés</span><span>5 restantes</span></div>
+      </div>
+      <div class="wallet-tile fade-up">
+        <div class="icon">🛍️</div>
+        <div class="label">Crédit boutique</div>
+        <div class="value">320<span class="total"> €</span></div>
+        <div class="progress"><div class="progress-bar full" style="width:64%"></div></div>
+        <div class="progress-meta"><span>sur 500 € inclus</span><span>180 € utilisés</span></div>
+      </div>
+      <div class="wallet-tile fade-up">
+        <div class="icon">📣</div>
+        <div class="label">Mentions réseaux</div>
+        <div class="value">2<span class="total"> / 6</span></div>
+        <div class="progress"><div class="progress-bar danger" style="width:33%"></div></div>
+        <div class="progress-meta"><span>33% utilisées</span><span>Demander une mention</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TICKETING -->
+  <section>
+    <div class="section-title">
+      <h2 class="display">Billetterie <em>prochains matchs</em></h2>
+      <a href="#">Tout le calendrier →</a>
+    </div>
+    <div class="tickie-frame">
+      <div class="frame-header">
+        <h3>Données live · Tickie</h3>
+        <span class="api-pill"><span class="live-dot"></span> API connectée</span>
+      </div>
+      <div class="matches-list">
+        <div class="match-row">
+          <div class="match-date"><div class="day">15</div><div class="month">Nov</div></div>
+          <div class="match-info">
+            <h4>Spacers Toulouse vs. Tours VB</h4>
+            <p><span>📍 Palais des Sports</span><span>🕗 20h00</span><span>· Marmande Open</span></p>
+          </div>
+          <div class="match-allocation">
+            <strong>4 places</strong>
+            <span>incluses dans contrat</span>
+          </div>
+          <button class="btn-reserve">Réserver</button>
+        </div>
+        <div class="match-row">
+          <div class="match-date"><div class="day">29</div><div class="month">Nov</div></div>
+          <div class="match-info">
+            <h4>Spacers Toulouse vs. Cannes VB</h4>
+            <p><span>📍 Palais des Sports</span><span>🕗 20h00</span><span>· Soirée Business Club</span></p>
+          </div>
+          <div class="match-allocation">
+            <strong>2 VIP + 4</strong>
+            <span>incluses · soirée networking</span>
+          </div>
+          <button class="btn-reserve">Réserver</button>
+        </div>
+        <div class="match-row">
+          <div class="match-date"><div class="day">06</div><div class="month">Déc</div></div>
+          <div class="match-info">
+            <h4>Spacers Toulouse vs. Paris Volley</h4>
+            <p><span>📍 Palais des Sports</span><span>🕗 18h30</span><span>· Match événement</span></p>
+          </div>
+          <div class="match-allocation">
+            <strong>0 places</strong>
+            <span>quota épuisé · achat possible</span>
+          </div>
+          <button class="btn-reserve">Acheter +</button>
+        </div>
+      </div>
+    </div>
+    <div class="stripe-scenario">
+      <div class="icn">💳</div>
+      <div>
+        <strong>Paiement billets supplémentaires :</strong> à arbitrer entre <strong>Stripe club</strong> (réconciliation centralisée, facture club) et <strong>Tickie</strong> (intégré dans leur tunnel, moins de dev). À discuter quand Tickie aura répondu sur leur passerelle de paiement API.
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOP + B2B -->
+  <section>
+    <div class="section-title">
+      <h2 class="display">Boutique <em>& mises en relation</em></h2>
+    </div>
+    <div class="two-col">
+
+      <div class="shop-card">
+        <div class="shop-visual">
+          <span class="tag">Exclu partenaires</span>
+          <h3>Maillot floqué <em class="display-italic">de votre entreprise</em></h3>
+        </div>
+        <div class="shop-body">
+          <div>
+            <p>Votre logo brodé sur le maillot officiel Spacers. Pour vos collaborateurs, clients VIP ou cadeaux d'affaires.</p>
+            <div class="shop-credit">
+              <span>Crédit boutique restant</span>
+              <strong>320 €</strong>
+            </div>
+          </div>
+          <a href="#" class="btn-primary">Voir la boutique<span class="stripe-mark">via Stripe</span></a>
+        </div>
+      </div>
+
+      <div class="b2b-card">
+        <span class="badge-new">Nouveau</span>
+        <h3>Faites <em>du business</em> entre partenaires</h3>
+        <p>Demandez une mise en relation avec un autre partenaire du club. Le club facilite l'intro, vous gardez la main sur la suite.</p>
+        <div class="b2b-stats">
+          <div><strong>156</strong><span>Partenaires</span></div>
+          <div><strong>23</strong><span>Intros ce mois</span></div>
+          <div><strong>87%</strong><span>Taux de réponse</span></div>
+        </div>
+        <a href="#" class="btn-primary" style="text-align:center;">Demander une mise en relation</a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 3-COL: News, Forum, Events -->
+  <section>
+    <div class="three-col">
+      <div class="col-card fade-up">
+        <h3>Actus du club</h3>
+        <div class="col-list">
+          <div class="col-item">
+            <div class="meta"><span>Communiqué · 02 nov.</span><span class="unread">Nouveau</span></div>
+            <h4>Le club signe avec Décathlon Pro Toulouse</h4>
+            <p>Nouveau partenaire équipementier pour les 3 prochaines saisons.</p>
+          </div>
+          <div class="col-item">
+            <div class="meta"><span>Sportif · 28 oct.</span></div>
+            <h4>Victoire 3-1 contre Nice VB</h4>
+            <p>Les Spacers prennent la 4e place du classement.</p>
+          </div>
+          <div class="col-item">
+            <div class="meta"><span>Communiqué · 22 oct.</span></div>
+            <h4>Nouveau salon VIP au Palais des Sports</h4>
+            <p>Capacité doublée à 80 places assises pour la réception.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-card fade-up">
+        <h3>Forum partenaires</h3>
+        <div class="col-list">
+          <div class="col-item">
+            <div class="meta"><span>Petites annonces · 04 nov.</span><span class="unread">12 réponses</span></div>
+            <h4>Cherche graphiste freelance pour refonte site</h4>
+            <p>Marc D. — Cabinet Comptable Pyrénées</p>
+          </div>
+          <div class="col-item">
+            <div class="meta"><span>Discussion · 03 nov.</span><span class="unread">5 réponses</span></div>
+            <h4>Quel CRM utilisez-vous pour < 20 commerciaux ?</h4>
+            <p>Sandrine F. — Imprimerie Toulousaine</p>
+          </div>
+          <div class="col-item">
+            <div class="meta"><span>Annonce · 30 oct.</span></div>
+            <h4>200 m² de stockage à louer · Labège</h4>
+            <p>Patrick L. — Logistic Sud-Ouest</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-card fade-up">
+        <h3>Events à venir</h3>
+        <div class="col-list">
+          <div class="col-item">
+            <div class="meta"><span>Networking · 18 nov.</span><span class="unread">Inscrit</span></div>
+            <h4>Petit-déjeuner partenaires Q4</h4>
+            <p>📍 Hôtel Crowne Plaza · 8h00</p>
+          </div>
+          <div class="col-item">
+            <div class="meta"><span>Événement · 29 nov.</span></div>
+            <h4>Soirée Business Club · match Cannes</h4>
+            <p>📍 Salon VIP · cocktail dînatoire 19h</p>
+          </div>
+          <div class="col-item">
+            <div class="meta"><span>AG · 12 déc.</span></div>
+            <h4>Assemblée générale partenaires</h4>
+            <p>📍 Maison des Spacers · 18h30</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer-note">
+    <span class="display-italic">Maquette dashboard partenaire</span><br>
+    Spacer's Business Club · V0 — pour validation interne
+  </div>
+
+</main>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="#" class="active" title="Dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2v9h14v-9l2 2"/><path d="M9 21V12h6v9"/></svg>
+  </a>
+  <a href="#" title="Annuaire">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/></svg>
+  </a>
+  <a href="#" title="Billetterie">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/></svg>
+  </a>
+  <a href="#" title="Boutique">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+  </a>
+  <a href="#" title="Forum">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </a>
+</nav>
+
+</body>
+</html>
