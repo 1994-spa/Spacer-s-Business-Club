@@ -2,11 +2,15 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0A1628" />
 <title>Spacer's Business Club · Espace partenaire</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
     --bg: #FAF7F2;
@@ -16,1097 +20,460 @@
     --ink-muted: #8A8478;
     --gold: #C8932B;
     --gold-soft: #E8C977;
+    --silver: #9CA3AF;
+    --bronze: #A56F3E;
     --red: #B23A48;
+    --orange: #D97743;
     --green: #3A8264;
     --line: #E5DED1;
     --card: #FFFFFF;
-    --shadow-sm: 0 1px 2px rgba(10, 22, 40, 0.04), 0 0 0 1px rgba(10, 22, 40, 0.04);
-    --shadow-md: 0 8px 24px rgba(10, 22, 40, 0.06), 0 0 0 1px rgba(10, 22, 40, 0.04);
-    --shadow-lg: 0 24px 48px rgba(10, 22, 40, 0.08), 0 0 0 1px rgba(10, 22, 40, 0.04);
-    --radius-sm: 8px;
+    --shadow-sm: 0 1px 2px rgba(10,22,40,.04), 0 0 0 1px rgba(10,22,40,.04);
+    --shadow-md: 0 8px 24px rgba(10,22,40,.06), 0 0 0 1px rgba(10,22,40,.04);
     --radius: 14px;
     --radius-lg: 22px;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: 'Manrope', system-ui, sans-serif;
-    font-size: 15px;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
-
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Manrope', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   body {
-    background:
-      radial-gradient(circle at 12% -8%, rgba(200, 147, 43, 0.08), transparent 35%),
-      radial-gradient(circle at 92% 6%, rgba(178, 58, 72, 0.05), transparent 40%),
-      var(--bg);
-    min-height: 100vh;
-    padding-bottom: 80px;
+    background: radial-gradient(circle at 12% -8%, rgba(200,147,43,.08), transparent 35%), radial-gradient(circle at 92% 6%, rgba(178,58,72,.05), transparent 40%), var(--bg);
+    min-height: 100vh; padding-bottom: 100px;
   }
+  .display { font-family: 'Fraunces', serif; font-variation-settings: "opsz" 144; font-weight: 500; letter-spacing: -.02em; line-height: 1.05; }
+  .display-italic { font-family: 'Fraunces', serif; font-style: italic; font-variation-settings: "opsz" 144; font-weight: 400; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; color: var(--ink-muted); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 700px) { .container { padding: 0 16px; } }
 
-  /* Typography */
-  .display {
-    font-family: 'Fraunces', serif;
-    font-variation-settings: "opsz" 144, "SOFT" 50;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1.05;
-  }
-  .display-italic {
-    font-family: 'Fraunces', serif;
-    font-style: italic;
-    font-variation-settings: "opsz" 144;
-    font-weight: 400;
-  }
+  /* HEADER */
+  header { padding: 24px 0 8px; }
+  header .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--ink); color: var(--gold-soft); display: grid; place-items: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
+  .brand .name { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+  .brand .name small { display: block; font-weight: 500; font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .14em; margin-top: 2px; }
+  .user-chip { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+  .user-chip .meta { text-align: right; font-size: 12px; line-height: 1.2; }
+  .user-chip .meta b { display: block; font-size: 13px; }
+  .user-chip .meta small { color: var(--ink-muted); font-size: 11px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: white; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
 
-  .eyebrow {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-weight: 600;
-    color: var(--ink-muted);
-  }
+  /* HERO */
+  .hero { padding: 48px 0 32px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; gap: 24px; padding: 32px 0 24px; } }
+  .hero .saison { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; margin-bottom: 16px; }
+  .hero h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(36px, 5.5vw, 64px); letter-spacing: -.025em; line-height: 1.02; }
+  .hero h1 em { font-style: italic; color: var(--gold); font-weight: 400; }
+  .hero-stats { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 16px 24px; font-size: 13px; }
+  .hero-stats span { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
+  .hero-stats span:before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  .hero-stats span.warn:before { background: var(--orange); }
 
-  /* Layout */
-  .container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
+  /* CARTE CONTRAT */
+  .contract-card { background: linear-gradient(155deg, #11203a 0%, #0A1628 60%); color: white; border-radius: var(--radius-lg); padding: 28px; position: relative; overflow: hidden; }
+  .contract-card:before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(200,147,43,.15), transparent 60%); pointer-events: none; }
+  .niveau-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
+  .niveau-badge.or { color: var(--gold-soft); }
+  .niveau-badge.or:before { content: '★'; color: var(--gold); }
+  .niveau-badge.argent { color: #D1D5DB; }
+  .niveau-badge.argent:before { content: '●'; color: var(--silver); }
+  .niveau-badge.bronze { color: #D4B5A0; }
+  .niveau-badge.bronze:before { content: '●'; color: var(--bronze); }
+  .contract-card h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; margin: 18px 0 6px; }
+  .contract-card .subtitle { color: rgba(255,255,255,.55); font-size: 13px; }
+  .contract-divider { height: 1px; background: rgba(255,255,255,.1); margin: 20px 0; }
+  .contract-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .contract-grid .col b { display: block; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin-bottom: 2px; }
+  .contract-grid .col small { font-size: 11px; color: rgba(255,255,255,.55); letter-spacing: .04em; }
 
-  /* Header */
-  .topbar {
-    border-bottom: 1px solid var(--line);
-    background: rgba(250, 247, 242, 0.85);
-    backdrop-filter: blur(12px);
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
-  .topbar-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 0;
-    gap: 24px;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .brand-mark {
-    width: 36px; height: 36px;
-    background: var(--ink);
-    color: var(--bg);
-    border-radius: 10px;
-    display: grid; place-items: center;
-    font-family: 'Fraunces', serif;
-    font-weight: 600;
-    font-size: 18px;
-    font-style: italic;
-  }
-  .brand-text {
-    line-height: 1.1;
-  }
-  .brand-text strong {
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: -0.01em;
-    display: block;
-  }
-  .brand-text span {
-    font-size: 11px;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-  }
+  /* SECTIONS */
+  section { margin-top: 48px; }
+  section h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; line-height: 1.1; margin-bottom: 6px; }
+  section h3 em { font-style: italic; color: var(--gold); }
+  section .section-desc { color: var(--ink-muted); font-size: 13px; margin-bottom: 22px; }
 
-  .partner-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 14px 6px 6px;
-    border: 1px solid var(--line);
-    border-radius: 100px;
-    background: var(--card);
-    cursor: pointer;
-    font-size: 13px;
-    transition: border-color 0.2s, transform 0.15s;
-  }
-  .partner-pill:hover { border-color: var(--gold); }
-  .partner-pill .avatar {
-    width: 28px; height: 28px;
-    border-radius: 100px;
-    background: linear-gradient(135deg, var(--gold), var(--red));
-    color: white;
-    display: grid; place-items: center;
-    font-weight: 700;
-    font-size: 11px;
-  }
-  .partner-pill svg { width: 12px; height: 12px; opacity: 0.5; }
+  /* PRESTATIONS */
+  .prestations { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .prest { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; transition: transform .2s ease, box-shadow .2s ease; }
+  .prest:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .prest .code { font-size: 10px; letter-spacing: .14em; color: var(--gold); font-weight: 700; text-transform: uppercase; }
+  .prest .designation { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin: 6px 0 14px; line-height: 1.2; }
+  .prest .progress { background: var(--bg-soft); height: 4px; border-radius: 2px; overflow: hidden; }
+  .prest .progress div { background: var(--gold); height: 100%; transition: width .6s ease; }
+  .prest .progress-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--ink-muted); }
+  .prest .statut { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 999px; font-size: 10px; letter-spacing: .04em; font-weight: 600; }
+  .prest .statut.a-livrer { background: #FEF3E2; color: #A66B17; }
+  .prest .statut.en-cours { background: #FFF8E5; color: var(--gold); }
+  .prest .statut.livre { background: #E5F4EC; color: var(--green); }
 
-  /* Hero */
-  .hero {
-    padding: 56px 0 32px;
-    display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap: 48px;
-    align-items: end;
-  }
-  @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; padding: 32px 0 24px; gap: 24px; }
-  }
+  /* PACK VIP */
+  .pack-vip { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: center; }
+  @media (max-width: 700px) { .pack-vip { grid-template-columns: 1fr; gap: 18px; } }
+  .pack-vip .pack-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 8px; }
+  .pack-vip .pack-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1.1; letter-spacing: -.02em; margin-bottom: 14px; }
+  .pack-bar { width: 100%; background: var(--bg-soft); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+  .pack-bar div { background: linear-gradient(90deg, var(--gold), var(--gold-soft)); height: 100%; transition: width .8s ease; }
+  .pack-stats { display: flex; gap: 24px; font-size: 12px; color: var(--ink-muted); }
+  .pack-stats b { color: var(--ink); font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; display: block; margin-bottom: 2px; }
+  .pack-counter { text-align: right; }
+  .pack-counter b { font-family: 'Fraunces', serif; font-size: 64px; font-weight: 500; line-height: 1; color: var(--gold); }
+  .pack-counter small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); margin-top: 6px; }
 
-  .hero-greeting .eyebrow {
-    margin-bottom: 14px;
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 100px;
-    background: var(--bg-soft);
-    color: var(--ink-soft);
-  }
-  .hero-greeting h1 {
-    font-size: clamp(38px, 5.5vw, 64px);
-  }
-  .hero-greeting h1 em {
-    color: var(--gold);
-  }
-  .hero-meta {
-    margin-top: 18px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 18px;
-    font-size: 13px;
-    color: var(--ink-soft);
-  }
-  .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
-  .dot {
-    width: 6px; height: 6px;
-    border-radius: 100px;
-    background: var(--green);
-  }
+  /* ALERTES */
+  .alertes { display: flex; flex-direction: column; gap: 10px; }
+  .alerte { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); }
+  .alerte.HAUTE { border-left: 3px solid var(--red); }
+  .alerte.MOYENNE { border-left: 3px solid var(--orange); }
+  .alerte.BASSE { border-left: 3px solid var(--ink-muted); }
+  .alerte .a-icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; flex-shrink: 0; font-weight: 700; }
+  .alerte.HAUTE .a-icon { background: rgba(178,58,72,.1); color: var(--red); }
+  .alerte.MOYENNE .a-icon { background: rgba(217,119,67,.1); color: var(--orange); }
+  .alerte.BASSE .a-icon { background: var(--bg-soft); color: var(--ink-muted); }
+  .alerte .a-content { flex: 1; }
+  .alerte .a-type { font-weight: 700; font-size: 13px; }
+  .alerte .a-msg { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .alerte .a-action { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s ease; flex-shrink: 0; align-self: center; }
+  .alerte .a-action:hover { background: var(--ink); color: white; border-color: var(--ink); }
 
-  .contract-card {
-    background: var(--ink);
-    color: var(--bg);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    position: relative;
-    overflow: hidden;
-  }
-  .contract-card::before {
-    content: '';
-    position: absolute;
-    top: -40%;
-    right: -20%;
-    width: 300px;
-    height: 300px;
-    border-radius: 100%;
-    background: radial-gradient(circle, rgba(200, 147, 43, 0.25), transparent 70%);
-    pointer-events: none;
-  }
-  .contract-card .level-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 100px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-weight: 600;
-  }
-  .contract-card .level-badge .star {
-    width: 14px; height: 14px;
-    fill: var(--gold);
-  }
-  .contract-card h3 {
-    font-family: 'Fraunces', serif;
-    font-size: 28px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    margin: 14px 0 4px;
-  }
-  .contract-card .saison {
-    font-size: 13px;
-    opacity: 0.65;
-    margin-bottom: 22px;
-  }
-  .contract-meta {
-    display: flex;
-    justify-content: space-between;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 12px;
-  }
-  .contract-meta div { display: flex; flex-direction: column; gap: 2px; }
-  .contract-meta strong { font-size: 15px; font-weight: 600; }
-  .contract-meta span { opacity: 0.6; }
+  /* CONTACT */
+  .contact-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
+  @media (max-width: 700px) { .contact-card { grid-template-columns: 1fr; gap: 14px; } .contact-card .actions { display: flex; gap: 8px; } }
+  .contact-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: white; font-weight: 700; font-size: 24px; display: grid; place-items: center; font-family: 'Fraunces', serif; }
+  .contact-info b { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; display: block; }
+  .contact-info small { color: var(--ink-muted); font-size: 13px; }
+  .btn { padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .2s; }
+  .btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn.primary:hover { background: var(--gold); border-color: var(--gold); }
 
-  /* Section title */
-  .section-title {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-  .section-title h2 {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: clamp(24px, 3vw, 32px);
-    letter-spacing: -0.02em;
-  }
-  .section-title h2 em {
-    font-style: italic;
-    font-weight: 400;
-    color: var(--ink-muted);
-  }
-  .section-title a {
-    font-size: 13px;
-    color: var(--ink-soft);
-    text-decoration: none;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 2px;
-    transition: color 0.2s, border-color 0.2s;
-  }
-  .section-title a:hover { color: var(--gold); border-color: var(--gold); }
+  /* LOADING */
+  .loading { padding: 80px 24px; text-align: center; }
+  .loading .spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--bg-soft); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: var(--ink-muted); font-size: 13px; }
 
-  section { margin-top: 56px; }
+  /* ERROR */
+  .error-box { padding: 60px 32px; text-align: center; max-width: 480px; margin: 60px auto; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--line); }
+  .error-box h2 { font-family: 'Fraunces', serif; font-size: 28px; margin-bottom: 12px; }
+  .error-box p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; }
+  .error-box .detail { font-size: 11px; color: var(--ink-muted); margin: 16px 0; font-family: monospace; }
 
-  /* Wallet ROI */
-  .wallet-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-  @media (max-width: 1024px) { .wallet-grid { grid-template-columns: repeat(2, 1fr); } }
+  /* BOTTOM NAV PWA */
+  .bottom-nav { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; border-radius: 999px; padding: 8px; display: flex; gap: 4px; box-shadow: 0 12px 32px rgba(10,22,40,.2); z-index: 100; }
+  .bottom-nav button { background: none; border: none; color: rgba(255,255,255,.6); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; transition: all .2s; font-size: 18px; }
+  .bottom-nav button.active { background: var(--gold); color: white; }
+  .bottom-nav button:hover:not(.active) { color: white; }
 
-  .wallet-tile {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 22px;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-  }
-  .wallet-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-  .wallet-tile .icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    background: var(--bg-soft);
-    display: grid; place-items: center;
-    margin-bottom: 16px;
-    font-size: 18px;
-  }
-  .wallet-tile .label {
-    font-size: 12px;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-  .wallet-tile .value {
-    font-family: 'Fraunces', serif;
-    font-size: 32px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .wallet-tile .value .total {
-    color: var(--ink-muted);
-    font-size: 18px;
-    font-weight: 400;
-  }
-  .progress {
-    margin-top: 14px;
-    height: 6px;
-    background: var(--bg-soft);
-    border-radius: 100px;
-    overflow: hidden;
-    position: relative;
-  }
-  .progress-bar {
-    height: 100%;
-    border-radius: 100px;
-    background: linear-gradient(90deg, var(--gold), var(--gold-soft));
-    transition: width 0.6s ease;
-  }
-  .progress-bar.danger { background: linear-gradient(90deg, var(--red), #D87080); }
-  .progress-bar.full { background: linear-gradient(90deg, var(--green), #6FB495); }
-  .progress-meta {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--ink-muted);
-    display: flex;
-    justify-content: space-between;
-  }
-
-  /* Tickie ticketing module */
-  .tickie-frame {
-    background: var(--card);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-  }
-  .tickie-frame .frame-header {
-    padding: 20px 24px;
-    background: var(--ink);
-    color: var(--bg);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-  }
-  .tickie-frame .frame-header h3 {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 18px;
-  }
-  .api-pill {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-weight: 700;
-    padding: 5px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 100px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .api-pill .live-dot {
-    width: 6px; height: 6px;
-    border-radius: 100px;
-    background: #6FE095;
-    box-shadow: 0 0 0 0 #6FE095;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(111, 224, 149, 0.6); }
-    70% { box-shadow: 0 0 0 8px rgba(111, 224, 149, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(111, 224, 149, 0); }
-  }
-
-  .matches-list { padding: 8px; }
-  .match-row {
-    padding: 18px 16px;
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    gap: 18px;
-    align-items: center;
-    border-radius: var(--radius);
-    transition: background 0.2s;
-  }
-  .match-row + .match-row { border-top: 1px solid var(--line); }
-  .match-row:hover { background: var(--bg); }
-
-  .match-date {
-    text-align: center;
-    width: 56px;
-    padding: 8px 0;
-    background: var(--bg-soft);
-    border-radius: var(--radius-sm);
-  }
-  .match-date .day {
-    font-family: 'Fraunces', serif;
-    font-size: 22px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .match-date .month {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-muted);
-    font-weight: 600;
-    margin-top: 4px;
-  }
-  .match-info h4 {
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-  .match-info p {
-    font-size: 12px;
-    color: var(--ink-muted);
-    margin-top: 3px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .match-allocation {
-    text-align: right;
-    font-size: 12px;
-    color: var(--ink-soft);
-  }
-  .match-allocation strong {
-    font-family: 'Fraunces', serif;
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--ink);
-    display: block;
-  }
-  .btn-reserve {
-    background: var(--gold);
-    color: var(--ink);
-    border: none;
-    padding: 10px 18px;
-    border-radius: 100px;
-    font-family: 'Manrope', sans-serif;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .btn-reserve:hover { background: var(--ink); color: var(--bg); transform: translateY(-1px); }
-  .btn-reserve.disabled {
-    background: var(--bg-soft);
-    color: var(--ink-muted);
-    cursor: not-allowed;
-  }
-  .btn-reserve.disabled:hover { transform: none; background: var(--bg-soft); color: var(--ink-muted); }
-
-  @media (max-width: 700px) {
-    .match-row { grid-template-columns: auto 1fr; grid-template-rows: auto auto; }
-    .match-allocation { grid-column: 2; text-align: left; }
-    .btn-reserve { grid-column: 1 / -1; justify-self: stretch; }
-  }
-
-  /* Two-column section: shop + B2B */
-  .two-col {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 24px;
-  }
-  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
-
-  /* Shop card */
-  .shop-card {
-    background: var(--card);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-  @media (max-width: 600px) { .shop-card { grid-template-columns: 1fr; } }
-
-  .shop-visual {
-    background: linear-gradient(135deg, #2A1F3D 0%, #5B2D52 50%, #C8932B 100%);
-    color: white;
-    padding: 32px;
-    position: relative;
-    overflow: hidden;
-    min-height: 280px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  .shop-visual::after {
-    content: '';
-    position: absolute;
-    bottom: -50px; left: -50px;
-    width: 200px; height: 200px;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 100%;
-  }
-  .shop-visual::before {
-    content: '';
-    position: absolute;
-    top: -80px; right: -40px;
-    width: 220px; height: 220px;
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 100%;
-  }
-  .shop-visual .tag {
-    display: inline-block;
-    padding: 5px 12px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 100px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-weight: 700;
-    backdrop-filter: blur(10px);
-    align-self: flex-start;
-  }
-  .shop-visual h3 {
-    font-family: 'Fraunces', serif;
-    font-size: 28px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.1;
-    position: relative;
-    z-index: 2;
-  }
-  .shop-visual h3 em { font-style: italic; opacity: 0.85; }
-  .shop-body {
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  .shop-body p {
-    color: var(--ink-soft);
-    font-size: 14px;
-    margin-bottom: 18px;
-  }
-  .shop-credit {
-    background: var(--bg-soft);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 18px;
-    font-size: 12px;
-    color: var(--ink-soft);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .shop-credit strong {
-    font-family: 'Fraunces', serif;
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--ink);
-  }
-  .btn-primary {
-    background: var(--ink);
-    color: var(--bg);
-    border: none;
-    padding: 14px 22px;
-    border-radius: 100px;
-    font-family: 'Manrope', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .btn-primary:hover { background: var(--gold); color: var(--ink); }
-  .btn-primary .stripe-mark {
-    font-size: 10px;
-    opacity: 0.6;
-    margin-left: 8px;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-  }
-
-  /* B2B intro */
-  .b2b-card {
-    background: var(--card);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    box-shadow: var(--shadow-sm);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-  }
-  .b2b-card::before {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 120px; height: 120px;
-    background: radial-gradient(circle at 80% 20%, rgba(200, 147, 43, 0.12), transparent 60%);
-    pointer-events: none;
-  }
-  .b2b-card .badge-new {
-    background: var(--gold);
-    color: var(--ink);
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    padding: 4px 10px;
-    border-radius: 100px;
-    align-self: flex-start;
-  }
-  .b2b-card h3 {
-    font-family: 'Fraunces', serif;
-    font-size: 26px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    margin: 16px 0 8px;
-    line-height: 1.15;
-  }
-  .b2b-card h3 em { color: var(--red); }
-  .b2b-card p { color: var(--ink-soft); font-size: 14px; flex: 1; margin-bottom: 20px; }
-  .b2b-stats {
-    display: flex;
-    gap: 24px;
-    padding: 16px 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 20px;
-  }
-  .b2b-stats div { flex: 1; }
-  .b2b-stats strong {
-    font-family: 'Fraunces', serif;
-    font-size: 26px;
-    font-weight: 500;
-    display: block;
-    line-height: 1;
-  }
-  .b2b-stats span { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
-
-  /* 3-column: News / Forum / Events */
-  .three-col {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
-  @media (max-width: 1024px) { .three-col { grid-template-columns: 1fr; } }
-
-  .col-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 24px;
-    box-shadow: var(--shadow-sm);
-  }
-  .col-card h3 {
-    font-family: 'Fraunces', serif;
-    font-size: 20px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    margin-bottom: 18px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .col-card h3::before {
-    content: '';
-    width: 8px; height: 8px;
-    background: var(--gold);
-    border-radius: 100%;
-  }
-  .col-list { display: flex; flex-direction: column; gap: 14px; }
-  .col-item {
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line);
-  }
-  .col-item:last-child { padding-bottom: 0; border-bottom: none; }
-  .col-item .meta {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-    font-size: 11px;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-  }
-  .col-item .meta .unread {
-    background: var(--red);
-    color: white;
-    padding: 1px 8px;
-    border-radius: 100px;
-    letter-spacing: 0;
-    text-transform: none;
-    font-size: 10px;
-  }
-  .col-item h4 {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.3;
-    margin-bottom: 4px;
-  }
-  .col-item p { font-size: 12px; color: var(--ink-soft); }
-
-  /* Side nav (desktop) / bottom nav (mobile) */
-  .bottom-nav {
-    position: fixed;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--ink);
-    border-radius: 100px;
-    padding: 8px;
-    display: flex;
-    gap: 4px;
-    box-shadow: var(--shadow-lg);
-    z-index: 40;
-  }
-  .bottom-nav a {
-    width: 44px; height: 44px;
-    border-radius: 100px;
-    display: grid;
-    place-items: center;
-    color: rgba(255, 255, 255, 0.6);
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-  .bottom-nav a.active, .bottom-nav a:hover {
-    background: var(--gold);
-    color: var(--ink);
-  }
-  .bottom-nav svg { width: 18px; height: 18px; }
-
-  /* Stripe scenario indicator */
-  .stripe-scenario {
-    background: var(--bg-soft);
-    border: 1px dashed var(--ink-muted);
-    border-radius: var(--radius);
-    padding: 14px 18px;
-    margin-top: 16px;
-    font-size: 12px;
-    color: var(--ink-soft);
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  .stripe-scenario strong { color: var(--ink); font-weight: 700; }
-  .stripe-scenario .icn {
-    width: 28px; height: 28px;
-    background: var(--card);
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    font-size: 14px;
-  }
-
-  /* Footer note */
-  .footer-note {
-    text-align: center;
-    margin-top: 80px;
-    padding: 32px 0;
-    border-top: 1px solid var(--line);
-    color: var(--ink-muted);
-    font-size: 12px;
-  }
-  .footer-note .display-italic {
-    color: var(--gold);
-    font-size: 14px;
-  }
-
-  /* Animation on load */
-  .fade-up {
-    animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .fade-up:nth-child(1) { animation-delay: 0.05s; }
-  .fade-up:nth-child(2) { animation-delay: 0.12s; }
-  .fade-up:nth-child(3) { animation-delay: 0.20s; }
-  .fade-up:nth-child(4) { animation-delay: 0.28s; }
-
-  /* Mockup ribbon */
-  .mockup-ribbon {
-    position: fixed;
-    top: 12px;
-    right: 12px;
-    background: var(--red);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 100px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    z-index: 60;
-    box-shadow: var(--shadow-md);
-  }
+  /* FADE IN */
+  .fade-in { animation: fadeIn .5s ease both; }
+  .fade-in.delay-1 { animation-delay: .1s; }
+  .fade-in.delay-2 { animation-delay: .2s; }
+  .fade-in.delay-3 { animation-delay: .3s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="mockup-ribbon">Maquette V0</div>
-
-<!-- TOPBAR -->
-<header class="topbar">
-  <div class="container topbar-inner">
-    <div class="brand">
-      <div class="brand-mark">S</div>
-      <div class="brand-text">
-        <strong>Spacer's Business Club</strong>
-        <span>Espace partenaire</span>
+<header>
+  <div class="container">
+    <div class="row">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div class="name">Spacer's Business Club<small>Espace partenaire</small></div>
       </div>
-    </div>
-    <div class="partner-pill">
-      <div class="avatar">GA</div>
-      <div>
-        <strong style="font-size:13px;">Garage Auto Sud-Ouest</strong>
-        <div style="font-size:11px;color:var(--ink-muted);">Marc Lefèvre · Dirigeant</div>
+      <div id="user-chip" class="user-chip" hidden>
+        <div class="meta">
+          <b id="user-name">—</b>
+          <small id="user-role">—</small>
+        </div>
+        <div id="user-avatar" class="avatar">—</div>
       </div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
   </div>
 </header>
 
-<main class="container">
+<!-- LOADING -->
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+  <p>Chargement de votre espace partenaire…</p>
+</div>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-greeting fade-up">
-      <span class="eyebrow">Saison 2025/2026 · Journée 14</span>
-      <h1 class="display">Bonjour Marc, <em class="display-italic">prêt pour le prochain match&nbsp;?</em></h1>
-      <div class="hero-meta">
-        <span><span class="dot"></span> Statut contrat actif</span>
-        <span>· 156 partenaires actifs dans le club</span>
-        <span>· Renouvellement dans 87 jours</span>
-      </div>
-    </div>
-    <div class="contract-card fade-up">
-      <div class="level-badge">
-        <svg class="star" viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9.5 17,14.5 18.5,22 12,18 5.5,22 7,14.5 2,9.5 9,9"/></svg>
-        Niveau Or
-      </div>
-      <h3>Pack Premium Volley</h3>
-      <div class="saison">Contrat 2025/2026 · 8 500 € HT</div>
-      <div class="contract-meta">
-        <div><strong>27 oct. 2025</strong><span>Date d'effet</span></div>
-        <div><strong>30 juin 2026</strong><span>Échéance</span></div>
-        <div><strong>3</strong><span>Contacts liés</span></div>
-      </div>
-    </div>
-  </section>
+<!-- ERROR -->
+<div id="error" class="error-box" hidden>
+  <h2 class="display">Espace introuvable</h2>
+  <p id="error-msg">Une erreur est survenue.</p>
+  <div class="detail" id="error-detail"></div>
+  <button class="btn primary" onclick="location.reload()">Réessayer</button>
+</div>
 
-  <!-- WALLET ROI -->
-  <section>
-    <div class="section-title">
-      <h2 class="display">Mon contrat <em>en un coup d'œil</em></h2>
-      <a href="#">Voir le détail des avantages →</a>
+<!-- DASHBOARD -->
+<main id="dashboard" class="container" hidden>
+
+  <!-- HERO + CARTE CONTRAT -->
+  <section class="hero fade-in">
+    <div>
+      <div class="saison" id="saison-label">—</div>
+      <h1 class="display">Bonjour <em id="greeting-firstname">—</em>,<br />prêt pour la <em>nouvelle saison ?</em></h1>
+      <div class="hero-stats">
+        <span id="stat-contract">—</span>
+        <span id="stat-echeance">—</span>
+      </div>
     </div>
-    <div class="wallet-grid">
-      <div class="wallet-tile fade-up">
-        <div class="icon">🎟️</div>
-        <div class="label">Billets standard</div>
-        <div class="value">14<span class="total"> / 20</span></div>
-        <div class="progress"><div class="progress-bar" style="width:70%"></div></div>
-        <div class="progress-meta"><span>70% utilisés</span><span>6 restants</span></div>
-      </div>
-      <div class="wallet-tile fade-up">
-        <div class="icon">🥂</div>
-        <div class="label">Places VIP</div>
-        <div class="value">3<span class="total"> / 8</span></div>
-        <div class="progress"><div class="progress-bar" style="width:37%"></div></div>
-        <div class="progress-meta"><span>37% utilisés</span><span>5 restantes</span></div>
-      </div>
-      <div class="wallet-tile fade-up">
-        <div class="icon">🛍️</div>
-        <div class="label">Crédit boutique</div>
-        <div class="value">320<span class="total"> €</span></div>
-        <div class="progress"><div class="progress-bar full" style="width:64%"></div></div>
-        <div class="progress-meta"><span>sur 500 € inclus</span><span>180 € utilisés</span></div>
-      </div>
-      <div class="wallet-tile fade-up">
-        <div class="icon">📣</div>
-        <div class="label">Mentions réseaux</div>
-        <div class="value">2<span class="total"> / 6</span></div>
-        <div class="progress"><div class="progress-bar danger" style="width:33%"></div></div>
-        <div class="progress-meta"><span>33% utilisées</span><span>Demander une mention</span></div>
+    <div class="contract-card">
+      <span id="niveau-badge" class="niveau-badge or">Niveau —</span>
+      <h2 class="display" id="contract-type">—</h2>
+      <div class="subtitle" id="contract-meta">—</div>
+      <div class="contract-divider"></div>
+      <div class="contract-grid">
+        <div class="col"><b id="contract-date-debut">—</b><small>Date d'effet</small></div>
+        <div class="col"><b id="contract-date-fin">—</b><small>Échéance</small></div>
+        <div class="col"><b id="contract-prestations-count">—</b><small>Prestations</small></div>
       </div>
     </div>
   </section>
 
-  <!-- TICKETING -->
-  <section>
-    <div class="section-title">
-      <h2 class="display">Billetterie <em>prochains matchs</em></h2>
-      <a href="#">Tout le calendrier →</a>
-    </div>
-    <div class="tickie-frame">
-      <div class="frame-header">
-        <h3>Données live · Tickie</h3>
-        <span class="api-pill"><span class="live-dot"></span> API connectée</span>
+  <!-- PRESTATIONS -->
+  <section class="fade-in delay-1">
+    <h3 class="display">Mes <em>prestations</em></h3>
+    <p class="section-desc">Suivi de vos avantages contractuels saison <span id="prest-saison">—</span></p>
+    <div class="prestations" id="prestations-list"></div>
+  </section>
+
+  <!-- PACK VIP -->
+  <section class="fade-in delay-2" id="pack-section">
+    <h3 class="display">Mes <em>invitations VIP</em></h3>
+    <p class="section-desc">Pack hospitalité associé à votre contrat</p>
+    <div class="pack-vip" id="pack-vip-card"></div>
+  </section>
+
+  <!-- ALERTES -->
+  <section class="fade-in delay-3" id="alertes-section">
+    <h3 class="display">Mes <em>alertes</em></h3>
+    <p class="section-desc">Actions à suivre cette saison</p>
+    <div class="alertes" id="alertes-list"></div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="fade-in delay-3">
+    <h3 class="display">Mon <em>contact club</em></h3>
+    <p class="section-desc">L'équipe Spacers à votre disposition</p>
+    <div class="contact-card">
+      <div class="contact-avatar" id="contact-avatar">SP</div>
+      <div class="contact-info">
+        <b>Équipe Spacer's</b>
+        <small>Toulouse Volleyball · Palais des Sports André Brouat</small>
       </div>
-      <div class="matches-list">
-        <div class="match-row">
-          <div class="match-date"><div class="day">15</div><div class="month">Nov</div></div>
-          <div class="match-info">
-            <h4>Spacers Toulouse vs. Tours VB</h4>
-            <p><span>📍 Palais des Sports</span><span>🕗 20h00</span><span>· Marmande Open</span></p>
-          </div>
-          <div class="match-allocation">
-            <strong>4 places</strong>
-            <span>incluses dans contrat</span>
-          </div>
-          <button class="btn-reserve">Réserver</button>
-        </div>
-        <div class="match-row">
-          <div class="match-date"><div class="day">29</div><div class="month">Nov</div></div>
-          <div class="match-info">
-            <h4>Spacers Toulouse vs. Cannes VB</h4>
-            <p><span>📍 Palais des Sports</span><span>🕗 20h00</span><span>· Soirée Business Club</span></p>
-          </div>
-          <div class="match-allocation">
-            <strong>2 VIP + 4</strong>
-            <span>incluses · soirée networking</span>
-          </div>
-          <button class="btn-reserve">Réserver</button>
-        </div>
-        <div class="match-row">
-          <div class="match-date"><div class="day">06</div><div class="month">Déc</div></div>
-          <div class="match-info">
-            <h4>Spacers Toulouse vs. Paris Volley</h4>
-            <p><span>📍 Palais des Sports</span><span>🕗 18h30</span><span>· Match événement</span></p>
-          </div>
-          <div class="match-allocation">
-            <strong>0 places</strong>
-            <span>quota épuisé · achat possible</span>
-          </div>
-          <button class="btn-reserve">Acheter +</button>
-        </div>
-      </div>
-    </div>
-    <div class="stripe-scenario">
-      <div class="icn">💳</div>
-      <div>
-        <strong>Paiement billets supplémentaires :</strong> à arbitrer entre <strong>Stripe club</strong> (réconciliation centralisée, facture club) et <strong>Tickie</strong> (intégré dans leur tunnel, moins de dev). À discuter quand Tickie aura répondu sur leur passerelle de paiement API.
+      <div class="actions" style="display:flex;gap:8px;">
+        <a class="btn" href="mailto:contact@spacerstoulouse.fr">Email</a>
+        <a class="btn primary" id="contract-doc-link" href="#" target="_blank">Mon contrat</a>
       </div>
     </div>
   </section>
-
-  <!-- SHOP + B2B -->
-  <section>
-    <div class="section-title">
-      <h2 class="display">Boutique <em>& mises en relation</em></h2>
-    </div>
-    <div class="two-col">
-
-      <div class="shop-card">
-        <div class="shop-visual">
-          <span class="tag">Exclu partenaires</span>
-          <h3>Maillot floqué <em class="display-italic">de votre entreprise</em></h3>
-        </div>
-        <div class="shop-body">
-          <div>
-            <p>Votre logo brodé sur le maillot officiel Spacers. Pour vos collaborateurs, clients VIP ou cadeaux d'affaires.</p>
-            <div class="shop-credit">
-              <span>Crédit boutique restant</span>
-              <strong>320 €</strong>
-            </div>
-          </div>
-          <a href="#" class="btn-primary">Voir la boutique<span class="stripe-mark">via Stripe</span></a>
-        </div>
-      </div>
-
-      <div class="b2b-card">
-        <span class="badge-new">Nouveau</span>
-        <h3>Faites <em>du business</em> entre partenaires</h3>
-        <p>Demandez une mise en relation avec un autre partenaire du club. Le club facilite l'intro, vous gardez la main sur la suite.</p>
-        <div class="b2b-stats">
-          <div><strong>156</strong><span>Partenaires</span></div>
-          <div><strong>23</strong><span>Intros ce mois</span></div>
-          <div><strong>87%</strong><span>Taux de réponse</span></div>
-        </div>
-        <a href="#" class="btn-primary" style="text-align:center;">Demander une mise en relation</a>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- 3-COL: News, Forum, Events -->
-  <section>
-    <div class="three-col">
-      <div class="col-card fade-up">
-        <h3>Actus du club</h3>
-        <div class="col-list">
-          <div class="col-item">
-            <div class="meta"><span>Communiqué · 02 nov.</span><span class="unread">Nouveau</span></div>
-            <h4>Le club signe avec Décathlon Pro Toulouse</h4>
-            <p>Nouveau partenaire équipementier pour les 3 prochaines saisons.</p>
-          </div>
-          <div class="col-item">
-            <div class="meta"><span>Sportif · 28 oct.</span></div>
-            <h4>Victoire 3-1 contre Nice VB</h4>
-            <p>Les Spacers prennent la 4e place du classement.</p>
-          </div>
-          <div class="col-item">
-            <div class="meta"><span>Communiqué · 22 oct.</span></div>
-            <h4>Nouveau salon VIP au Palais des Sports</h4>
-            <p>Capacité doublée à 80 places assises pour la réception.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-card fade-up">
-        <h3>Forum partenaires</h3>
-        <div class="col-list">
-          <div class="col-item">
-            <div class="meta"><span>Petites annonces · 04 nov.</span><span class="unread">12 réponses</span></div>
-            <h4>Cherche graphiste freelance pour refonte site</h4>
-            <p>Marc D. — Cabinet Comptable Pyrénées</p>
-          </div>
-          <div class="col-item">
-            <div class="meta"><span>Discussion · 03 nov.</span><span class="unread">5 réponses</span></div>
-            <h4>Quel CRM utilisez-vous pour < 20 commerciaux ?</h4>
-            <p>Sandrine F. — Imprimerie Toulousaine</p>
-          </div>
-          <div class="col-item">
-            <div class="meta"><span>Annonce · 30 oct.</span></div>
-            <h4>200 m² de stockage à louer · Labège</h4>
-            <p>Patrick L. — Logistic Sud-Ouest</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-card fade-up">
-        <h3>Events à venir</h3>
-        <div class="col-list">
-          <div class="col-item">
-            <div class="meta"><span>Networking · 18 nov.</span><span class="unread">Inscrit</span></div>
-            <h4>Petit-déjeuner partenaires Q4</h4>
-            <p>📍 Hôtel Crowne Plaza · 8h00</p>
-          </div>
-          <div class="col-item">
-            <div class="meta"><span>Événement · 29 nov.</span></div>
-            <h4>Soirée Business Club · match Cannes</h4>
-            <p>📍 Salon VIP · cocktail dînatoire 19h</p>
-          </div>
-          <div class="col-item">
-            <div class="meta"><span>AG · 12 déc.</span></div>
-            <h4>Assemblée générale partenaires</h4>
-            <p>📍 Maison des Spacers · 18h30</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="footer-note">
-    <span class="display-italic">Maquette dashboard partenaire</span><br>
-    Spacer's Business Club · V0 — pour validation interne
-  </div>
 
 </main>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <a href="#" class="active" title="Dashboard">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2v9h14v-9l2 2"/><path d="M9 21V12h6v9"/></svg>
-  </a>
-  <a href="#" title="Annuaire">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/></svg>
-  </a>
-  <a href="#" title="Billetterie">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/></svg>
-  </a>
-  <a href="#" title="Boutique">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-  </a>
-  <a href="#" title="Forum">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-  </a>
+  <button class="active" title="Accueil">🏠</button>
+  <button title="Contrat">📄</button>
+  <button title="Billetterie">🎫</button>
+  <button title="Boutique">🛍</button>
+  <button title="Forum">💬</button>
 </nav>
+
+<script>
+// =========================================================================
+//  Spacer's Business Club — PWA bootstrap
+//  Au chargement : lit ?siren=... → fetch /api/partner/:siren → rend le DOM
+// =========================================================================
+
+const $ = (id) => document.getElementById(id);
+
+const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function daysBetween(isoEnd) {
+  if (!isoEnd) return null;
+  const end = new Date(isoEnd);
+  const now = new Date();
+  return Math.floor((end - now) / 86400000);
+}
+
+function formatEUR(n) {
+  if (!n && n !== 0) return '—';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+}
+
+function firstName(fullName) {
+  if (!fullName) return 'partenaire';
+  // "Céline TALON" → "Céline"  |  "Marc-Antoine DUBOIS" → "Marc-Antoine"
+  const parts = fullName.trim().split(/\s+/);
+  return parts[0];
+}
+
+function initials(fullName) {
+  if (!fullName) return '—';
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function showError(msg, detail) {
+  $('loading').hidden = true;
+  $('dashboard').hidden = true;
+  $('error').hidden = false;
+  $('error-msg').textContent = msg;
+  if (detail) $('error-detail').textContent = detail;
+}
+
+function renderDashboard(data) {
+  const { partenaire, contrat, prestations, pack_places, alertes } = data;
+
+  // ===== HEADER USER CHIP =====
+  $('user-chip').hidden = false;
+  $('user-name').textContent = partenaire.raison_sociale || '—';
+  $('user-role').textContent = partenaire.representant
+    ? `${partenaire.representant}${partenaire.fonction ? ' · ' + partenaire.fonction : ''}`
+    : '—';
+  $('user-avatar').textContent = initials(partenaire.representant || partenaire.raison_sociale);
+
+  // ===== HERO =====
+  $('greeting-firstname').textContent = firstName(partenaire.representant);
+  $('saison-label').textContent = `Saison ${contrat.saison || '—'}`;
+  $('stat-contract').textContent = `Contrat ${contrat.statut.toLowerCase()}`;
+
+  const jours = daysBetween(contrat.date_fin);
+  if (jours !== null) {
+    const stat = $('stat-echeance');
+    if (jours < 0) {
+      stat.textContent = `Contrat expiré depuis ${Math.abs(jours)} j`;
+      stat.classList.add('warn');
+    } else if (jours < 60) {
+      stat.textContent = `Renouvellement dans ${jours} j`;
+      stat.classList.add('warn');
+    } else {
+      stat.textContent = `${jours} j avant échéance`;
+    }
+  }
+
+  // ===== CARTE CONTRAT =====
+  const niveau = (partenaire.niveau || 'bronze').toLowerCase();
+  const badge = $('niveau-badge');
+  badge.textContent = `Niveau ${partenaire.niveau || '—'}`;
+  badge.className = `niveau-badge ${niveau}`;
+
+  $('contract-type').textContent = contrat.type || '—';
+  $('contract-meta').textContent = `Contrat ${contrat.id} · ${formatEUR(contrat.montant_ht)} HT`;
+  $('contract-date-debut').textContent = formatDate(contrat.date_debut);
+  $('contract-date-fin').textContent = formatDate(contrat.date_fin);
+  $('contract-prestations-count').textContent = (contrat.codes_prestations || []).length;
+
+  // ===== PRESTATIONS =====
+  $('prest-saison').textContent = contrat.saison || '—';
+  const prestList = $('prestations-list');
+  if (!prestations || prestations.length === 0) {
+    prestList.innerHTML = '<div style="padding:24px;color:var(--ink-muted);font-size:13px;">Aucune prestation enregistrée.</div>';
+  } else {
+    prestList.innerHTML = prestations.map(p => {
+      const pct = p.nb_total > 0 ? Math.round((p.nb_livre / p.nb_total) * 100) : 0;
+      const statutClass = p.statut === 'Livré' || p.statut === 'Livré complet' ? 'livre'
+                        : p.statut && p.statut.includes('cours') ? 'en-cours' : 'a-livrer';
+      return `
+        <article class="prest">
+          <div class="code">${p.code}</div>
+          <div class="designation">${p.designation || p.code}</div>
+          <div class="progress"><div style="width: ${pct}%"></div></div>
+          <div class="progress-meta"><span>${p.nb_livre}/${p.nb_total} livré(s)</span><span>${pct}%</span></div>
+          <span class="statut ${statutClass}">${p.statut || 'À livrer'}</span>
+        </article>
+      `;
+    }).join('');
+  }
+
+  // ===== PACK VIP =====
+  const packSection = $('pack-section');
+  const packCard = $('pack-vip-card');
+  if (pack_places) {
+    const pct = pack_places.alloues > 0 ? Math.round((pack_places.utilises / pack_places.alloues) * 100) : 0;
+    packCard.innerHTML = `
+      <div>
+        <div class="pack-label">${pack_places.libelle || 'Pack VIP'}</div>
+        <div class="pack-title">${pack_places.alloues} places allouées</div>
+        <div class="pack-bar"><div style="width: ${pct}%"></div></div>
+        <div class="pack-stats">
+          <div><b>${pack_places.utilises}</b>Utilisées</div>
+          <div><b>${pack_places.restants}</b>Restantes</div>
+          <div><b>${pack_places.seuil_alerte}</b>Seuil alerte</div>
+        </div>
+      </div>
+      <div class="pack-counter">
+        <b>${pack_places.restants}</b>
+        <small>Places dispo</small>
+      </div>
+    `;
+  } else {
+    packSection.style.display = 'none';
+  }
+
+  // ===== ALERTES =====
+  const alertSection = $('alertes-section');
+  const alertList = $('alertes-list');
+  if (!alertes || alertes.length === 0) {
+    alertSection.style.display = 'none';
+  } else {
+    alertList.innerHTML = alertes.map(a => {
+      const icon = a.priorite === 'HAUTE' ? '!' : a.priorite === 'MOYENNE' ? '!' : '·';
+      return `
+        <div class="alerte ${a.priorite}">
+          <div class="a-icon">${icon}</div>
+          <div class="a-content">
+            <div class="a-type">${a.type}</div>
+            <div class="a-msg">${a.message}</div>
+          </div>
+          <button class="a-action">${a.action || 'Voir'}</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== CONTRAT DOC =====
+  if (contrat.lien_doc) {
+    $('contract-doc-link').href = contrat.lien_doc;
+  } else {
+    $('contract-doc-link').style.display = 'none';
+  }
+
+  // ===== AFFICHAGE =====
+  $('loading').hidden = true;
+  $('dashboard').hidden = false;
+}
+
+// =========================================================================
+//  Bootstrap
+// =========================================================================
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const siren = params.get('siren') || '812192102';  // fallback démo : COMFORT
+
+  try {
+    const r = await fetch(`/api/partner/${siren}`);
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      showError(data.error || `Erreur ${r.status}`, data.detail || `SIREN: ${siren}`);
+      return;
+    }
+    renderDashboard(data);
+  } catch (e) {
+    showError('Connexion impossible', e.message);
+  }
+})();
+</script>
 
 </body>
 </html>
