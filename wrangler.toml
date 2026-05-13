@@ -1,0 +1,10 @@
+name = "spacers-business-club"
+main = "src/worker.js"
+compatibility_date = "2024-12-01"
+
+# Static assets servis depuis ./public
+# Tout ce qui n'est pas /api/* est servi en static
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
