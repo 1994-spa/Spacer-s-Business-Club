@@ -163,6 +163,13 @@
   .bottom-nav button.active { background: var(--gold); color: white; }
   .bottom-nav button:hover:not(.active) { color: white; }
 
+  /* MODAL "Bientôt" */
+  .modal { position: fixed; inset: 0; background: rgba(10,22,40,.55); display: grid; place-items: center; z-index: 200; padding: 20px; backdrop-filter: blur(4px); animation: fadeIn .25s ease; }
+  .modal-card { background: var(--card); border-radius: var(--radius-lg); padding: 32px 28px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(10,22,40,.3); }
+  .modal-eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+  .modal-card h3 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; margin-bottom: 12px; letter-spacing: -.02em; }
+  .modal-card p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
+
   /* FADE IN */
   .fade-in { animation: fadeIn .5s ease both; }
   .fade-in.delay-1 { animation-delay: .1s; }
@@ -220,7 +227,6 @@
       </div>
     </div>
     <div class="contract-card">
-      <span id="niveau-badge" class="niveau-badge or">Niveau —</span>
       <h2 class="display" id="contract-type">—</h2>
       <div class="subtitle" id="contract-meta">—</div>
       <div class="contract-divider"></div>
@@ -264,7 +270,7 @@
         <small>Toulouse Volleyball · Palais des Sports André Brouat</small>
       </div>
       <div class="actions" style="display:flex;gap:8px;">
-        <a class="btn" href="mailto:contact@spacerstoulouse.fr">Email</a>
+        <a class="btn" href="mailto:treicy@fitgroup.fr">Email</a>
         <a class="btn primary" id="contract-doc-link" href="#" target="_blank">Mon contrat</a>
       </div>
     </div>
@@ -274,12 +280,22 @@
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <button class="active" title="Accueil">🏠</button>
-  <button title="Contrat">📄</button>
-  <button title="Billetterie">🎫</button>
-  <button title="Boutique">🛍</button>
-  <button title="Forum">💬</button>
+  <button class="active" title="Accueil" onclick="window.scrollTo({top:0,behavior:'smooth'})">🏠</button>
+  <button title="Mon contrat" onclick="ouvrirContrat()">📄</button>
+  <button title="Billetterie" onclick="showSoon('Billetterie','La gestion de vos invitations VIP arrive bientôt — synchronisation avec Tickie en cours.')">🎫</button>
+  <button title="Boutique" onclick="showSoon('Boutique','Achat de places en ligne et boutique partenaire en préparation.')">🛍</button>
+  <button title="Forum" onclick="showSoon('Forum','Espace de discussion entre partenaires et club bientôt disponible.')">💬</button>
 </nav>
+
+<!-- MODAL "Bientôt" -->
+<div id="modal" class="modal" hidden onclick="if(event.target.id==='modal')closeSoon()">
+  <div class="modal-card">
+    <div class="modal-eyebrow">À venir</div>
+    <h3 id="modal-title" class="display">—</h3>
+    <p id="modal-text">—</p>
+    <button class="btn primary" onclick="closeSoon()">Compris</button>
+  </div>
+</div>
 
 <script>
 // =========================================================================
@@ -332,6 +348,27 @@ function showError(msg, detail) {
   if (detail) $('error-detail').textContent = detail;
 }
 
+// =========================================================================
+//  Helpers UI : modal "Bientôt" + navigation
+// =========================================================================
+let CURRENT_CONTRAT_LIEN = '';
+
+function showSoon(title, text) {
+  $('modal-title').textContent = title;
+  $('modal-text').textContent = text;
+  $('modal').hidden = false;
+}
+function closeSoon() {
+  $('modal').hidden = true;
+}
+function ouvrirContrat() {
+  if (CURRENT_CONTRAT_LIEN) {
+    window.open(CURRENT_CONTRAT_LIEN, '_blank');
+  } else {
+    showSoon('Mon contrat', 'Le lien vers ton contrat sera disponible une fois que tu seras identifié(e).');
+  }
+}
+
 function renderDashboard(data) {
   const { partenaire, contrat, prestations, pack_places, alertes } = data;
 
@@ -363,11 +400,6 @@ function renderDashboard(data) {
   }
 
   // ===== CARTE CONTRAT =====
-  const niveau = (partenaire.niveau || 'bronze').toLowerCase();
-  const badge = $('niveau-badge');
-  badge.textContent = `Niveau ${partenaire.niveau || '—'}`;
-  badge.className = `niveau-badge ${niveau}`;
-
   $('contract-type').textContent = contrat.type || '—';
   $('contract-meta').textContent = `Contrat ${contrat.id} · ${formatEUR(contrat.montant_ht)} HT`;
   $('contract-date-debut').textContent = formatDate(contrat.date_debut);
@@ -436,7 +468,6 @@ function renderDashboard(data) {
             <div class="a-type">${a.type}</div>
             <div class="a-msg">${a.message}</div>
           </div>
-          <button class="a-action">${a.action || 'Voir'}</button>
         </div>
       `;
     }).join('');
@@ -445,6 +476,7 @@ function renderDashboard(data) {
   // ===== CONTRAT DOC =====
   if (contrat.lien_doc) {
     $('contract-doc-link').href = contrat.lien_doc;
+    CURRENT_CONTRAT_LIEN = contrat.lien_doc;
   } else {
     $('contract-doc-link').style.display = 'none';
   }
