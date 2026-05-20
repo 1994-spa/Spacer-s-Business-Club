@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spacer's Pilote · Espace équipe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F4F1EA;
+    --bg-soft: #ECE7DB;
+    --ink: #0A1628;
+    --ink-2: #0F1D33;
+    --ink-soft: #3F4A5E;
+    --ink-muted: #8B8775;
+    --gold: #C8932B;
+    --gold-soft: #E8C977;
+    --gold-faint: rgba(200,147,43,.12);
+    --red: #B23A48;
+    --green: #3A8264;
+    --orange: #D97743;
+    --line: #DDD6C6;
+    --line-strong: #C8C0AC;
+    --card: #FFFFFF;
+    --sidebar: #0A1628;
+    --sidebar-soft: #152238;
+    --sidebar-line: rgba(255,255,255,.08);
+    --shadow-sm: 0 1px 3px rgba(10,22,40,.06);
+    --shadow-md: 0 4px 16px rgba(10,22,40,.06), 0 0 0 1px rgba(10,22,40,.04);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: 'Manrope', system-ui, sans-serif; font-size: 14px; line-height: 1.5; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  body { display: flex; min-height: 100vh; overflow-x: hidden; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  a { color: inherit; text-decoration: none; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ====== SIDEBAR ====== */
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    background: var(--sidebar);
+    color: rgba(255,255,255,.78);
+    padding: 22px 0 18px;
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+    border-right: 1px solid var(--sidebar-line);
+  }
+  .sb-brand { padding: 0 22px 26px; border-bottom: 1px solid var(--sidebar-line); margin-bottom: 14px; }
+  .sb-brand-row { display: flex; align-items: center; gap: 11px; }
+  .sb-logo { width: 36px; height: 36px; border-radius: 9px; background: linear-gradient(135deg, var(--gold), #A57518); display: grid; place-items: center; color: var(--ink); font-weight: 800; font-size: 16px; }
+  .sb-brand-text { flex: 1; }
+  .sb-brand-title { color: white; font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
+  .sb-brand-sub { font-size: 10.5px; color: rgba(255,255,255,.5); letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; }
+
+  .sb-section { padding: 14px 22px 8px; font-size: 10.5px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .12em; font-weight: 600; }
+  .sb-nav { padding: 0 12px; display: flex; flex-direction: column; gap: 2px; }
+  .sb-link { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 7px; color: rgba(255,255,255,.72); font-size: 13.5px; font-weight: 500; transition: all .15s; cursor: pointer; }
+  .sb-link:hover { background: var(--sidebar-soft); color: white; }
+  .sb-link.active { background: var(--sidebar-soft); color: white; box-shadow: inset 2px 0 0 var(--gold); }
+  .sb-link.active::before { content: ''; }
+  .sb-ico { width: 18px; height: 18px; display: grid; place-items: center; opacity: .8; }
+  .sb-link .sb-badge { margin-left: auto; background: var(--red); color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px; }
+
+  .sb-user { margin-top: auto; padding: 16px 22px 0; border-top: 1px solid var(--sidebar-line); }
+  .sb-user-row { display: flex; align-items: center; gap: 10px; }
+  .sb-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); color: var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 12.5px; }
+  .sb-user-info { flex: 1; min-width: 0; }
+  .sb-user-name { color: white; font-size: 13px; font-weight: 600; }
+  .sb-user-role { font-size: 11px; color: rgba(255,255,255,.5); }
+
+  /* ====== MAIN ====== */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  .topbar { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
+  .breadcrumb { font-size: 13.5px; color: var(--ink-muted); display: flex; align-items: center; gap: 8px; }
+  .breadcrumb b { color: var(--ink); font-weight: 600; }
+  .breadcrumb-sep { color: var(--ink-muted); opacity: .4; }
+  .topbar-spacer { flex: 1; }
+  .topbar-search { position: relative; }
+  .topbar-search input { background: var(--bg); border: 1px solid var(--line); padding: 8px 12px 8px 34px; border-radius: 8px; width: 240px; font-family: inherit; font-size: 13px; color: var(--ink); transition: all .15s; }
+  .topbar-search input:focus { outline: none; border-color: var(--ink); background: white; }
+  .topbar-search .ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-soft); transition: all .15s; cursor: pointer; }
+  .icon-btn:hover { background: var(--bg); color: var(--ink); }
+  .icon-btn .dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; background: var(--red); border-radius: 50%; border: 2px solid white; }
+  .icon-btn-wrap { position: relative; }
+
+  .content { padding: 32px; max-width: 100%; }
+
+  /* ====== PAGE HEADER ====== */
+  .page-head { margin-bottom: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .15em; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; color: var(--ink); }
+  .page-sub { color: var(--ink-soft); margin-top: 4px; font-size: 13.5px; }
+
+  /* ====== BUTTONS ====== */
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: all .15s; border: 1px solid transparent; }
+  .btn.primary { background: var(--ink); color: white; }
+  .btn.primary:hover { background: var(--ink-2); }
+  .btn.gold { background: var(--gold); color: var(--ink); }
+  .btn.gold:hover { background: #B8821F; }
+  .btn.ghost { background: white; color: var(--ink); border-color: var(--line); }
+  .btn.ghost:hover { background: var(--bg); border-color: var(--line-strong); }
+  .btn.sm { padding: 6px 10px; font-size: 12px; }
+
+  /* ====== STATS GRID ====== */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 16px; transition: all .15s; }
+  .stat-card:hover { border-color: var(--line-strong); }
+  .stat-label { font-size: 11.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; }
+  .stat-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
+  .stat-trend { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .stat-trend.up { background: rgba(58,130,100,.12); color: var(--green); }
+  .stat-trend.warn { background: rgba(178,58,72,.1); color: var(--red); }
+
+  /* ====== CARD / PANEL ====== */
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .panel-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .panel-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+  .panel-sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 2px; }
+  .panel-body { padding: 0; }
+  .panel-foot { padding: 12px 20px; border-top: 1px solid var(--line); background: var(--bg-soft); font-size: 12.5px; color: var(--ink-soft); }
+
+  .two-col { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ====== TABLE ====== */
+  .table { width: 100%; border-collapse: collapse; }
+  .table th { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--ink-muted); text-align: left; padding: 12px 20px; background: var(--bg-soft); border-bottom: 1px solid var(--line); }
+  .table td { padding: 14px 20px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle; }
+  .table tr:last-child td { border-bottom: none; }
+  .table tr.clickable:hover td { background: var(--bg); cursor: pointer; }
+  .partner-cell { display: flex; align-items: center; gap: 12px; }
+  .partner-mark { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: 12.5px; flex-shrink: 0; }
+  .partner-info b { font-weight: 600; color: var(--ink); display: block; }
+  .partner-info small { color: var(--ink-muted); font-size: 11.5px; }
+
+  /* ====== BADGES ====== */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; line-height: 1.4; }
+  .badge.green { background: rgba(58,130,100,.12); color: var(--green); }
+  .badge.gold { background: var(--gold-faint); color: #8E6818; }
+  .badge.red { background: rgba(178,58,72,.1); color: var(--red); }
+  .badge.gray { background: var(--bg-soft); color: var(--ink-soft); }
+  .badge.dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+  /* ====== ACTIVITY FEED ====== */
+  .feed { display: flex; flex-direction: column; }
+  .feed-item { display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); transition: background .15s; }
+  .feed-item:hover { background: var(--bg); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-marker { width: 28px; height: 28px; border-radius: 7px; background: var(--bg-soft); color: var(--ink-soft); display: grid; place-items: center; flex-shrink: 0; font-size: 13px; }
+  .feed-marker.gold { background: var(--gold-faint); color: var(--gold); }
+  .feed-marker.green { background: rgba(58,130,100,.12); color: var(--green); }
+  .feed-marker.red { background: rgba(178,58,72,.1); color: var(--red); }
+  .feed-content { flex: 1; min-width: 0; }
+  .feed-title { font-size: 13.5px; color: var(--ink); }
+  .feed-title b { font-weight: 600; }
+  .feed-meta { font-size: 11.5px; color: var(--ink-muted); margin-top: 2px; }
+
+  /* ====== DETAIL PAGE ====== */
+  .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+  @media (max-width: 1000px) { .detail-grid { grid-template-columns: 1fr; } }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 18px; padding: 20px; }
+  .info-cell { }
+  .info-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-muted); font-weight: 600; margin-bottom: 4px; }
+  .info-val { font-size: 14px; color: var(--ink); font-weight: 500; }
+  .info-val.lg { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+
+  /* Hidden pages */
+  .page { display: none; }
+  .page.active { display: block; animation: fadeUp .35s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* Placeholder for unfinished pages */
+  .empty-state { padding: 80px 20px; text-align: center; }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+  .empty-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .empty-sub { color: var(--ink-soft); max-width: 360px; margin: 0 auto; font-size: 13.5px; }
+
+  /* Section spacing */
+  .stack > * + * { margin-top: 20px; }
+
+  /* Quick actions row */
+  .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .quick-action { background: var(--card); border: 1px solid var(--line); padding: 14px 16px; border-radius: var(--radius); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all .15s; }
+  .quick-action:hover { border-color: var(--ink); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .qa-ico { width: 36px; height: 36px; border-radius: 9px; background: var(--gold-faint); color: var(--gold); display: grid; place-items: center; flex-shrink: 0; }
+  .qa-text { flex: 1; }
+  .qa-text b { display: block; font-weight: 600; font-size: 13.5px; }
+  .qa-text small { color: var(--ink-muted); font-size: 11.5px; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .sidebar { position: fixed; left: -240px; z-index: 100; transition: left .3s; }
+    .sidebar.open { left: 0; }
+    .content { padding: 18px; }
+    .topbar { padding: 0 18px; }
+    .topbar-search { display: none; }
+    .stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====================== LOADING ====================== -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:1000;">
+  <div style="text-align:center;">
+    <div style="width:48px;height:48px;border:3px solid var(--gold-faint);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+    <div style="color:var(--ink-muted);font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;">Connexion au pilote</div>
+  </div>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+<!-- ====================== ERROR ====================== -->
+<div id="error-screen" style="position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:1000;padding:24px;">
+  <div style="max-width:440px;text-align:center;background:white;border-radius:16px;padding:36px 32px;box-shadow:var(--shadow-md);">
+    <div style="font-size:40px;margin-bottom:16px;">🔒</div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em;">Accès non autorisé</h2>
+    <p id="error-message" style="color:var(--ink-soft);font-size:14px;margin-bottom:24px;line-height:1.55;">Ton lien admin est invalide ou a expiré. Demande à Clément ou Treicy un nouveau lien.</p>
+    <div style="font-size:11.5px;color:var(--ink-muted);font-family:'JetBrains Mono',monospace;padding:10px;background:var(--bg);border-radius:8px;" id="error-detail"></div>
+  </div>
+</div>
+
+<!-- ====================== SIDEBAR ====================== -->
+<aside class="sidebar" id="sidebar" style="display:none;">
+  <div class="sb-brand">
+    <div class="sb-brand-row">
+      <div class="sb-logo">S</div>
+      <div class="sb-brand-text">
+        <div class="sb-brand-title">Spacer's Club</div>
+        <div class="sb-brand-sub">Pilote</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section">Pilotage</div>
+  <nav class="sb-nav">
+    <a class="sb-link active" onclick="showPage('home')">
+      <span class="sb-ico">▤</span>Accueil
+    </a>
+    <a class="sb-link" onclick="showPage('partners')">
+      <span class="sb-ico">◉</span>Partenaires
+      <span class="sb-badge" id="sb-badge-partners">—</span>
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">⌘</span>Forum
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">◇</span>Événements
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">✉</span>Communication
+    </a>
+  </nav>
+
+  <div class="sb-section">Gestion</div>
+  <nav class="sb-nav">
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">⌥</span>Annuaire
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">⌃</span>Facturation
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">⚙</span>Paramètres
+    </a>
+  </nav>
+
+  <div class="sb-user">
+    <div class="sb-user-row">
+      <div class="sb-avatar" id="sb-avatar">—</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-user-name">—</div>
+        <div class="sb-user-role" id="sb-user-role">—</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ====================== MAIN ====================== -->
+<main class="main" id="main" style="display:none;">
+
+  <header class="topbar">
+    <div class="breadcrumb">
+      <span id="breadcrumb-current"><b>Accueil</b></span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-search">
+      <span class="ico">⌕</span>
+      <input type="text" placeholder="Rechercher un partenaire, événement, sujet…" />
+    </div>
+    <div class="icon-btn-wrap">
+      <button class="icon-btn">🔔</button>
+      <span class="dot"></span>
+    </div>
+  </header>
+
+  <!-- ============ PAGE ACCUEIL ============ -->
+  <section class="page active" id="page-home">
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <div class="page-eyebrow">Saison 2026-2027</div>
+          <h1 class="page-title">Bonjour <span id="greeting-name">—</span>.</h1>
+          <p class="page-sub"><span id="stat-partenaires-mini">—</span> partenaires actifs · <span id="stat-alertes-mini">—</span> alertes à traiter</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost sm">Exporter CRM</button>
+          <button class="btn gold sm">+ Nouveau partenaire</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Chiffre signé</div>
+          <div class="stat-value" id="stat-chiffre">—</div>
+          <div class="stat-foot">
+            <span>Saison <span id="stat-saison">—</span></span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Partenaires actifs</div>
+          <div class="stat-value" id="stat-partenaires">—</div>
+          <div class="stat-foot">
+            <span>Saison active</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Packs VIP configurés</div>
+          <div class="stat-value" id="stat-packs">—</div>
+          <div class="stat-foot">
+            <span>Avec places allouées</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Alertes au CRM</div>
+          <div class="stat-value" id="stat-alertes">—</div>
+          <div class="stat-foot">
+            <span>À traiter</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="quick-actions">
+        <div class="quick-action" onclick="showPage('soon')">
+          <div class="qa-ico">+</div>
+          <div class="qa-text"><b>Créer un événement</b><small>Repas, meeting, pétanque</small></div>
+        </div>
+        <div class="quick-action" onclick="showPage('soon')">
+          <div class="qa-ico">✉</div>
+          <div class="qa-text"><b>Envoyer un mail groupé</b><small>Communication partenaires</small></div>
+        </div>
+        <div class="quick-action" onclick="showPage('soon')">
+          <div class="qa-ico">€</div>
+          <div class="qa-text"><b>Générer une facture</b><small>Stripe + PDF</small></div>
+        </div>
+      </div>
+
+      <!-- Two-col -->
+      <div class="two-col">
+        <!-- Alertes -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Alertes à traiter</div>
+              <div class="panel-sub">16 actions en attente</div>
+            </div>
+            <button class="btn ghost sm">Tout voir</button>
+          </div>
+          <div class="panel-body feed">
+            <div class="feed-item">
+              <div class="feed-marker red">!</div>
+              <div class="feed-content">
+                <div class="feed-title"><b>PICOTY</b> — Prestation P001 non démarrée</div>
+                <div class="feed-meta">PRE-262027-020 · Priorité moyenne · Saison débute en sept.</div>
+              </div>
+              <button class="btn ghost sm">Traiter</button>
+            </div>
+            <div class="feed-item">
+              <div class="feed-marker red">!</div>
+              <div class="feed-content">
+                <div class="feed-title"><b>A.P.C.R.A</b> — Prestation P002 non démarrée</div>
+                <div class="feed-meta">PRE-262027-015 · Priorité moyenne</div>
+              </div>
+              <button class="btn ghost sm">Traiter</button>
+            </div>
+            <div class="feed-item">
+              <div class="feed-marker gold">⌃</div>
+              <div class="feed-content">
+                <div class="feed-title"><b>LA BRIGADE</b> — Renouvellement dans 405 jours</div>
+                <div class="feed-meta">CON-262027-001 · Anticiper le contact commercial</div>
+              </div>
+              <button class="btn ghost sm">Traiter</button>
+            </div>
+            <div class="feed-item">
+              <div class="feed-marker gold">⌃</div>
+              <div class="feed-content">
+                <div class="feed-title"><b>COMFORT APARTHOTEL</b> — Suivi prestation P101</div>
+                <div class="feed-meta">PRE-262027-014 · Vérifier diffusion LED</div>
+              </div>
+              <button class="btn ghost sm">Traiter</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activité récente -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Activité récente</div>
+              <div class="panel-sub">Modifications du CRM</div>
+            </div>
+          </div>
+          <div class="panel-body feed">
+            <div class="feed-item">
+              <div class="feed-marker green">✓</div>
+              <div class="feed-content">
+                <div class="feed-title">Pack VIP PICOTY configuré (15 places)</div>
+                <div class="feed-meta">il y a 12 min · Clément</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-marker gold">+</div>
+              <div class="feed-content">
+                <div class="feed-title">Magic links générés (7 partenaires)</div>
+                <div class="feed-meta">il y a 1 h · Système</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-marker green">✓</div>
+              <div class="feed-content">
+                <div class="feed-title">Contrat PICOTY finalisé</div>
+                <div class="feed-meta">hier · Treicy</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-marker gold">+</div>
+              <div class="feed-content">
+                <div class="feed-title">Partenaire A.P.C.R.A ajouté</div>
+                <div class="feed-meta">2 j · Clément</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE PARTENAIRES ============ -->
+  <section class="page" id="page-partners">
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <div class="page-eyebrow">Annuaire</div>
+          <h1 class="page-title">Partenaires</h1>
+          <p class="page-sub">7 actifs en saison active · 293 historiques (toutes saisons)</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost sm">⬇ Export</button>
+          <button class="btn gold sm">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <button class="btn primary sm">Saison active (7)</button>
+        <button class="btn ghost sm">Toutes saisons (300)</button>
+        <button class="btn ghost sm">Prospects</button>
+        <button class="btn ghost sm">Archivés</button>
+        <div style="flex:1;"></div>
+        <span style="font-size:12px;color:var(--ink-muted);">Trier par : <b style="color:var(--ink);">Contrat ID ↓</b></span>
+      </div>
+
+      <!-- Table -->
+      <div class="panel">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Partenaire</th>
+              <th>Contrat</th>
+              <th>Type</th>
+              <th>Montant</th>
+              <th>Prestations</th>
+              <th>Pack VIP</th>
+              <th>Statut</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(200,147,43,.15);color:var(--gold);">LB</div>
+                  <div class="partner-info">
+                    <b>LA BRIGADE TRAITEUR</b>
+                    <small>Sébastien AUTHIER</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-001</td>
+              <td>Sponsoring + Prest.</td>
+              <td><b>4 500 €</b> HT</td>
+              <td><span class="badge gold dot">2/3 livrées</span></td>
+              <td>20 places</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(58,130,100,.15);color:var(--green);">CA</div>
+                  <div class="partner-info">
+                    <b>COMFORT APARTHOTEL</b>
+                    <small>Céline TALON · Directrice</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-002</td>
+              <td>Naming + Prest.</td>
+              <td><b>3 200 €</b> HT</td>
+              <td><span class="badge gold dot">1/3 livrées</span></td>
+              <td>15 places</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(217,119,67,.15);color:var(--orange);">CE</div>
+                  <div class="partner-info">
+                    <b>CELIOS</b>
+                    <small>Cédric REQUIER</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-003</td>
+              <td>Sponsoring</td>
+              <td><b>2 800 €</b> HT</td>
+              <td><span class="badge gold dot">0/2 livrées</span></td>
+              <td>20 places</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(178,58,72,.15);color:var(--red);">CL</div>
+                  <div class="partner-info">
+                    <b>CLEAN'ELEC</b>
+                    <small>Rafael MERCIER</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-004</td>
+              <td>Sponsoring</td>
+              <td><b>2 500 €</b> HT</td>
+              <td><span class="badge gold dot">0/2 livrées</span></td>
+              <td>20 places</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(15,29,51,.15);color:var(--ink);">AF</div>
+                  <div class="partner-info">
+                    <b>AFR FINANCEMENT</b>
+                    <small>Lionel DANSOT</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-005</td>
+              <td>Sponsoring</td>
+              <td><b>1 800 €</b> HT</td>
+              <td><span class="badge gold dot">0/2 livrées</span></td>
+              <td>15 places</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(200,147,43,.15);color:var(--gold);">PI</div>
+                  <div class="partner-info">
+                    <b>PICOTY</b>
+                    <small>Thomas BOZEC</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-006</td>
+              <td>Sponsoring financier</td>
+              <td><b>1 800 €</b> HT</td>
+              <td><span class="badge gold dot">0/2 livrées</span></td>
+              <td>15 places</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+            <tr class="clickable" onclick="showPage('partner-detail')">
+              <td>
+                <div class="partner-cell">
+                  <div class="partner-mark" style="background:rgba(58,130,100,.15);color:var(--green);">AP</div>
+                  <div class="partner-info">
+                    <b>A.P.C.R.A</b>
+                    <small>Stéphanie Cordeiro</small>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">CON-262027-007</td>
+              <td>Loge + LED</td>
+              <td><b>3 500 €</b> HT</td>
+              <td><span class="badge gold dot">0/2 livrées</span></td>
+              <td>—</td>
+              <td><span class="badge green dot">Signé</span></td>
+              <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="panel-foot">
+          7 partenaires affichés sur 7 actifs en saison 2026-2027
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE PARTENAIRE DÉTAIL ============ -->
+  <section class="page" id="page-partner-detail">
+    <div class="content">
+      <div style="margin-bottom:14px;">
+        <button class="btn ghost sm" onclick="showPage('partners')">← Retour à la liste</button>
+      </div>
+      <div class="page-head">
+        <div>
+          <div class="page-eyebrow mono">CON-262027-006</div>
+          <h1 class="page-title">PICOTY</h1>
+          <p class="page-sub">Thomas BOZEC · SIREN 777347386 · Sponsoring financier</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost sm">📋 Lien partenaire</button>
+          <button class="btn ghost sm">📄 Voir contrat</button>
+          <button class="btn primary sm">✎ Éditer</button>
+        </div>
+      </div>
+
+      <!-- Infos clés -->
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-label">Saison</div>
+            <div class="info-val">2026-2027</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Montant HT</div>
+            <div class="info-val lg">1 800 €</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">TVA / TTC</div>
+            <div class="info-val">360 € / 2 160 €</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Date début</div>
+            <div class="info-val">1 sept. 2026</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Date fin</div>
+            <div class="info-val">30 juin 2027</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Statut</div>
+            <div class="info-val"><span class="badge green dot">Signé</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <!-- Prestations -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Prestations contractuelles</div>
+              <div class="panel-sub">2 prestations · 0 livrées</div>
+            </div>
+            <button class="btn ghost sm">+ Ajouter</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>Code</th><th>Désignation</th><th>Avancement</th><th style="text-align:right;">Action</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">P001</td>
+                <td><b>Hospitalité Pack VIP</b><br><small style="color:var(--ink-muted);">15 places × 13 matchs</small></td>
+                <td><span class="badge gold dot">0/13 matchs</span></td>
+                <td style="text-align:right;"><button class="btn ghost sm">+1 livré</button></td>
+              </tr>
+              <tr>
+                <td class="mono">P007</td>
+                <td><b>Business Club</b><br><small style="color:var(--ink-muted);">Accès événements saison</small></td>
+                <td><span class="badge gold dot">0/13 événements</span></td>
+                <td style="text-align:right;"><button class="btn ghost sm">+1 livré</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pack VIP -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Pack VIP</div>
+              <div class="panel-sub">PAC-262027-010</div>
+            </div>
+          </div>
+          <div style="padding: 20px;">
+            <div style="font-size:36px;font-weight:700;letter-spacing:-.02em;line-height:1;">15<span style="font-size:14px;font-weight:500;color:var(--ink-muted);">/15</span></div>
+            <div style="font-size:12px;color:var(--ink-muted);margin-top:4px;">places restantes · 0 utilisées</div>
+            <div style="margin-top:14px;height:6px;background:var(--bg-soft);border-radius:99px;overflow:hidden;">
+              <div style="width:100%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-soft));"></div>
+            </div>
+            <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <button class="btn ghost sm">−1 place</button>
+              <button class="btn primary sm">+1 présence</button>
+            </div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-muted);">
+              Seuil alerte : 3 places · Synchronisation Tickie <span class="badge gray" style="margin-left:4px;">à venir</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activité partenaire -->
+      <div style="margin-top:20px;" class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Historique d'activité</div>
+            <div class="panel-sub">Échanges et modifications</div>
+          </div>
+          <button class="btn ghost sm">+ Note</button>
+        </div>
+        <div class="feed">
+          <div class="feed-item">
+            <div class="feed-marker green">✓</div>
+            <div class="feed-content">
+              <div class="feed-title">Pack VIP configuré : 15 places allouées</div>
+              <div class="feed-meta">aujourd'hui à 14:33 · Clément</div>
+            </div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-marker gold">✉</div>
+            <div class="feed-content">
+              <div class="feed-title">Lien partenaire envoyé à Thomas BOZEC</div>
+              <div class="feed-meta">hier à 16:42 · Treicy</div>
+            </div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-marker green">✓</div>
+            <div class="feed-content">
+              <div class="feed-title">Contrat signé et importé dans le CRM</div>
+              <div class="feed-meta">il y a 3 j · Système</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE PLACEHOLDER ============ -->
+  <section class="page" id="page-soon">
+    <div class="content">
+      <div class="empty-state">
+        <div class="empty-icon">◇</div>
+        <div class="empty-title">Bientôt disponible</div>
+        <div class="empty-sub">Ce module est en préparation. On le développera dans les prochains sprints — d'abord Forum, puis Événements business avec paiements Stripe.</div>
+        <div style="margin-top:24px;"><button class="btn primary" onclick="showPage('home')">Retour à l'accueil</button></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // =========================================================================
+  //  Bootstrap : auth admin via magic token + chargement dashboard
+  // =========================================================================
+
+  const $ = id => document.getElementById(id);
+
+  function fmtEUR(n) {
+    if (!n) return '0 €';
+    return Number(n).toLocaleString('fr-FR') + ' €';
+  }
+  function initiales(prenom, nom) {
+    return ((prenom||'?')[0] + (nom||'?')[0]).toUpperCase();
+  }
+
+  function showError(message, detail) {
+    $('loading-screen').style.display = 'none';
+    $('error-screen').style.display = 'grid';
+    if (message) $('error-message').textContent = message;
+    if (detail) $('error-detail').textContent = detail;
+  }
+
+  async function boot() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('t');
+
+    if (!token) {
+      showError(
+        'Aucun lien admin détecté.',
+        'Ouvre cette page via le lien personnel qui t\'a été envoyé.'
+      );
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/dashboard/${token}`);
+      const json = await res.json();
+
+      if (json.error) {
+        showError(
+          json.error === 'Invalid admin token'
+            ? 'Ton lien admin est invalide ou désactivé.'
+            : 'Erreur de connexion : ' + json.error,
+          json.detail || token.slice(0, 12) + '…'
+        );
+        return;
+      }
+
+      renderDashboard(json);
+    } catch (err) {
+      showError('Erreur réseau', err.message);
+    }
+  }
+
+  function renderDashboard(data) {
+    const { admin, saison, stats } = data;
+
+    // === Sidebar : profil admin
+    $('sb-avatar').textContent = initiales(admin.prenom, admin.nom);
+    $('sb-user-name').textContent = `${admin.prenom} ${admin.nom}`;
+    $('sb-user-role').textContent = admin.role === 'admin' ? 'Administrateur' : admin.role;
+    $('sb-badge-partners').textContent = stats.partenaires_actifs || 0;
+
+    // === Accueil : hero
+    $('greeting-name').textContent = admin.prenom || 'équipe';
+    $('stat-partenaires-mini').textContent = stats.partenaires_actifs || 0;
+    $('stat-alertes-mini').textContent = stats.alertes_total || 0;
+
+    // === Stats cards
+    $('stat-chiffre').textContent = fmtEUR(stats.chiffre_signe);
+    $('stat-saison').textContent = saison || '—';
+    $('stat-partenaires').textContent = stats.partenaires_actifs || 0;
+    $('stat-packs').textContent = stats.packs_configures || 0;
+    $('stat-alertes').textContent = stats.alertes_total || 0;
+
+    // === Reveal UI
+    $('loading-screen').style.display = 'none';
+    $('sidebar').style.display = 'flex';
+    $('main').style.display = 'flex';
+  }
+
+  // =========================================================================
+  //  Navigation entre pages (déjà existant, conservé)
+  // =========================================================================
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + name);
+    if (target) target.classList.add('active');
+
+    const bc = document.getElementById('breadcrumb-current');
+    const labels = {
+      'home': 'Accueil',
+      'partners': 'Partenaires',
+      'partner-detail': 'Partenaires <span class="breadcrumb-sep">/</span> <b>PICOTY</b>',
+      'soon': 'Module en préparation'
+    };
+    if (name === 'partner-detail') {
+      bc.innerHTML = '<span style="color:var(--ink-muted);">Partenaires</span> <span class="breadcrumb-sep">/</span> <b>PICOTY</b>';
+    } else {
+      bc.innerHTML = '<b>' + (labels[name] || name) + '</b>';
+    }
+
+    document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+    const activeSb = document.querySelector(`[onclick="showPage('${name}')"]`);
+    if (activeSb && activeSb.classList.contains('sb-link')) activeSb.classList.add('active');
+    else if (name === 'partner-detail') document.querySelector('[onclick="showPage(\'partners\')"]').classList.add('active');
+
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  // Démarrage
+  boot();
+</script>
+
+</body>
+</html>
