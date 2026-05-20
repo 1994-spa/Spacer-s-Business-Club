@@ -1,14 +1,17 @@
 /**
  * Spacers Business Club — Worker proxy + static assets
- * V3.10 — Magic token route added
+ * V3.13 — Admin routes + pilote routing
  *
  * Routes :
- *   GET /                              → public/index.html (PWA)
- *   GET /api/ping                      → health check
- *   GET /api/partner/:siren            → JSON par SIREN (dev / fallback)
- *   GET /api/partner-by-token/:token   → JSON par magic token (prod auth)
+ *   GET /                                  → public/index.html (PWA partenaire)
+ *   GET /pilote                            → public/pilote.html (PWA admin)
+ *   GET /api/ping                          → health check
+ *   GET /api/partner/:siren                → JSON par SIREN (dev / fallback)
+ *   GET /api/partner-by-token/:token       → JSON par magic token (partenaire)
+ *   GET /api/admin/auth/:token             → vérifier magic token admin
+ *   GET /api/admin/dashboard/:token        → stats globales admin
  *
- * Secret requis : env.API_TOKEN (configuré dans Cloudflare Worker Settings)
+ * Secret requis : env.API_TOKEN (Cloudflare Worker Settings → Variables)
  */
 
 const APPS_SCRIPT_URL =
@@ -28,7 +31,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Routes API → logique Worker
+    // Routes API
     if (path.startsWith('/api/')) {
       if (request.method === 'OPTIONS') {
         return new Response(null, { headers: CORS_HEADERS });
@@ -36,7 +39,16 @@ export default {
       return await handleApi(request, env, path);
     }
 
-    // Static assets via le binding ASSETS
+    // Routing /pilote → pilote.html
+    if (path === '/pilote' || path === '/pilote/') {
+      const rewritten = new Request(
+        new URL('/pilote.html', request.url).toString(),
+        request
+      );
+      return env.ASSETS.fetch(rewritten);
+    }
+
+    // Static assets (index.html par défaut)
     return env.ASSETS.fetch(request);
   },
 };
@@ -53,40 +65,59 @@ async function handleApi(request, env, path) {
     queryString = 'action=ping';
   }
   // /api/partner/:siren — accès direct par SIREN (dev / fallback)
-  else if (path.startsWith('/api/partner/')) {
+  else if (path.startsWith('/api/partner/') && !path.startsWith('/api/partner-by-token/')) {
     const m = path.match(/^\/api\/partner\/(\d+)$/);
     if (m) {
-      if (!env.API_TOKEN) {
-        return jsonResponse({
-          error: 'API_TOKEN not configured',
-          detail: 'Add secret API_TOKEN in Cloudflare Worker Settings',
-        }, 500);
-      }
+      if (!env.API_TOKEN) return jsonResponse({ error: 'API_TOKEN not configured' }, 500);
       const siren = m[1];
       queryString = `action=partner&siren=${siren}&token=${env.API_TOKEN}`;
     } else {
       return jsonResponse({ error: 'Invalid SIREN format' }, 400);
     }
   }
-  // /api/partner-by-token/:token — accès par magic token (prod auth)
+  // /api/partner-by-token/:token
   else if (path.startsWith('/api/partner-by-token/')) {
     const m = path.match(/^\/api\/partner-by-token\/([a-zA-Z0-9_-]{16,})$/);
     if (m) {
-      if (!env.API_TOKEN) {
-        return jsonResponse({
-          error: 'API_TOKEN not configured',
-        }, 500);
-      }
+      if (!env.API_TOKEN) return jsonResponse({ error: 'API_TOKEN not configured' }, 500);
       const magicToken = m[1];
       queryString = `action=partner-by-token&magic_token=${magicToken}&token=${env.API_TOKEN}`;
     } else {
       return jsonResponse({ error: 'Invalid magic token format' }, 400);
     }
   }
+  // /api/admin/auth/:token — vérifier token admin
+  else if (path.startsWith('/api/admin/auth/')) {
+    const m = path.match(/^\/api\/admin\/auth\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) {
+      if (!env.API_TOKEN) return jsonResponse({ error: 'API_TOKEN not configured' }, 500);
+      const adminToken = m[1];
+      queryString = `action=admin-auth&magic_token=${adminToken}&token=${env.API_TOKEN}`;
+    } else {
+      return jsonResponse({ error: 'Invalid admin token format' }, 400);
+    }
+  }
+  // /api/admin/dashboard/:token — stats globales
+  else if (path.startsWith('/api/admin/dashboard/')) {
+    const m = path.match(/^\/api\/admin\/dashboard\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) {
+      if (!env.API_TOKEN) return jsonResponse({ error: 'API_TOKEN not configured' }, 500);
+      const adminToken = m[1];
+      queryString = `action=admin-dashboard&magic_token=${adminToken}&token=${env.API_TOKEN}`;
+    } else {
+      return jsonResponse({ error: 'Invalid admin token format' }, 400);
+    }
+  }
   else {
     return jsonResponse({
       error: 'Not found',
-      available_routes: ['/api/ping', '/api/partner/:siren', '/api/partner-by-token/:token'],
+      available_routes: [
+        '/api/ping',
+        '/api/partner/:siren',
+        '/api/partner-by-token/:token',
+        '/api/admin/auth/:token',
+        '/api/admin/dashboard/:token',
+      ],
       path: path,
     }, 404);
   }
@@ -94,10 +125,7 @@ async function handleApi(request, env, path) {
   try {
     const upstreamUrl = `${APPS_SCRIPT_URL}?${queryString}`;
     const upstream = await fetch(upstreamUrl, {
-      cf: {
-        cacheTtl: CACHE_TTL_SECONDS,
-        cacheEverything: true,
-      },
+      cf: { cacheTtl: CACHE_TTL_SECONDS, cacheEverything: true },
     });
     const body = await upstream.text();
 
@@ -111,10 +139,7 @@ async function handleApi(request, env, path) {
       },
     });
   } catch (err) {
-    return jsonResponse({
-      error: 'Upstream fetch failed',
-      detail: err.message,
-    }, 502);
+    return jsonResponse({ error: 'Upstream fetch failed', detail: err.message }, 502);
   }
 }
 
