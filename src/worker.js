@@ -109,6 +109,20 @@ async function handleApi(request, env, path) {
     m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)$/);
     if (m) return await handleAdminPartnerDetail(m[1], m[2], env);
 
+    // ===== TICKIE (Vivenu) routes =====
+    if (path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/)) {
+      const tm = path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/);
+      return await handleTickiePing(tm[1], env);
+    }
+    if (path.match(/^\/api\/admin\/tickie\/customers\/([a-zA-Z0-9_-]{16,})$/)) {
+      const tm = path.match(/^\/api\/admin\/tickie\/customers\/([a-zA-Z0-9_-]{16,})$/);
+      return await handleTickieCustomers(tm[1], env);
+    }
+    if (path.match(/^\/api\/admin\/tickie\/events\/([a-zA-Z0-9_-]{16,})$/)) {
+      const tm = path.match(/^\/api\/admin\/tickie\/events\/([a-zA-Z0-9_-]{16,})$/);
+      return await handleTickieEvents(tm[1], env);
+    }
+
     return jsonResponse({
       error: 'Not found',
       available_routes: [
@@ -120,6 +134,9 @@ async function handleApi(request, env, path) {
         'GET  /api/admin/partner/:token/:contractId',
         'POST /api/admin/prestation-livrer/:token/:prestationId',
         'POST /api/admin/pack-utiliser/:token/:packId',
+        'GET  /api/admin/tickie/ping/:token',
+        'GET  /api/admin/tickie/customers/:token',
+        'GET  /api/admin/tickie/events/:token',
       ],
       path,
     }, 404);
@@ -629,4 +646,139 @@ function jsonResponseNoCache(data, status = 200) {
       ...CORS,
     },
   });
+}
+
+// ============================================================================
+//  TICKIE (Vivenu) — Sprint Tickie 1 : exploration
+// ============================================================================
+//
+//  Variables d'environnement requises :
+//    - TICKIE_API_KEY : Bearer token Tickie (secret Cloudflare)
+//    - TICKIE_BASE_URL (optionnel) : "https://vivenu.com/api" par défaut
+//
+//  Endpoints exposés :
+//    - GET /api/admin/tickie/ping/:token       → test connexion + comptes
+//    - GET /api/admin/tickie/customers/:token  → liste customers Tickie
+//    - GET /api/admin/tickie/events/:token     → liste events (matchs)
+//
+// ============================================================================
+
+const TICKIE_DEFAULT_BASE = 'https://vivenu.com/api';
+
+async function tickieRequest_(path, env, queryParams) {
+  if (!env.TICKIE_API_KEY) {
+    throw new Error('TICKIE_API_KEY not configured in Worker Secrets');
+  }
+  const base = env.TICKIE_BASE_URL || TICKIE_DEFAULT_BASE;
+  const qs = queryParams ? '?' + new URLSearchParams(queryParams).toString() : '';
+  const url = `${base}${path}${qs}`;
+
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${env.TICKIE_API_KEY}`,
+      'Accept': 'application/json',
+    },
+    cf: { cacheTtl: 30, cacheEverything: true },
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`Tickie ${res.status} on ${path}: ${text.slice(0, 300)}`);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+// ----------- GET /api/admin/tickie/ping/:token -----------
+// Teste la connexion Tickie et retourne quelques stats minimales
+
+async function handleTickiePing(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  try {
+    // Pull les 3 premiers events et 3 premiers customers pour valider la connexion
+    const [eventsRes, customersRes] = await Promise.all([
+      tickieRequest_('/events', env, { top: '3' }).catch(e => ({ error: e.message })),
+      tickieRequest_('/customers', env, { top: '3' }).catch(e => ({ error: e.message })),
+    ]);
+
+    return jsonResponseNoCache({
+      status: 'ok',
+      tickie_base_url: env.TICKIE_BASE_URL || TICKIE_DEFAULT_BASE,
+      sample_events: eventsRes,
+      sample_customers: customersRes,
+      meta: {
+        version: 'V4.3-tickie-explore',
+        generated_at: new Date().toISOString(),
+      },
+    });
+  } catch (e) {
+    return jsonResponseNoCache({
+      status: 'error',
+      error: e.message,
+      hint: 'Vérifie TICKIE_API_KEY dans Worker Secrets',
+    }, 500);
+  }
+}
+
+// ----------- GET /api/admin/tickie/customers/:token -----------
+// Liste tous les customers Tickie pour faire le mapping avec nos partenaires
+
+async function handleTickieCustomers(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  try {
+    const raw = await tickieRequest_('/customers', env, { top: '500' });
+    // Vivenu retourne { rows: [...], total } OU { docs: [...] } selon endpoint
+    const customers = raw.rows || raw.docs || (Array.isArray(raw) ? raw : []);
+
+    // On mappe seulement les champs utiles
+    const simplified = customers.map(c => ({
+      tickie_id: c._id || c.id,
+      email: c.email || '',
+      company: c.company || '',
+      firstname: c.firstname || '',
+      lastname: c.lastname || '',
+      created_at: c.createdAt || null,
+    }));
+
+    return jsonResponseNoCache({
+      total: simplified.length,
+      customers: simplified,
+      meta: { version: 'V4.3', generated_at: new Date().toISOString() },
+    });
+  } catch (e) {
+    return jsonResponseNoCache({ error: e.message }, 500);
+  }
+}
+
+// ----------- GET /api/admin/tickie/events/:token -----------
+// Liste tous les events Tickie (matchs de la saison)
+
+async function handleTickieEvents(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  try {
+    const raw = await tickieRequest_('/events', env, { top: '100' });
+    const events = raw.rows || raw.docs || (Array.isArray(raw) ? raw : []);
+
+    const simplified = events.map(e => ({
+      tickie_id: e._id || e.id,
+      name: e.name || e.title || '',
+      start: e.start || e.startDate || null,
+      end: e.end || e.endDate || null,
+      sellStart: e.sellStart || null,
+      sellEnd: e.sellEnd || null,
+      location_name: e.locationName || e.location?.name || '',
+    }));
+
+    return jsonResponseNoCache({
+      total: simplified.length,
+      events: simplified,
+      meta: { version: 'V4.3', generated_at: new Date().toISOString() },
+    });
+  } catch (e) {
+    return jsonResponseNoCache({ error: e.message }, 500);
+  }
 }
