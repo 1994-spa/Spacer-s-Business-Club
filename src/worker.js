@@ -1,13 +1,14 @@
 /**
  * Spacers Business Club — Worker proxy + static assets
+ * V3.10 — Magic token route added
  *
  * Routes :
- *   GET /                          → public/index.html (PWA)
- *   GET /api/ping                  → health check (proxy action=ping)
- *   GET /api/partner/:siren        → JSON complet pour ce SIREN
- *   GET /autre/chose               → fallback sur les static assets
+ *   GET /                              → public/index.html (PWA)
+ *   GET /api/ping                      → health check
+ *   GET /api/partner/:siren            → JSON par SIREN (dev / fallback)
+ *   GET /api/partner-by-token/:token   → JSON par magic token (prod auth)
  *
- * Secret requis : env.API_TOKEN (configurer dans Cloudflare Workers Settings)
+ * Secret requis : env.API_TOKEN (configuré dans Cloudflare Worker Settings)
  */
 
 const APPS_SCRIPT_URL =
@@ -29,14 +30,13 @@ export default {
 
     // Routes API → logique Worker
     if (path.startsWith('/api/')) {
-      // CORS preflight
       if (request.method === 'OPTIONS') {
         return new Response(null, { headers: CORS_HEADERS });
       }
       return await handleApi(request, env, path);
     }
 
-    // Toutes les autres routes → static assets via le binding ASSETS
+    // Static assets via le binding ASSETS
     return env.ASSETS.fetch(request);
   },
 };
@@ -48,12 +48,12 @@ async function handleApi(request, env, path) {
 
   let queryString = '';
 
-  // /api/ping → health check
+  // /api/ping
   if (path === '/api/ping') {
     queryString = 'action=ping';
   }
-  // /api/partner/:siren → données partenaire
-  else {
+  // /api/partner/:siren — accès direct par SIREN (dev / fallback)
+  else if (path.startsWith('/api/partner/')) {
     const m = path.match(/^\/api\/partner\/(\d+)$/);
     if (m) {
       if (!env.API_TOKEN) {
@@ -65,12 +65,30 @@ async function handleApi(request, env, path) {
       const siren = m[1];
       queryString = `action=partner&siren=${siren}&token=${env.API_TOKEN}`;
     } else {
-      return jsonResponse({
-        error: 'Not found',
-        available_routes: ['/api/ping', '/api/partner/:siren'],
-        path: path,
-      }, 404);
+      return jsonResponse({ error: 'Invalid SIREN format' }, 400);
     }
+  }
+  // /api/partner-by-token/:token — accès par magic token (prod auth)
+  else if (path.startsWith('/api/partner-by-token/')) {
+    const m = path.match(/^\/api\/partner-by-token\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) {
+      if (!env.API_TOKEN) {
+        return jsonResponse({
+          error: 'API_TOKEN not configured',
+        }, 500);
+      }
+      const magicToken = m[1];
+      queryString = `action=partner-by-token&magic_token=${magicToken}&token=${env.API_TOKEN}`;
+    } else {
+      return jsonResponse({ error: 'Invalid magic token format' }, 400);
+    }
+  }
+  else {
+    return jsonResponse({
+      error: 'Not found',
+      available_routes: ['/api/ping', '/api/partner/:siren', '/api/partner-by-token/:token'],
+      path: path,
+    }, 404);
   }
 
   try {
