@@ -455,17 +455,43 @@ function renderDashboard(data) {
 }
 
 // =========================================================================
-//  Bootstrap
+//  Bootstrap — résolution de l'identité partenaire
+//
+//  Ordre de priorité :
+//    1. ?t=TOKEN   → magic token (PROD, recommandé)
+//    2. ?siren=XXX → SIREN direct (DEV / debug uniquement)
+//    3. Pas de paramètre → écran "Accès requis"
 // =========================================================================
 (async () => {
   const params = new URLSearchParams(location.search);
-  const siren = params.get('siren') || '812192102';  // fallback démo : COMFORT
+  const magicToken = params.get('t');
+  const siren = params.get('siren');
+
+  let apiUrl;
+  let identityLabel;
+
+  if (magicToken) {
+    apiUrl = `/api/partner-by-token/${encodeURIComponent(magicToken)}`;
+    identityLabel = 'token';
+  } else if (siren) {
+    apiUrl = `/api/partner/${encodeURIComponent(siren)}`;
+    identityLabel = `SIREN ${siren}`;
+  } else {
+    showError(
+      'Accès requis',
+      'Aucun token d\'accès fourni. Utilisez le lien personnel envoyé par email.'
+    );
+    return;
+  }
 
   try {
-    const r = await fetch(`/api/partner/${siren}`);
+    const r = await fetch(apiUrl);
     const data = await r.json();
     if (!r.ok || data.error) {
-      showError(data.error || `Erreur ${r.status}`, data.detail || `SIREN: ${siren}`);
+      showError(
+        data.error || `Erreur ${r.status}`,
+        data.detail || `Identité : ${identityLabel}`
+      );
       return;
     }
     renderDashboard(data);
