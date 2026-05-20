@@ -84,6 +84,14 @@ async function handleApi(path, env) {
     m = path.match(/^\/api\/admin\/dashboard\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminDashboard(m[1], env);
 
+    // Admin partners list
+    m = path.match(/^\/api\/admin\/partners\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminPartners(m[1], env);
+
+    // Admin partner detail
+    m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)$/);
+    if (m) return await handleAdminPartnerDetail(m[1], m[2], env);
+
     return jsonResponse({
       error: 'Not found',
       available_routes: [
@@ -91,6 +99,8 @@ async function handleApi(path, env) {
         '/api/partner-by-token/:token',
         '/api/admin/auth/:token',
         '/api/admin/dashboard/:token',
+        '/api/admin/partners/:token',
+        '/api/admin/partner/:token/:contractId',
       ],
       path,
     }, 404);
@@ -300,6 +310,163 @@ function jsonResponse(data, status = 200) {
       'Cache-Control': `public, max-age=${CACHE_TTL}`,
       'X-Backend': 'supabase',
       ...CORS,
+    },
+  });
+}
+
+// ============================================================================
+//  ADMIN PARTNERS LIST — V4.1
+// ============================================================================
+
+async function handleAdminPartners(token, env) {
+  // Auth
+  const admins = await supabaseQuery(
+    'admins',
+    `magic_token=eq.${token}&actif=eq.true&select=id&limit=1`,
+    env
+  );
+  if (!admins || admins.length === 0) {
+    return jsonResponse({ error: 'Invalid admin token' }, 401);
+  }
+
+  const saisonActive = '2026-2027';
+
+  // Fetch contrats + relations (partenaire, prestations agrégées, packs agrégés)
+  const contrats = await supabaseQuery(
+    'contrats',
+    `saison=eq.${saisonActive}` +
+    `&select=id,saison,type,montant_ht,montant_ttc,statut,magic_token,date_debut,date_fin,` +
+    `partenaire:partenaires(id,siren,raison_sociale,representant,representant_fonction,niveau),` +
+    `prestations(id,nb_total,nb_livre),` +
+    `packs_places(id,alloues,utilises,seuil_alerte)` +
+    `&order=id.asc`,
+    env
+  );
+
+  const partners = contrats.map(c => {
+    const p = c.partenaire || {};
+    const prestations = c.prestations || [];
+    const packsArr = c.packs_places || [];
+
+    const nbPrest = prestations.length;
+    const nbPrestLivrees = prestations.filter(pr => Number(pr.nb_livre) >= Number(pr.nb_total) && Number(pr.nb_total) > 0).length;
+
+    const pack = packsArr.length > 0 ? packsArr[0] : null;
+    const packAlloues = pack ? Number(pack.alloues || 0) : 0;
+    const packUtilises = pack ? Number(pack.utilises || 0) : 0;
+
+    return {
+      contrat_id: c.id,
+      raison_sociale: p.raison_sociale || '—',
+      siren: p.siren || '',
+      representant: p.representant || '',
+      fonction: p.representant_fonction || '',
+      niveau: p.niveau || '',
+      type: c.type || '—',
+      montant_ht: Number(c.montant_ht || 0),
+      montant_ttc: Number(c.montant_ttc || 0),
+      statut: c.statut || '—',
+      date_debut: c.date_debut || null,
+      date_fin: c.date_fin || null,
+      nb_prestations: nbPrest,
+      nb_prestations_livrees: nbPrestLivrees,
+      pack_alloues: packAlloues,
+      pack_utilises: packUtilises,
+      magic_token: c.magic_token || '',
+    };
+  });
+
+  return jsonResponse({
+    saison: saisonActive,
+    count_total: partners.length,
+    partners,
+    meta: {
+      version: 'V4.1-supabase',
+      generated_at: new Date().toISOString(),
+    },
+  });
+}
+
+// ============================================================================
+//  ADMIN PARTNER DETAIL — V4.1
+// ============================================================================
+
+async function handleAdminPartnerDetail(token, contractId, env) {
+  // Auth
+  const admins = await supabaseQuery(
+    'admins',
+    `magic_token=eq.${token}&actif=eq.true&select=id&limit=1`,
+    env
+  );
+  if (!admins || admins.length === 0) {
+    return jsonResponse({ error: 'Invalid admin token' }, 401);
+  }
+
+  // Fetch contrat avec toutes les relations
+  const rows = await supabaseQuery(
+    'contrats',
+    `id=eq.${contractId}` +
+    `&select=*,partenaire:partenaires(*),prestations(*),packs_places(*)` +
+    `&limit=1`,
+    env
+  );
+
+  if (!rows || rows.length === 0) {
+    return jsonResponse({ error: 'Contrat introuvable', contractId }, 404);
+  }
+
+  const c = rows[0];
+  const p = c.partenaire || {};
+  const prestations = (c.prestations || []).sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+  const packsArr = (c.packs_places || []);
+  const pack = packsArr.length > 0 ? packsArr[0] : null;
+
+  return jsonResponse({
+    partenaire: {
+      id: p.id || '',
+      raison_sociale: p.raison_sociale || '',
+      siren: p.siren || '',
+      secteur: p.secteur || '',
+      adresse: p.adresse || '',
+      representant: p.representant || '',
+      representant_email: p.representant_email || '',
+      fonction: p.representant_fonction || '',
+      niveau: p.niveau || '',
+    },
+    contrat: {
+      id: c.id,
+      saison: c.saison || '',
+      type: c.type || '',
+      montant_ht: Number(c.montant_ht || 0),
+      tva: Number(c.tva || 0),
+      montant_ttc: Number(c.montant_ttc || 0),
+      date_debut: c.date_debut || null,
+      date_fin: c.date_fin || null,
+      statut: c.statut || '',
+      lien_doc: c.lien_doc || '',
+      magic_token: c.magic_token || '',
+    },
+    prestations: prestations.map(pr => ({
+      id: pr.id,
+      code: pr.code || '',
+      designation: pr.designation || '',
+      detail: pr.detail || '',
+      nb_total: Number(pr.nb_total || 0),
+      nb_livre: Number(pr.nb_livre || 0),
+      nb_restant: Math.max(0, Number(pr.nb_total || 0) - Number(pr.nb_livre || 0)),
+      statut: pr.statut || '',
+    })),
+    pack_places: pack ? {
+      id: pack.id,
+      libelle: pack.libelle || '',
+      alloues: Number(pack.alloues || 0),
+      utilises: Number(pack.utilises || 0),
+      restants: Number(pack.restants || (pack.alloues - pack.utilises) || 0),
+      seuil_alerte: Number(pack.seuil_alerte || 3),
+    } : null,
+    meta: {
+      version: 'V4.1-supabase',
+      generated_at: new Date().toISOString(),
     },
   });
 }
