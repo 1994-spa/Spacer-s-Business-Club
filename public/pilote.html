@@ -176,6 +176,7 @@
   .page { display: none; }
   .page.active { display: block; animation: fadeUp .35s ease; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
 
   /* Placeholder for unfinished pages */
   .empty-state { padding: 80px 20px; text-align: center; }
@@ -204,9 +205,23 @@
     .topbar-search { display: none; }
     .stats { grid-template-columns: 1fr 1fr; }
   }
+
+  /* TOAST notifications */
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+  .toast { background: var(--ink); color: white; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 20px rgba(10,22,40,.25); opacity: 0; transform: translateY(20px) scale(.95); transition: opacity .25s, transform .25s; pointer-events: auto; max-width: 360px; }
+  .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+  .toast-success { background: var(--green); }
+  .toast-error { background: var(--red); }
+  .toast-info { background: var(--ink); }
+
+  /* Disable state while mutating */
+  .mutating { opacity: .5; pointer-events: none; }
 </style>
 </head>
 <body>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toast-wrap"></div>
 
 <!-- ====================== LOADING ====================== -->
 <div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:1000;">
@@ -792,13 +807,16 @@
     } else {
       $('detail-prestations-tbody').innerHTML = prestations.map(pr => {
         const pct = pr.nb_total > 0 ? Math.round(100 * pr.nb_livre / pr.nb_total) : 0;
-        const badgeClass = pct === 100 ? 'green' : (pct > 0 ? 'gold' : 'gold');
+        const badgeClass = pct === 100 ? 'green' : 'gold';
+        const livreesComplete = pr.nb_total > 0 && pr.nb_livre >= pr.nb_total;
         return `
           <tr>
             <td class="mono">${pr.code}</td>
             <td><b>${pr.designation || pr.code}</b>${pr.detail ? '<br><small style="color:var(--ink-muted);">' + pr.detail + '</small>' : ''}</td>
             <td><span class="badge ${badgeClass} dot">${pr.nb_livre}/${pr.nb_total}</span></td>
-            <td style="text-align:right;"><button class="btn ghost sm" disabled>+1 livré</button></td>
+            <td style="text-align:right;">
+              <button class="btn ${livreesComplete ? 'ghost' : 'primary'} sm" ${livreesComplete ? 'disabled' : ''} onclick="livrerPrestation('${pr.id}')">+1 livré</button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -806,6 +824,7 @@
 
     // Pack VIP
     if (pack_places) {
+      const packEpuise = pack_places.restants <= 0;
       $('detail-pack-id').textContent = pack_places.id;
       $('detail-pack-body').innerHTML = `
         <div style="font-size:36px;font-weight:700;letter-spacing:-.02em;line-height:1;">${pack_places.restants}<span style="font-size:14px;font-weight:500;color:var(--ink-muted);">/${pack_places.alloues}</span></div>
@@ -813,9 +832,8 @@
         <div style="margin-top:14px;height:6px;background:var(--bg-soft);border-radius:99px;overflow:hidden;">
           <div style="width:${pack_places.alloues > 0 ? (100 * pack_places.restants / pack_places.alloues) : 0}%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-soft));"></div>
         </div>
-        <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <button class="btn ghost sm" disabled>−1 place</button>
-          <button class="btn primary sm" disabled>+1 présence</button>
+        <div style="margin-top:18px;">
+          <button class="btn ${packEpuise ? 'ghost' : 'primary'} sm" style="width:100%;" ${packEpuise ? 'disabled' : ''} onclick="utiliserPack('${pack_places.id}')">+1 présence</button>
         </div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-muted);">
           Seuil alerte : ${pack_places.seuil_alerte} places
@@ -846,6 +864,70 @@
       return;
     }
     window.open(CURRENT_PARTNER.contrat.lien_doc, '_blank');
+  }
+
+  // =========================================================================
+  //  Mutations
+  // =========================================================================
+  async function livrerPrestation(prestationId) {
+    if (!confirm('Marquer 1 unité supplémentaire comme livrée ?\n\nCette action est tracée dans l\'audit log.')) return;
+    try {
+      const res = await fetch(`/api/admin/prestation-livrer/${ADMIN_TOKEN}/${prestationId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 1 }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        toast('❌ ' + json.error, 'red');
+        return;
+      }
+      toast(`✅ Prestation ${json.prestation.code} : ${json.prestation.nb_livre}/${json.prestation.nb_total}`, 'green');
+      if (CURRENT_PARTNER) {
+        await showPartnerDetail(CURRENT_PARTNER.contrat.id);
+      }
+      PARTNERS_CACHE = null; // invalide le cache liste
+    } catch (err) {
+      toast('❌ Erreur réseau : ' + err.message, 'red');
+    }
+  }
+
+  async function utiliserPack(packId) {
+    if (!confirm('Décompter 1 place du pack VIP ?\n\nCette action est tracée dans l\'audit log.')) return;
+    try {
+      const res = await fetch(`/api/admin/pack-utiliser/${ADMIN_TOKEN}/${packId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 1 }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        toast('❌ ' + json.error, 'red');
+        return;
+      }
+      toast(`✅ Pack ${packId} : ${json.pack.restants}/${json.pack.alloues} places restantes`, 'green');
+      if (CURRENT_PARTNER) {
+        await showPartnerDetail(CURRENT_PARTNER.contrat.id);
+      }
+      PARTNERS_CACHE = null;
+    } catch (err) {
+      toast('❌ Erreur réseau : ' + err.message, 'red');
+    }
+  }
+
+  // =========================================================================
+  //  Toast notifications
+  // =========================================================================
+  function toast(message, color = 'green') {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.className = 'toast';
+    const bg = color === 'red' ? 'var(--red)' : (color === 'green' ? 'var(--green)' : 'var(--ink)');
+    el.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${bg};color:white;padding:12px 20px;border-radius:8px;font-size:13.5px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:300;animation:slideUp .25s ease;`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3500);
   }
 
   // =========================================================================
