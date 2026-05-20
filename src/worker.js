@@ -33,7 +33,7 @@ export default {
       if (request.method === 'OPTIONS') {
         return new Response(null, { headers: CORS });
       }
-      return await handleApi(path, env);
+      return await handleApi(request, env, path);
     }
 
     // Routing /pilote → pilote.html
@@ -53,7 +53,7 @@ export default {
 //  ROUTING API
 // ============================================================================
 
-async function handleApi(path, env) {
+async function handleApi(request, env, path) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({
       error: 'Supabase credentials not configured',
@@ -61,12 +61,29 @@ async function handleApi(path, env) {
     }, 500);
   }
 
+  const method = request.method;
+
   try {
+    // ===== POST : mutations admin =====
+    if (method === 'POST') {
+      let body = null;
+      try { body = await request.json(); } catch {}
+
+      let m = path.match(/^\/api\/admin\/prestation-livrer\/([a-zA-Z0-9_-]{16,})\/(PRE-[0-9]+-[0-9]+)$/);
+      if (m) return await handlePrestationLivrer(m[1], m[2], body, env);
+
+      m = path.match(/^\/api\/admin\/pack-utiliser\/([a-zA-Z0-9_-]{16,})\/(PAC-[0-9]+-[0-9]+)$/);
+      if (m) return await handlePackUtiliser(m[1], m[2], body, env);
+
+      return jsonResponse({ error: 'Unknown POST route', path }, 404);
+    }
+
+    // ===== GET =====
     // Health check
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4 — Supabase',
+        version: 'V4.2 — Supabase + mutations',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -95,12 +112,14 @@ async function handleApi(path, env) {
     return jsonResponse({
       error: 'Not found',
       available_routes: [
-        '/api/ping',
-        '/api/partner-by-token/:token',
-        '/api/admin/auth/:token',
-        '/api/admin/dashboard/:token',
-        '/api/admin/partners/:token',
-        '/api/admin/partner/:token/:contractId',
+        'GET  /api/ping',
+        'GET  /api/partner-by-token/:token',
+        'GET  /api/admin/auth/:token',
+        'GET  /api/admin/dashboard/:token',
+        'GET  /api/admin/partners/:token',
+        'GET  /api/admin/partner/:token/:contractId',
+        'POST /api/admin/prestation-livrer/:token/:prestationId',
+        'POST /api/admin/pack-utiliser/:token/:packId',
       ],
       path,
     }, 404);
@@ -261,7 +280,7 @@ async function handleAdminDashboard(token, env) {
   const packs_configures = packs.length;
   const alertes_total = alertes.length;
 
-  return jsonResponse({
+  return jsonResponseNoCache({
     admin,
     saison: saisonActive,
     stats: {
@@ -271,7 +290,7 @@ async function handleAdminDashboard(token, env) {
       alertes_total,
     },
     meta: {
-      version: 'V4-supabase',
+      version: 'V4.2-supabase',
       generated_at: new Date().toISOString(),
     },
   });
@@ -376,12 +395,12 @@ async function handleAdminPartners(token, env) {
     };
   });
 
-  return jsonResponse({
+  return jsonResponseNoCache({
     saison: saisonActive,
     count_total: partners.length,
     partners,
     meta: {
-      version: 'V4.1-supabase',
+      version: 'V4.2-supabase',
       generated_at: new Date().toISOString(),
     },
   });
@@ -421,7 +440,7 @@ async function handleAdminPartnerDetail(token, contractId, env) {
   const packsArr = (c.packs_places || []);
   const pack = packsArr.length > 0 ? packsArr[0] : null;
 
-  return jsonResponse({
+  return jsonResponseNoCache({
     partenaire: {
       id: p.id || '',
       raison_sociale: p.raison_sociale || '',
@@ -465,8 +484,149 @@ async function handleAdminPartnerDetail(token, contractId, env) {
       seuil_alerte: Number(pack.seuil_alerte || 3),
     } : null,
     meta: {
-      version: 'V4.1-supabase',
+      version: 'V4.2-supabase',
       generated_at: new Date().toISOString(),
+    },
+  });
+}
+
+// ============================================================================
+//  MUTATIONS — V4.2
+// ============================================================================
+
+async function authAdmin_(token, env) {
+  const admins = await supabaseQuery(
+    'admins',
+    `magic_token=eq.${token}&actif=eq.true&select=id,prenom,nom,role&limit=1`,
+    env
+  );
+  return (admins && admins.length > 0) ? admins[0] : null;
+}
+
+async function supabasePatch_(table, filter, payload, env) {
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${filter}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(env), Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`PATCH ${table} ${res.status}: ${body.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+async function supabasePost_(table, payload, env) {
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok && res.status !== 201) {
+    const body = await res.text();
+    throw new Error(`POST ${table} ${res.status}: ${body.slice(0, 200)}`);
+  }
+  return true;
+}
+
+async function logAudit_(adminId, action, table, recordId, changes, env) {
+  // Fire-and-forget : on ne bloque pas si le log échoue
+  supabasePost_('audit_log', {
+    admin_id: adminId,
+    action: action,
+    table_name: table,
+    record_id: recordId,
+    changes: changes,
+  }, env).catch(() => {});
+}
+
+// ----------- POST /api/admin/prestation-livrer/:token/:prestationId -----------
+
+async function handlePrestationLivrer(token, prestationId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery('prestations', `id=eq.${prestationId}&select=*`, env);
+  if (!rows || rows.length === 0) {
+    return jsonResponseNoCache({ error: 'Prestation introuvable', id: prestationId }, 404);
+  }
+  const pre = rows[0];
+
+  const count = Math.max(1, Number((body && body.count) || 1));
+  const oldLivre = Number(pre.nb_livre || 0);
+  const total = Number(pre.nb_total || 0);
+  const newLivre = Math.min(total, oldLivre + count);
+  const newStatut = newLivre >= total && total > 0 ? 'Livrée' : (newLivre > 0 ? 'En cours' : 'A livrer');
+
+  await supabasePatch_('prestations', `id=eq.${prestationId}`,
+    { nb_livre: newLivre, statut: newStatut }, env);
+
+  logAudit_(admin.id, 'prestation_livrer', 'prestations', prestationId, {
+    from: oldLivre, to: newLivre, by: `${admin.prenom} ${admin.nom}`,
+  }, env);
+
+  return jsonResponseNoCache({
+    success: true,
+    prestation: {
+      id: prestationId,
+      code: pre.code,
+      nb_total: total,
+      nb_livre: newLivre,
+      nb_restant: Math.max(0, total - newLivre),
+      statut: newStatut,
+    },
+  });
+}
+
+// ----------- POST /api/admin/pack-utiliser/:token/:packId -----------
+
+async function handlePackUtiliser(token, packId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery('packs_places', `id=eq.${packId}&select=*`, env);
+  if (!rows || rows.length === 0) {
+    return jsonResponseNoCache({ error: 'Pack introuvable', id: packId }, 404);
+  }
+  const pack = rows[0];
+
+  const count = Math.max(1, Number((body && body.count) || 1));
+  const oldUtilises = Number(pack.utilises || 0);
+  const alloues = Number(pack.alloues || 0);
+  const newUtilises = Math.min(alloues, oldUtilises + count);
+
+  await supabasePatch_('packs_places', `id=eq.${packId}`,
+    { utilises: newUtilises }, env);
+
+  logAudit_(admin.id, 'pack_utiliser', 'packs_places', packId, {
+    from: oldUtilises, to: newUtilises, by: `${admin.prenom} ${admin.nom}`,
+  }, env);
+
+  return jsonResponseNoCache({
+    success: true,
+    pack: {
+      id: packId,
+      alloues: alloues,
+      utilises: newUtilises,
+      restants: Math.max(0, alloues - newUtilises),
+    },
+  });
+}
+
+// ============================================================================
+//  Helper : réponse sans cache (pour mutations + lectures admin sensibles)
+// ============================================================================
+
+function jsonResponseNoCache(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'X-Backend': 'supabase',
+      ...CORS,
     },
   });
 }
