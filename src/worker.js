@@ -845,22 +845,25 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
     return jsonResponseNoCache({ error: 'Email invalide', got: email }, 400);
   }
 
-  // Création customer Tickie
+  // Création customer Tickie — on ne met QUE les champs non-vides
   const tickiePayload = {
     primaryEmail: email,
     company: partenaire.raison_sociale,
-    prename: prenom,
-    lastname: nom,
     tags: ['PARTENAIRE_BC', `SAISON_${contrat.saison}`],
     externalId: contrat.id,
     verified: true,
-    meta: {
-      supabase_partenaire_id: partenaire.id,
-      saison: contrat.saison,
-      niveau: partenaire.niveau || '',
-    },
   };
+  if (prenom) tickiePayload.prename = prenom;
+  if (nom) tickiePayload.lastname = nom;
   if (telephone) tickiePayload.phone = telephone;
+
+  // meta : uniquement les clés qui ont une valeur
+  const meta = {
+    supabase_partenaire_id: partenaire.id,
+    saison: contrat.saison,
+  };
+  if (partenaire.niveau) meta.niveau = partenaire.niveau;
+  tickiePayload.meta = meta;
 
   let tickieCustomer;
   try {
