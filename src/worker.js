@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4
+ * Spacers Business Club — Worker V4.7.1
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -13,6 +13,8 @@
  *   GET /api/partner-by-token/:token       → JSON partenaire complet
  *   GET /api/admin/auth/:token             → profil admin seul
  *   GET /api/admin/dashboard/:token        → profil admin + stats globales
+ *
+ * V4.7.1 — Fix : url is not defined dans handleApi pour routes avec query string
  */
 
 const CACHE_TTL = 30; // secondes
@@ -60,6 +62,9 @@ async function handleApi(request, env, path) {
       detail: 'Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Worker Settings',
     }, 500);
   }
+
+  // V4.7.1 FIX : url manquait, ce qui cassait toutes les routes utilisant url.searchParams
+  const url = new URL(request.url);
 
   const method = request.method;
 
@@ -132,7 +137,7 @@ async function handleApi(request, env, path) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.2 — Supabase + mutations',
+        version: 'V4.7.1 — Supabase + mutations + url fix',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -1210,6 +1215,8 @@ async function handleAdminOffreDetail(token, offreId, env) {
       created_by: o.created_by || '',
       created_at: o.created_at,
       updated_at: o.updated_at,
+      // V4.7.1 : on expose aussi metadata pour que le pilote puisse afficher logo_b64, date_match, les_plus
+      metadata: o.metadata || {},
     },
   });
 }
