@@ -570,6 +570,18 @@
             <div style="text-align:center;padding:20px;color:var(--ink-muted);">Aucun pack VIP</div>
           </div>
         </div>
+
+        <div class="panel" style="margin-top:18px;">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Compte Tickie</div>
+              <div class="panel-sub">Billetterie partenaire</div>
+            </div>
+          </div>
+          <div style="padding:20px;" id="detail-tickie-body">
+            <div style="text-align:center;padding:14px;color:var(--ink-muted);font-size:13px;">Chargement…</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -587,6 +599,44 @@
   </section>
 
 </main>
+
+<!-- ============ MODALE TICKIE ============ -->
+<div id="tickie-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:14px;max-width:480px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
+    <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;">Créer un compte Tickie</div>
+    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:20px;" id="tickie-modal-sub">Pour <span id="tickie-modal-company">—</span></div>
+
+    <div style="display:grid;gap:12px;">
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Email du contact partenaire *
+        <input id="tickie-input-email" type="email" placeholder="contact@picoty.fr"
+          style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Prénom
+          <input id="tickie-input-prenom" type="text" placeholder="Thomas"
+            style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Nom
+          <input id="tickie-input-nom" type="text" placeholder="BOZEC"
+            style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+      </div>
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Téléphone (optionnel)
+        <input id="tickie-input-telephone" type="tel" placeholder="06 12 34 56 78"
+          style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+    </div>
+
+    <div style="margin-top:14px;padding:10px 14px;background:#fff8e1;border-left:3px solid var(--gold);border-radius:6px;font-size:12px;color:var(--ink-muted);line-height:1.5;">
+      ℹ️ Le customer sera créé dans Tickie avec le tag <code>PARTENAIRE_BC</code>. L'email de connexion peut être envoyé dans un second temps.
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+      <button class="btn ghost" onclick="closeTickieModal()">Annuler</button>
+      <button class="btn primary" id="tickie-modal-submit" onclick="submitTickieCustomer()">Créer le compte</button>
+    </div>
+  </div>
+</div>
 
 <script>
   // =========================================================================
@@ -842,6 +892,156 @@
     } else {
       $('detail-pack-id').textContent = '—';
       $('detail-pack-body').innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-muted);">Pas de pack VIP sur ce contrat</div>';
+    }
+
+    // Tickie
+    renderTickieSection();
+  }
+
+  function renderTickieSection() {
+    const p = CURRENT_PARTNER && CURRENT_PARTNER.partenaire;
+    if (!p) return;
+    const tid = p.tickie_customer_id;
+
+    if (!tid) {
+      $('detail-tickie-body').innerHTML = `
+        <div style="text-align:center;">
+          <div style="font-size:32px;margin-bottom:8px;">🎫</div>
+          <div style="color:var(--ink-muted);font-size:13px;margin-bottom:14px;">Pas de compte Tickie lié à ce partenaire</div>
+          <button class="btn primary" onclick="openTickieModal()">Créer compte Tickie</button>
+        </div>
+      `;
+    } else {
+      $('detail-tickie-body').innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="display:inline-flex;width:32px;height:32px;border-radius:50%;background:var(--green);color:white;align-items:center;justify-content:center;font-weight:600;">✓</span>
+          <div>
+            <div style="font-weight:500;font-size:14px;">Compte lié</div>
+            <div style="font-family:monospace;font-size:11px;color:var(--ink-muted);">${tid}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn ghost sm" onclick="sendTickieLogin()" id="btn-send-login">📧 Envoyer login</button>
+          <button class="btn ghost sm" onclick="unlinkTickie()" style="color:var(--red);">Délier</button>
+        </div>
+        <div style="margin-top:14px;padding:10px 14px;background:#f3f6fa;border-radius:6px;font-size:12px;color:var(--ink-muted);line-height:1.5;">
+          ℹ️ "Envoyer login" déclenche un email automatique de Tickie avec les identifiants de connexion.
+        </div>
+      `;
+    }
+  }
+
+  // Tickie modal handlers
+  function openTickieModal() {
+    if (!CURRENT_PARTNER) return;
+    const p = CURRENT_PARTNER.partenaire;
+    $('tickie-modal-company').textContent = p.raison_sociale || '—';
+    $('tickie-input-email').value = p.representant_email || '';
+    // Split representant en prenom + nom approximativement
+    const rep = (p.representant || '').trim();
+    if (rep) {
+      const parts = rep.split(/\s+/);
+      $('tickie-input-prenom').value = parts[0] || '';
+      $('tickie-input-nom').value = parts.slice(1).join(' ') || '';
+    } else {
+      $('tickie-input-prenom').value = '';
+      $('tickie-input-nom').value = '';
+    }
+    $('tickie-input-telephone').value = '';
+    $('tickie-modal').style.display = 'flex';
+    setTimeout(() => $('tickie-input-email').focus(), 100);
+  }
+
+  function closeTickieModal() {
+    $('tickie-modal').style.display = 'none';
+  }
+
+  async function submitTickieCustomer() {
+    if (!CURRENT_PARTNER) return;
+    const email = $('tickie-input-email').value.trim();
+    const prenom = $('tickie-input-prenom').value.trim();
+    const nom = $('tickie-input-nom').value.trim();
+    const telephone = $('tickie-input-telephone').value.trim();
+
+    if (!email || !email.includes('@')) {
+      toast('Email invalide', 'error');
+      $('tickie-input-email').focus();
+      return;
+    }
+
+    const btn = $('tickie-modal-submit');
+    btn.disabled = true;
+    btn.textContent = 'Création…';
+
+    try {
+      const contractId = CURRENT_PARTNER.contrat.id;
+      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}/create-tickie-customer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, prenom, nom, telephone }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        toast(json.error || 'Erreur création', 'error');
+        console.error(json);
+        btn.disabled = false;
+        btn.textContent = 'Créer le compte';
+        return;
+      }
+      toast(`✅ Compte Tickie créé pour ${json.company}`, 'success');
+      closeTickieModal();
+      // Update local state + refresh section
+      CURRENT_PARTNER.partenaire.tickie_customer_id = json.tickie_customer_id;
+      renderTickieSection();
+    } catch (e) {
+      console.error(e);
+      toast('Erreur réseau : ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Créer le compte';
+    }
+  }
+
+  async function sendTickieLogin() {
+    if (!CURRENT_PARTNER || !CURRENT_PARTNER.partenaire.tickie_customer_id) return;
+    if (!confirm("Envoyer l'email de connexion Tickie au partenaire ?\nTickie enverra automatiquement un mail avec les identifiants.")) return;
+
+    const btn = $('btn-send-login');
+    if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+
+    try {
+      const contractId = CURRENT_PARTNER.contrat.id;
+      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}/send-tickie-login`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        toast(json.error || 'Erreur envoi', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '📧 Envoyer login'; }
+        return;
+      }
+      toast('✅ Email de connexion envoyé au partenaire', 'success');
+      if (btn) { btn.disabled = false; btn.textContent = '📧 Envoyer login'; }
+    } catch (e) {
+      toast('Erreur réseau', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '📧 Envoyer login'; }
+    }
+  }
+
+  async function unlinkTickie() {
+    if (!CURRENT_PARTNER || !CURRENT_PARTNER.partenaire.tickie_customer_id) return;
+    if (!confirm('Délier ce partenaire de son customer Tickie ?\n\nLe customer Tickie ne sera PAS supprimé côté Tickie — seul le mapping côté pilote sera retiré. Tu pourras le re-lier ou en créer un nouveau ensuite.')) return;
+
+    try {
+      const contractId = CURRENT_PARTNER.contrat.id;
+      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}/unlink-tickie`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        toast(json.error || 'Erreur', 'error');
+        return;
+      }
+      toast('✅ Partenaire délié de Tickie', 'success');
+      CURRENT_PARTNER.partenaire.tickie_customer_id = null;
+      renderTickieSection();
+    } catch (e) {
+      toast('Erreur réseau', 'error');
     }
   }
 
