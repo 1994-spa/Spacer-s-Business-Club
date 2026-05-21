@@ -4,857 +4,1389 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#0A1628" />
-<title>Spacer's Business Club · Espace partenaire</title>
-<link rel="manifest" href="/manifest.webmanifest" />
+<title>Pilote · Spacer's Business Club</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  :root {
-    --bg: #FAF7F2;
-    --bg-soft: #F1ECE2;
-    --ink: #0A1628;
-    --ink-soft: #4A5568;
-    --ink-muted: #8A8478;
-    --gold: #C8932B;
-    --gold-soft: #E8C977;
-    --silver: #9CA3AF;
-    --bronze: #A56F3E;
-    --red: #B23A48;
-    --orange: #D97743;
-    --green: #3A8264;
-    --line: #E5DED1;
-    --card: #FFFFFF;
-    --shadow-sm: 0 1px 2px rgba(10,22,40,.04), 0 0 0 1px rgba(10,22,40,.04);
-    --shadow-md: 0 8px 24px rgba(10,22,40,.06), 0 0 0 1px rgba(10,22,40,.04);
-    --radius: 14px;
-    --radius-lg: 22px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: var(--bg); color: var(--ink); font-family: 'Manrope', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-  body {
-    background: radial-gradient(circle at 12% -8%, rgba(200,147,43,.08), transparent 35%), radial-gradient(circle at 92% 6%, rgba(178,58,72,.05), transparent 40%), var(--bg);
-    min-height: 100vh; padding-bottom: 100px;
-  }
-  .display { font-family: 'Fraunces', serif; font-variation-settings: "opsz" 144; font-weight: 500; letter-spacing: -.02em; line-height: 1.05; }
-  .display-italic { font-family: 'Fraunces', serif; font-style: italic; font-variation-settings: "opsz" 144; font-weight: 400; }
-  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; color: var(--ink-muted); }
-  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-  @media (max-width: 700px) { .container { padding: 0 16px; } }
+:root {
+  --bg: #FAF7F2;
+  --bg-soft: #F1ECE2;
+  --ink: #0A1628;
+  --ink-2: #11203a;
+  --ink-soft: #4A5568;
+  --ink-muted: #8A8478;
+  --gold: #C8932B;
+  --gold-soft: #E8C977;
+  --gold-tint: #FAF3DF;
+  --silver: #9CA3AF;
+  --red: #B23A48;
+  --red-tint: #FCEDEF;
+  --orange: #D97743;
+  --orange-tint: #FDF1E8;
+  --green: #3A8264;
+  --green-tint: #E5F4EC;
+  --line: #E5DED1;
+  --line-soft: #EFE9DC;
+  --card: #FFFFFF;
+  --shadow-sm: 0 1px 2px rgba(10,22,40,.04), 0 0 0 1px rgba(10,22,40,.04);
+  --shadow-md: 0 8px 24px rgba(10,22,40,.06), 0 0 0 1px rgba(10,22,40,.04);
+  --shadow-lg: 0 20px 50px rgba(10,22,40,.12), 0 0 0 1px rgba(10,22,40,.04);
+  --radius: 14px;
+  --radius-lg: 22px;
+  --sidebar-w: 260px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--ink); font-family: 'Manrope', system-ui, sans-serif; font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+body {
+  background:
+    radial-gradient(circle at 8% -6%, rgba(200,147,43,.06), transparent 40%),
+    radial-gradient(circle at 96% 8%, rgba(178,58,72,.04), transparent 45%),
+    var(--bg);
+  min-height: 100vh;
+}
+.display { font-family: 'Fraunces', serif; font-variation-settings: "opsz" 144; font-weight: 500; letter-spacing: -.02em; line-height: 1.05; }
+.italic-em { font-family: 'Fraunces', serif; font-style: italic; font-weight: 400; color: var(--gold); }
+.eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; color: var(--ink-muted); }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; }
+[hidden] { display: none !important; }
 
-  /* HEADER */
-  header { padding: 24px 0 8px; }
-  header .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .brand { display: flex; align-items: center; gap: 12px; }
-  .brand .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--ink); color: var(--gold-soft); display: grid; place-items: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
-  .brand .name { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
-  .brand .name small { display: block; font-weight: 500; font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .14em; margin-top: 2px; }
-  .user-chip { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
-  .user-chip .meta { text-align: right; font-size: 12px; line-height: 1.2; }
-  .user-chip .meta b { display: block; font-size: 13px; }
-  .user-chip .meta small { color: var(--ink-muted); font-size: 11px; }
-  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: white; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+/* ============ LOADING / ERROR / LOGIN screens ============ */
+.fullscreen { min-height: 100vh; display: grid; place-items: center; padding: 40px 24px; }
+.spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--bg-soft); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-card, .error-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 48px 40px; max-width: 460px; width: 100%; text-align: center; box-shadow: var(--shadow-md); }
+.error-card h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 28px; margin-bottom: 10px; letter-spacing: -.02em; }
+.error-card p { color: var(--ink-soft); font-size: 14px; margin-bottom: 18px; line-height: 1.6; }
+.error-detail { font-size: 11px; color: var(--ink-muted); font-family: monospace; background: var(--bg-soft); padding: 8px 12px; border-radius: 8px; word-break: break-all; }
 
-  /* HERO */
-  .hero { padding: 48px 0 32px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: center; }
-  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; gap: 24px; padding: 32px 0 24px; } }
-  .hero .saison { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; margin-bottom: 16px; }
-  .hero h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(36px, 5.5vw, 64px); letter-spacing: -.025em; line-height: 1.02; }
-  .hero h1 em { font-style: italic; color: var(--gold); font-weight: 400; }
-  .hero-stats { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 16px 24px; font-size: 13px; }
-  .hero-stats span { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
-  .hero-stats span:before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
-  .hero-stats span.warn:before { background: var(--orange); }
+/* ============ APP SHELL (sidebar + main) ============ */
+.app-shell { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+@media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } }
 
-  /* CARTE CONTRAT */
-  .contract-card { background: linear-gradient(155deg, #11203a 0%, #0A1628 60%); color: white; border-radius: var(--radius-lg); padding: 28px; position: relative; overflow: hidden; }
-  .contract-card:before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(200,147,43,.15), transparent 60%); pointer-events: none; }
-  .niveau-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
-  .niveau-badge.or { color: var(--gold-soft); }
-  .niveau-badge.or:before { content: '★'; color: var(--gold); }
-  .niveau-badge.argent { color: #D1D5DB; }
-  .niveau-badge.argent:before { content: '●'; color: var(--silver); }
-  .niveau-badge.bronze { color: #D4B5A0; }
-  .niveau-badge.bronze:before { content: '●'; color: var(--bronze); }
-  .contract-card h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; margin: 18px 0 6px; }
-  .contract-card .subtitle { color: rgba(255,255,255,.55); font-size: 13px; }
-  .contract-divider { height: 1px; background: rgba(255,255,255,.1); margin: 20px 0; }
-  .contract-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  .contract-grid .col b { display: block; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin-bottom: 2px; }
-  .contract-grid .col small { font-size: 11px; color: rgba(255,255,255,.55); letter-spacing: .04em; }
+/* ============ SIDEBAR ============ */
+.sidebar {
+  background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink) 100%);
+  color: white;
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  border-right: 1px solid rgba(255,255,255,.04);
+}
+@media (max-width: 900px) {
+  .sidebar { position: relative; height: auto; flex-direction: row; flex-wrap: wrap; padding: 16px; }
+}
+.sb-brand { display: flex; align-items: center; gap: 12px; padding: 8px 10px 22px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 14px; flex-shrink: 0; }
+.sb-logo { width: 36px; height: 36px; border-radius: 10px; background: white; color: var(--ink); display: grid; place-items: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
+.sb-name { font-weight: 700; font-size: 14px; letter-spacing: -.01em; line-height: 1.1; }
+.sb-name small { display: block; font-weight: 500; font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .14em; margin-top: 3px; }
+.sb-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+@media (max-width: 900px) { .sb-nav { flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; } }
+.sb-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: transparent; border: none;
+  color: rgba(255,255,255,.65);
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; text-align: left; transition: all .15s;
+  position: relative;
+}
+.sb-link:hover { background: rgba(255,255,255,.04); color: white; }
+.sb-link.active { background: rgba(255,255,255,.06); color: var(--gold-soft); }
+.sb-link.active:before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--gold); border-radius: 0 3px 3px 0; }
+.sb-link .ico { width: 16px; height: 16px; display: inline-grid; place-items: center; font-size: 14px; flex-shrink: 0; }
+.sb-link .label { flex: 1; }
+.sb-link .badge { background: var(--gold); color: var(--ink); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; min-width: 18px; text-align: center; line-height: 1.4; }
+.sb-link.soon { opacity: .45; cursor: not-allowed; }
+.sb-link.soon .label:after { content: 'À venir'; font-size: 9px; color: rgba(255,255,255,.4); margin-left: 6px; letter-spacing: .1em; text-transform: uppercase; }
 
-  /* SECTIONS */
-  section { margin-top: 48px; }
-  section h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; line-height: 1.1; margin-bottom: 6px; }
-  section h3 em { font-style: italic; color: var(--gold); }
-  section .section-desc { color: var(--ink-muted); font-size: 13px; margin-bottom: 22px; }
+.sb-admin {
+  border-top: 1px solid rgba(255,255,255,.06);
+  padding-top: 14px; margin-top: 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sb-admin-av { width: 32px; height: 32px; border-radius: 50%; background: var(--gold); color: var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 12px; font-family: 'Fraunces', serif; }
+.sb-admin-info { flex: 1; min-width: 0; }
+.sb-admin-info b { display: block; font-size: 12px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-admin-info small { display: block; font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .12em; }
 
-  /* PRESTATIONS */
-  .prestations { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-  .prest { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; transition: transform .2s ease, box-shadow .2s ease; }
-  .prest:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-  .prest .code { font-size: 10px; letter-spacing: .14em; color: var(--gold); font-weight: 700; text-transform: uppercase; }
-  .prest .designation { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin: 6px 0 14px; line-height: 1.2; }
-  .prest .progress { background: var(--bg-soft); height: 4px; border-radius: 2px; overflow: hidden; }
-  .prest .progress div { background: var(--gold); height: 100%; transition: width .6s ease; }
-  .prest .progress-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--ink-muted); }
-  .prest .statut { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 999px; font-size: 10px; letter-spacing: .04em; font-weight: 600; }
-  .prest .statut.a-livrer { background: #FEF3E2; color: #A66B17; }
-  .prest .statut.en-cours { background: #FFF8E5; color: var(--gold); }
-  .prest .statut.livre { background: #E5F4EC; color: var(--green); }
+/* ============ MAIN content area ============ */
+.main { padding: 32px 40px 60px; max-width: 1300px; }
+@media (max-width: 900px) { .main { padding: 24px 16px 60px; } }
 
-  /* PACK VIP */
-  .pack-vip { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: center; }
-  @media (max-width: 700px) { .pack-vip { grid-template-columns: 1fr; gap: 18px; } }
-  .pack-vip .pack-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 8px; }
-  .pack-vip .pack-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1.1; letter-spacing: -.02em; margin-bottom: 14px; }
-  .pack-bar { width: 100%; background: var(--bg-soft); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-  .pack-bar div { background: linear-gradient(90deg, var(--gold), var(--gold-soft)); height: 100%; transition: width .8s ease; }
-  .pack-stats { display: flex; gap: 24px; font-size: 12px; color: var(--ink-muted); }
-  .pack-stats b { color: var(--ink); font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; display: block; margin-bottom: 2px; }
-  .pack-counter { text-align: right; }
-  .pack-counter b { font-family: 'Fraunces', serif; font-size: 64px; font-weight: 500; line-height: 1; color: var(--gold); }
-  .pack-counter small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); margin-top: 6px; }
+.page-head { margin-bottom: 30px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.page-head h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(28px, 3.5vw, 40px); letter-spacing: -.02em; line-height: 1.1; }
+.page-head h1 em { font-style: italic; color: var(--gold); font-weight: 400; }
+.page-head .desc { color: var(--ink-muted); font-size: 13px; margin-top: 6px; }
 
-  /* ALERTES */
-  .alertes { display: flex; flex-direction: column; gap: 10px; }
-  .alerte { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); }
-  .alerte.HAUTE { border-left: 3px solid var(--red); }
-  .alerte.MOYENNE { border-left: 3px solid var(--orange); }
-  .alerte.BASSE { border-left: 3px solid var(--ink-muted); }
-  .alerte .a-icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; flex-shrink: 0; font-weight: 700; }
-  .alerte.HAUTE .a-icon { background: rgba(178,58,72,.1); color: var(--red); }
-  .alerte.MOYENNE .a-icon { background: rgba(217,119,67,.1); color: var(--orange); }
-  .alerte.BASSE .a-icon { background: var(--bg-soft); color: var(--ink-muted); }
-  .alerte .a-content { flex: 1; }
-  .alerte .a-type { font-weight: 700; font-size: 13px; }
-  .alerte .a-msg { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
-  .alerte .a-action { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s ease; flex-shrink: 0; align-self: center; }
-  .alerte .a-action:hover { background: var(--ink); color: white; border-color: var(--ink); }
+.tab-section { display: none; }
+.tab-section.on { display: block; animation: fadeIn .35s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* CONTACT */
-  .contact-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
+/* ============ DASHBOARD stats cards ============ */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 22px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; color: var(--ink-muted); margin-bottom: 10px; }
+.stat-card .value { font-family: 'Fraunces', serif; font-weight: 500; font-size: 38px; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+.stat-card .sub { font-size: 12px; color: var(--ink-muted); margin-top: 8px; }
+.stat-card.accent-gold { border-color: var(--gold-soft); background: linear-gradient(145deg, white 0%, var(--gold-tint) 200%); }
+.stat-card.accent-gold .value { color: var(--gold); }
+.stat-card.accent-red { border-color: rgba(178,58,72,.2); }
+.stat-card.accent-red .value { color: var(--red); }
 
-  /* MA VIE PARTENAIRE */
-  .vp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  @media (max-width: 700px) { .vp-grid { grid-template-columns: 1fr; } }
-  .vp-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; cursor: pointer; transition: transform .2s, border-color .2s, box-shadow .2s; }
-  .vp-card:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 6px 20px rgba(10,22,40,.08); }
-  .vp-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--gold); color: white; display: grid; place-items: center; font-size: 20px; font-weight: 600; margin-bottom: 14px; }
-  .vp-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 4px; color: var(--ink); }
-  .vp-sub { color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
-  .mp-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; }
-  .mp-item-content { flex: 1; }
-  .mp-item-title { font-weight: 600; font-size: 14px; color: var(--ink); }
-  .mp-item-meta { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
-  .mp-badge { padding: 3px 10px; border-radius: 11px; font-size: 11px; font-weight: 600; }
-  .mp-badge-attente { background: #fff8e1; color: #a36b00; }
-  .mp-badge-publie { background: #e8f5e9; color: #2e7d32; }
-  .mp-badge-refuse { background: #ffebee; color: #c62828; }
-  .mp-badge-archive { background: #f3f6fa; color: #5b6573; }
+.hero-card {
+  background: linear-gradient(155deg, var(--ink-2) 0%, var(--ink) 60%);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+.hero-card:before {
+  content: ''; position: absolute; top: -50%; right: -20%;
+  width: 60%; height: 200%;
+  background: radial-gradient(ellipse, rgba(200,147,43,.18), transparent 60%);
+  pointer-events: none;
+}
+.hero-card .eyebrow { color: rgba(255,255,255,.5); font-size: 11px; letter-spacing: .16em; }
+.hero-card h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 30px; line-height: 1.15; letter-spacing: -.02em; margin: 12px 0 8px; }
+.hero-card h2 em { font-style: italic; color: var(--gold-soft); font-weight: 400; }
+.hero-card p { color: rgba(255,255,255,.55); font-size: 13px; max-width: 480px; }
 
-  /* MINUTE DE L'EMPLOI — Form inputs */
-  .me-label { display:block; font-size:11px; color:#A98A4D; font-weight:bold; text-transform:uppercase; letter-spacing:.05em; }
-  .me-input { display:block; width:100%; box-sizing:border-box; margin-top:4px; padding:10px 12px; border:1px solid #E8E2D4; border-radius:8px; font-size:14px; font-family:inherit; background:white; color:#0A1628; transition:border-color .15s; }
-  .me-input:focus { outline:none; border-color:#C9A864; box-shadow:0 0 0 3px rgba(201,168,100,.15); }
-  @media (max-width: 700px) { .contact-card { grid-template-columns: 1fr; gap: 14px; } .contact-card .actions { display: flex; gap: 8px; } }
-  .contact-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: white; font-weight: 700; font-size: 24px; display: grid; place-items: center; font-family: 'Fraunces', serif; }
-  .contact-info b { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; display: block; }
-  .contact-info small { color: var(--ink-muted); font-size: 13px; }
-  .btn { padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .2s; }
-  .btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
-  .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
-  .btn.primary:hover { background: var(--gold); border-color: var(--gold); }
+/* ============ FILTER segments + Table ============ */
+.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.segs { display: inline-flex; gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px; box-shadow: var(--shadow-sm); }
+.seg {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-muted);
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.seg:hover { color: var(--ink); }
+.seg.on { background: var(--ink); color: white; }
+.seg .count { background: var(--bg-soft); color: var(--ink); padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+.seg.on .count { background: rgba(255,255,255,.15); color: white; }
+.seg.warn.on { background: var(--orange); }
+.seg.danger.on { background: var(--red); }
+.seg.success.on { background: var(--green); }
 
-  /* LOADING */
-  .loading { padding: 80px 24px; text-align: center; }
-  .loading .spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--bg-soft); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading p { color: var(--ink-muted); font-size: 13px; }
+.refresh-btn {
+  background: white; border: 1px solid var(--line); color: var(--ink-soft);
+  padding: 7px 14px; border-radius: 999px; font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.refresh-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+.refresh-btn .ico { transition: transform .4s ease; }
+.refresh-btn.spinning .ico { animation: spin .8s linear infinite; }
 
-  /* ERROR */
-  .error-box { padding: 60px 32px; text-align: center; max-width: 480px; margin: 60px auto; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--line); }
-  .error-box h2 { font-family: 'Fraunces', serif; font-size: 28px; margin-bottom: 12px; }
-  .error-box p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; }
-  .error-box .detail { font-size: 11px; color: var(--ink-muted); margin: 16px 0; font-family: monospace; }
+/* ============ Liste offres (cards) ============ */
+.list { display: flex; flex-direction: column; gap: 10px; }
+.list-empty {
+  padding: 60px 24px; text-align: center;
+  background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius);
+  color: var(--ink-muted); font-size: 13px;
+}
+.list-empty h3 { font-family: 'Fraunces', serif; font-size: 20px; color: var(--ink); font-weight: 500; margin-bottom: 6px; }
 
-  /* BOTTOM NAV PWA */
-  .bottom-nav { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; border-radius: 999px; padding: 8px; display: flex; gap: 4px; box-shadow: 0 12px 32px rgba(10,22,40,.2); z-index: 100; }
-  .bottom-nav button { background: none; border: none; color: rgba(255,255,255,.6); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; transition: all .2s; font-size: 18px; }
-  .bottom-nav button.active { background: var(--gold); color: white; }
-  .bottom-nav button:hover:not(.active) { color: white; }
+.offre-row {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.offre-row:hover { border-color: var(--gold); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.offre-row.attente { border-left: 3px solid var(--orange); }
+.offre-row.publie { border-left: 3px solid var(--green); }
+.offre-row.refuse { border-left: 3px solid var(--red); }
+.offre-row.archive { border-left: 3px solid var(--ink-muted); opacity: .7; }
 
-  /* MODAL "Bientôt" */
-  .modal { position: fixed; inset: 0; background: rgba(10,22,40,.55); display: grid; place-items: center; z-index: 200; padding: 20px; backdrop-filter: blur(4px); animation: fadeIn .25s ease; }
-  .modal-card { background: var(--card); border-radius: var(--radius-lg); padding: 32px 28px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(10,22,40,.3); }
-  .modal-eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
-  .modal-card h3 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; margin-bottom: 12px; letter-spacing: -.02em; }
-  .modal-card p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
+.offre-main { min-width: 0; }
+.offre-titre { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; line-height: 1.25; color: var(--ink); margin-bottom: 4px; }
+.offre-partner { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+.offre-partner b { font-weight: 600; color: var(--ink); }
+.offre-meta { display: flex; gap: 12px; font-size: 11px; color: var(--ink-muted); flex-wrap: wrap; align-items: center; }
+.offre-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-muted); display: inline-block; }
+.offre-meta .tag { background: var(--bg-soft); color: var(--ink-soft); padding: 2px 9px; border-radius: 999px; font-weight: 600; }
 
-  /* FADE IN */
-  .fade-in { animation: fadeIn .5s ease both; }
-  .fade-in.delay-1 { animation-delay: .1s; }
-  .fade-in.delay-2 { animation-delay: .2s; }
-  .fade-in.delay-3 { animation-delay: .3s; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  [hidden] { display: none !important; }
+.offre-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700;
+  padding: 4px 11px; border-radius: 999px;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.status-badge:before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.status-badge.attente { background: var(--orange-tint); color: var(--orange); }
+.status-badge.publie { background: var(--green-tint); color: var(--green); }
+.status-badge.refuse { background: var(--red-tint); color: var(--red); }
+.status-badge.archive { background: var(--bg-soft); color: var(--ink-muted); }
+.status-badge.expire { background: var(--bg-soft); color: var(--ink-muted); }
+.status-badge.pourvue { background: #E0F2FE; color: #075985; }
+
+/* ============ Buttons ============ */
+.btn { padding: 8px 14px; border-radius: 999px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .15s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
+.btn.primary:hover { background: var(--gold); border-color: var(--gold); }
+.btn.gold { background: var(--gold); color: white; border-color: var(--gold); }
+.btn.gold:hover { background: var(--ink); border-color: var(--ink); }
+.btn.success { background: var(--green); color: white; border-color: var(--green); }
+.btn.success:hover { filter: brightness(.92); }
+.btn.danger { background: white; color: var(--red); border-color: var(--red); }
+.btn.danger:hover { background: var(--red); color: white; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--ink-soft); }
+.btn.ghost:hover { background: var(--bg-soft); color: var(--ink); border-color: var(--bg-soft); }
+.btn.sm { padding: 6px 11px; font-size: 11px; }
+.btn .ico { font-size: 13px; line-height: 1; }
+
+/* ============ Modal ============ */
+.modal-ov {
+  position: fixed; inset: 0;
+  background: rgba(10,22,40,.55);
+  display: grid; place-items: center;
+  z-index: 200; padding: 20px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn .25s ease;
+}
+.modal-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  max-width: 720px; width: 100%;
+  max-height: 92vh; overflow-y: auto;
+  box-shadow: 0 30px 80px rgba(10,22,40,.35);
+  position: relative;
+}
+.modal-card.sm { max-width: 460px; }
+.modal-head {
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  position: sticky; top: 0; background: var(--card); z-index: 1;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.modal-head .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.modal-head .eyebrow { color: var(--gold); margin-bottom: 6px; }
+.modal-head h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 26px; letter-spacing: -.02em; line-height: 1.1; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg-soft); border: none; color: var(--ink-soft);
+  font-size: 16px; cursor: pointer; flex-shrink: 0;
+  display: grid; place-items: center;
+  transition: all .15s;
+}
+.modal-close:hover { background: var(--ink); color: white; }
+.modal-body { padding: 22px 28px; }
+.modal-foot { padding: 18px 28px 24px; border-top: 1px solid var(--line-soft); background: var(--bg-soft); border-radius: 0 0 var(--radius-lg) var(--radius-lg); display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; margin-bottom: 20px; }
+@media (max-width: 600px) { .detail-grid { grid-template-columns: 1fr; gap: 14px; } }
+.detail-field .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; color: var(--ink-muted); margin-bottom: 4px; }
+.detail-field .val { font-size: 14px; color: var(--ink); word-break: break-word; }
+.detail-field .val.empty { color: var(--ink-muted); font-style: italic; }
+
+.detail-section { background: var(--bg); border: 1px solid var(--line-soft); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.detail-section-h { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+.detail-section .descr { font-size: 13px; line-height: 1.7; color: var(--ink-soft); white-space: pre-wrap; }
+
+.banner {
+  border-radius: 12px; padding: 14px 16px;
+  font-size: 12px; line-height: 1.6;
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-bottom: 16px;
+}
+.banner b { font-weight: 700; }
+.banner.warn { background: var(--orange-tint); color: var(--orange); border-left: 3px solid var(--orange); }
+.banner.danger { background: var(--red-tint); color: var(--red); border-left: 3px solid var(--red); }
+.banner.success { background: var(--green-tint); color: var(--green); border-left: 3px solid var(--green); }
+.banner.info { background: var(--gold-tint); color: var(--gold); border-left: 3px solid var(--gold); }
+
+.input {
+  display: block; width: 100%; box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px; font-family: inherit;
+  background: white; color: var(--ink);
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,147,43,.12); }
+textarea.input { resize: vertical; min-height: 80px; }
+.input-lbl { font-size: 11px; color: var(--ink-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 5px; display: block; }
+
+/* ============ Toast ============ */
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  background: var(--ink); color: white;
+  padding: 12px 22px; border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 12px 36px rgba(10,22,40,.3);
+  transition: transform .3s ease;
+  z-index: 300; max-width: 90%; text-align: center;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+
+/* ============ PDF preview frame ============ */
+.pdf-preview-card {
+  background: linear-gradient(155deg, var(--ink-2), var(--ink));
+  border-radius: var(--radius);
+  padding: 18px;
+  color: white;
+  margin-bottom: 18px;
+}
+.pdf-preview-card .label { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-soft); font-weight: 700; margin-bottom: 8px; }
+.pdf-preview-card .title { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; }
+.pdf-preview-card .desc { color: rgba(255,255,255,.55); font-size: 12px; margin-top: 4px; }
+
+/* ============ Empty placeholder for "À venir" tabs ============ */
+.placeholder-tab {
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 80px 30px;
+  text-align: center;
+}
+.placeholder-tab .ico { font-size: 36px; opacity: .35; margin-bottom: 12px; }
+.placeholder-tab h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin-bottom: 8px; }
+.placeholder-tab p { color: var(--ink-muted); font-size: 13px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
+.placeholder-tab .routes { background: var(--bg-soft); margin-top: 22px; padding: 14px 18px; border-radius: 10px; font-family: monospace; font-size: 11px; color: var(--ink-soft); text-align: left; max-width: 540px; margin: 22px auto 0; }
+.placeholder-tab .routes b { color: var(--gold); }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="container">
-    <div class="row">
-      <div class="brand">
-        <div class="logo">S</div>
-        <div class="name">Spacer's Business Club<small>Espace partenaire</small></div>
+<!-- ===== LOADING ===== -->
+<div id="screen-loading" class="fullscreen">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p style="color:var(--ink-muted);font-size:13px;">Vérification de votre accès pilote…</p>
+  </div>
+</div>
+
+<!-- ===== ERROR ===== -->
+<div id="screen-error" class="fullscreen" hidden>
+  <div class="error-card">
+    <h1 class="display">Accès <em class="italic-em">pilote</em> requis</h1>
+    <p id="error-msg">Pour accéder au pilote admin, utilisez votre lien personnel envoyé par l'équipe.</p>
+    <div class="error-detail" id="error-detail" hidden></div>
+    <button class="btn primary" style="margin-top:18px;" onclick="location.reload()">Réessayer</button>
+  </div>
+</div>
+
+<!-- ===== APP SHELL ===== -->
+<div id="app" class="app-shell" hidden>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">S</div>
+      <div class="sb-name">Spacer's Pilote<small>Business Club</small></div>
+    </div>
+
+    <nav class="sb-nav">
+      <button class="sb-link active" data-tab="dashboard" onclick="switchTab('dashboard')">
+        <span class="ico">◆</span><span class="label">Tableau de bord</span>
+      </button>
+      <button class="sb-link" data-tab="offres" onclick="switchTab('offres')">
+        <span class="ico">◐</span><span class="label">Annonces emploi</span>
+        <span class="badge" id="sb-badge-attente" hidden>0</span>
+      </button>
+      <button class="sb-link soon" data-tab="partenaires" onclick="switchTab('partenaires')">
+        <span class="ico">◈</span><span class="label">Partenaires</span>
+      </button>
+      <button class="sb-link soon" data-tab="publications" onclick="switchTab('publications')">
+        <span class="ico">⌘</span><span class="label">Publications</span>
+      </button>
+      <button class="sb-link soon" data-tab="tickie" onclick="switchTab('tickie')">
+        <span class="ico">⌬</span><span class="label">Tickie</span>
+      </button>
+    </nav>
+
+    <div class="sb-admin">
+      <div class="sb-admin-av" id="sb-admin-av">—</div>
+      <div class="sb-admin-info">
+        <b id="sb-admin-name">—</b>
+        <small id="sb-admin-role">—</small>
       </div>
-      <div id="user-chip" class="user-chip" hidden>
-        <div class="meta">
-          <b id="user-name">—</b>
-          <small id="user-role">—</small>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ===== TAB : Tableau de bord ===== -->
+    <section id="tab-dashboard" class="tab-section on">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Tableau de <em>bord</em></h1>
+          <p class="desc">Vue d'ensemble du Business Club pour la saison <span id="dash-saison" class="mono">—</span></p>
         </div>
-        <div id="user-avatar" class="avatar">—</div>
+        <button class="refresh-btn" onclick="loadDashboard(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
-    </div>
-  </div>
-</header>
 
-<!-- LOADING -->
-<div id="loading" class="loading">
-  <div class="spinner"></div>
-  <p>Chargement de votre espace partenaire…</p>
-</div>
-
-<!-- ERROR -->
-<div id="error" class="error-box" hidden>
-  <h2 class="display">Espace introuvable</h2>
-  <p id="error-msg">Une erreur est survenue.</p>
-  <div class="detail" id="error-detail"></div>
-  <button class="btn primary" onclick="location.reload()">Réessayer</button>
-</div>
-
-<!-- DASHBOARD -->
-<main id="dashboard" class="container" hidden>
-
-  <!-- HERO + CARTE CONTRAT -->
-  <section class="hero fade-in">
-    <div>
-      <div class="saison" id="saison-label">—</div>
-      <h1 class="display">Bonjour <em id="greeting-firstname">—</em>,<br />prêt pour la <em>nouvelle saison ?</em></h1>
-      <div class="hero-stats">
-        <span id="stat-contract">—</span>
-        <span id="stat-echeance">—</span>
-      </div>
-    </div>
-    <div class="contract-card">
-      <h2 class="display" id="contract-type">—</h2>
-      <div class="subtitle" id="contract-meta">—</div>
-      <div class="contract-divider"></div>
-      <div class="contract-grid">
-        <div class="col"><b id="contract-date-debut">—</b><small>Date d'effet</small></div>
-        <div class="col"><b id="contract-date-fin">—</b><small>Échéance</small></div>
-        <div class="col"><b id="contract-prestations-count">—</b><small>Prestations</small></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- PRESTATIONS -->
-  <section class="fade-in delay-1">
-    <h3 class="display">Mes <em>prestations</em></h3>
-    <p class="section-desc">Suivi de vos avantages contractuels saison <span id="prest-saison">—</span></p>
-    <div class="prestations" id="prestations-list"></div>
-  </section>
-
-  <!-- PACK VIP -->
-  <section class="fade-in delay-2" id="pack-section">
-    <h3 class="display">Mes <em>invitations VIP</em></h3>
-    <p class="section-desc">Pack hospitalité associé à votre contrat</p>
-    <div class="pack-vip" id="pack-vip-card"></div>
-  </section>
-
-  <!-- ALERTES -->
-  <section class="fade-in delay-3" id="alertes-section">
-    <h3 class="display">Mes <em>alertes</em></h3>
-    <p class="section-desc">Actions à suivre cette saison</p>
-    <div class="alertes" id="alertes-list"></div>
-  </section>
-
-  <!-- MA VIE PARTENAIRE -->
-  <section class="fade-in delay-3" id="vie-partenaire-section">
-    <h3 class="display">Ma <em>vie partenaire</em></h3>
-    <p class="section-desc">Partager, proposer, recruter — directement depuis votre espace</p>
-    <div class="vp-grid">
-      <div class="vp-card" onclick="showSoon('Forum partenaires','Bientôt — vous pourrez proposer ici des sorties, padel, afterworks et événements informels.')">
-        <div class="vp-icon">⌘</div>
-        <div class="vp-title">Forum</div>
-        <div class="vp-sub">Sport, social, divers : proposer un padel, un afterwork, un moment partagé</div>
-      </div>
-      <div class="vp-card" onclick="showSoon('Proposer un service','Bientôt — partagez vos offres et remises entre partenaires Spacers.')">
-        <div class="vp-icon">◈</div>
-        <div class="vp-title">Proposer un service / produit</div>
-        <div class="vp-sub">Faites connaître votre offre aux autres partenaires du club</div>
-      </div>
-      <div class="vp-card" onclick="openMinuteEmploiModal()">
-        <div class="vp-icon">◐</div>
-        <div class="vp-title">Minute de l'emploi</div>
-        <div class="vp-sub">Recruter via le réseau bénévoles — annonce PDF diffusée au match</div>
-      </div>
-      <div class="vp-card" onclick="showSoon('Demande de service','Bientôt — cherchez un prestataire (plombier, électricien…) parmi les partenaires.')">
-        <div class="vp-icon">⌬</div>
-        <div class="vp-title">Demander un service</div>
-        <div class="vp-sub">Chercher un prestataire (plombier, électricien…) parmi les partenaires</div>
-      </div>
-    </div>
-
-    <div id="mes-publications" style="margin-top:24px;"></div>
-  </section>
-
-  <!-- CONTACT -->
-  <section class="fade-in delay-3">
-    <h3 class="display">Mon <em>contact club</em></h3>
-    <p class="section-desc">L'équipe Spacers à votre disposition</p>
-    <div class="contact-card">
-      <div class="contact-avatar" id="contact-avatar">SP</div>
-      <div class="contact-info">
-        <b>Équipe Spacer's</b>
-        <small>Toulouse Volleyball · Palais des Sports André Brouat</small>
-      </div>
-      <div class="actions" style="display:flex;gap:8px;">
-        <a class="btn" href="mailto:treicy@fitgroup.fr">Email</a>
-        <a class="btn primary" id="contract-doc-link" href="#" target="_blank">Mon contrat</a>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- BOTTOM NAV -->
-<nav class="bottom-nav">
-  <button class="active" title="Accueil" onclick="window.scrollTo({top:0,behavior:'smooth'})">🏠</button>
-  <button title="Mon contrat" onclick="ouvrirContrat()">📄</button>
-  <button title="Billetterie" onclick="showSoon('Billetterie','La gestion de vos invitations VIP arrive bientôt — synchronisation avec Tickie en cours.')">🎫</button>
-  <button title="Boutique" onclick="showSoon('Boutique','Achat de places en ligne et boutique partenaire en préparation.')">🛍</button>
-  <button title="Forum" onclick="showSoon('Forum','Espace de discussion entre partenaires et club bientôt disponible.')">💬</button>
-</nav>
-
-<!-- MODAL "Bientôt" -->
-<div id="modal" class="modal" hidden onclick="if(event.target.id==='modal')closeSoon()">
-  <div class="modal-card">
-    <div class="modal-eyebrow">À venir</div>
-    <h3 id="modal-title" class="display">—</h3>
-    <p id="modal-text">—</p>
-    <button class="btn primary" onclick="closeSoon()">Compris</button>
-  </div>
-</div>
-
-<!-- MODAL Minute de l'emploi -->
-<div id="me-modal" class="modal" hidden onclick="if(event.target.id==='me-modal')closeMinuteEmploiModal()">
-  <div class="modal-card" style="max-width:640px;text-align:left;max-height:90vh;overflow-y:auto;">
-    <div class="modal-eyebrow" style="text-align:center;">📥 ANNONCE EMPLOI</div>
-    <h3 class="display" style="text-align:center;">Minute de l'emploi</h3>
-    <p style="text-align:center;font-size:13px;">Remplissez votre annonce ci-dessous. Le PDF aux couleurs Spacers se génère automatiquement.</p>
-
-    <!-- LOGO -->
-    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:16px;margin:18px 0;">
-      <div style="font-size:11px;color:#A98A4D;font-weight:bold;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Votre logo (PNG ou JPG, ≤ 2 Mo)</div>
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div id="me-logo-preview" style="width:56px;height:56px;border:2px dashed #C9A864;border-radius:8px;display:grid;place-items:center;background:white;overflow:hidden;flex-shrink:0;">
-          <span style="color:#5B6573;font-size:10px;">aucun</span>
+      <div id="dash-content">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">Chargement…</div></div>
         </div>
-        <label class="btn" style="cursor:pointer;margin-bottom:0;font-size:13px;">
-          <input type="file" id="me-logo-input" accept="image/png,image/jpeg" style="display:none;" onchange="onLogoSelected(event)">
-          Choisir un logo
-        </label>
-        <button class="btn" id="me-logo-remove" style="display:none;font-size:13px;" onclick="removeLogo()">Retirer</button>
       </div>
-    </div>
+    </section>
 
-    <!-- FORMULAIRE -->
-    <div style="display:grid;gap:12px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label class="me-label">Date / match
-          <input id="me-input-date_match" type="text" placeholder="14/03/2026" class="me-input">
-        </label>
-        <label class="me-label">Type de contrat
-          <select id="me-input-contrat" class="me-input">
-            <option value="">—</option>
-            <option value="CDI">CDI</option>
-            <option value="CDD">CDD</option>
-            <option value="Stage">Stage</option>
-            <option value="Alternance">Alternance</option>
-            <option value="Apprentissage">Apprentissage</option>
-            <option value="Freelance">Freelance</option>
-            <option value="Intérim">Intérim</option>
-          </select>
-        </label>
+    <!-- ===== TAB : Annonces emploi ===== -->
+    <section id="tab-offres" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Annonces <em>emploi</em></h1>
+          <p class="desc">Modération, publication et diffusion cube vidéo</p>
+        </div>
+        <button class="refresh-btn" onclick="loadOffres(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
 
-      <label class="me-label">Poste recherché *
-        <input id="me-input-poste" type="text" placeholder="ex: Vendeur(se) d'articles de sport" class="me-input">
-      </label>
-
-      <label class="me-label">Prérequis & profil recherché
-        <textarea id="me-input-prerequis" rows="3" placeholder="ex: Très forte appétence pour le sport, expérience en magasin appréciée…" class="me-input" style="resize:vertical;"></textarea>
-      </label>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label class="me-label">Lieu(x) de travail
-          <input id="me-input-lieux" type="text" placeholder="Toulouse" class="me-input">
-        </label>
-        <label class="me-label">Heures / semaine
-          <input id="me-input-heures" type="text" placeholder="35h" class="me-input">
-        </label>
+      <div class="toolbar">
+        <div class="segs" id="offres-segs">
+          <button class="seg on" data-statut="all" onclick="setOffreFilter('all',this)">Tous <span class="count" id="cnt-all">·</span></button>
+          <button class="seg warn" data-statut="en_attente" onclick="setOffreFilter('en_attente',this)">À modérer <span class="count" id="cnt-en_attente">·</span></button>
+          <button class="seg success" data-statut="publie" onclick="setOffreFilter('publie',this)">Publiées <span class="count" id="cnt-publie">·</span></button>
+          <button class="seg danger" data-statut="refuse" onclick="setOffreFilter('refuse',this)">Refusées <span class="count" id="cnt-refuse">·</span></button>
+          <button class="seg" data-statut="archive" onclick="setOffreFilter('archive',this)">Archivées <span class="count" id="cnt-archive">·</span></button>
+        </div>
       </div>
 
-      <label class="me-label">Salaire indicatif
-        <input id="me-input-salaire" type="text" placeholder="ex: SMIC horaire, 30k€/an, à négocier" class="me-input">
-      </label>
+      <div id="offres-list" class="list">
+        <div class="list-empty">Chargement…</div>
+      </div>
+    </section>
 
-      <label class="me-label">Les + de l'offre
-        <textarea id="me-input-les_plus" rows="2" placeholder="ex: Planning modulable, mutuelle, ambiance familiale…" class="me-input" style="resize:vertical;"></textarea>
-      </label>
+    <!-- ===== TAB : Partenaires (placeholder) ===== -->
+    <section id="tab-partenaires" class="tab-section">
+      <div class="page-head"><h1 class="display">Parten<em>aires</em></h1></div>
+      <div class="placeholder-tab">
+        <div class="ico">◈</div>
+        <h3>Onglet à venir — V2</h3>
+        <p>La gestion des partenaires (contrats, prestations, packs VIP, mapping Tickie) sera ajoutée dans un prochain sprint. Les endpoints worker sont déjà prêts.</p>
+        <div class="routes">
+          <b>GET</b>  /api/admin/partners/:token<br>
+          <b>GET</b>  /api/admin/partner/:token/:contractId<br>
+          <b>POST</b> /api/admin/prestation-livrer/:token/:prestationId<br>
+          <b>POST</b> /api/admin/pack-utiliser/:token/:packId<br>
+          <b>POST</b> /api/admin/partner/:token/:contractId/create-tickie-customer<br>
+          <b>POST</b> /api/admin/partner/:token/:contractId/send-tickie-login
+        </div>
+      </div>
+    </section>
 
-      <label class="me-label">Email pour candidatures *
-        <input id="me-input-email" type="email" placeholder="rh@entreprise.fr" class="me-input">
-      </label>
-    </div>
+    <!-- ===== TAB : Publications (placeholder) ===== -->
+    <section id="tab-publications" class="tab-section">
+      <div class="page-head"><h1 class="display">Publi<em>cations</em></h1></div>
+      <div class="placeholder-tab">
+        <div class="ico">⌘</div>
+        <h3>Onglet à venir — V2</h3>
+        <p>Modération polymorphe des publications (forum, propositions, échanges) avec workflow identique aux annonces emploi.</p>
+        <div class="routes">
+          <b>GET</b>  /api/admin/publications/:token?type=X&statut=Y<br>
+          <b>GET</b>  /api/admin/publication/:token/:id<br>
+          <b>POST</b> /api/admin/publications/:token/create<br>
+          <b>POST</b> /api/admin/publications/:token/:id/publish<br>
+          <b>POST</b> /api/admin/publications/:token/:id/reject<br>
+          <b>POST</b> /api/admin/publications/:token/:id/archive
+        </div>
+      </div>
+    </section>
 
-    <button class="btn primary" id="me-dl-btn" onclick="submitMinuteEmploi()" style="width:100%;margin-top:18px;">
-      ✉ Envoyer mon annonce
-    </button>
+    <!-- ===== TAB : Tickie (placeholder) ===== -->
+    <section id="tab-tickie" class="tab-section">
+      <div class="page-head"><h1 class="display">Bille<em>tterie</em> Tickie</h1></div>
+      <div class="placeholder-tab">
+        <div class="ico">🎫</div>
+        <h3>Onglet à venir — Sprint Tickie 3</h3>
+        <p>Génération automatique des billets VIP par match depuis les packs places des partenaires.</p>
+        <div class="routes">
+          <b>GET</b>  /api/admin/tickie/ping/:token<br>
+          <b>GET</b>  /api/admin/tickie/customers/:token<br>
+          <b>GET</b>  /api/admin/tickie/events/:token
+        </div>
+      </div>
+    </section>
 
-    <div id="me-status" style="font-size:13px;text-align:center;color:#5B6573;min-height:20px;margin-top:10px;"></div>
+  </main>
+</div>
 
-    <div style="background:#FAF7EF;border-left:3px solid #C9A864;padding:12px 14px;margin-top:14px;border-radius:6px;">
-      <small style="color:#5B6573;font-size:12px;">📺 Après validation par l'équipe Spacers, votre annonce est diffusée sur le <b style="color:#0A1628;">cube vidéo en interset</b> et publiée auprès du <b style="color:#0A1628;">réseau bénévoles</b>.</small>
-    </div>
-
-    <button class="btn" onclick="closeMinuteEmploiModal()" style="width:100%;margin-top:14px;">Fermer</button>
+<!-- ===== MODAL : Detail offre ===== -->
+<div id="modal-offre" class="modal-ov" hidden onclick="if(event.target.id==='modal-offre')closeOffreModal()">
+  <div class="modal-card" id="modal-offre-card">
+    <!-- injected -->
   </div>
 </div>
+
+<!-- ===== MODAL : Confirm (reject avec raison) ===== -->
+<div id="modal-confirm" class="modal-ov" hidden onclick="if(event.target.id==='modal-confirm')closeConfirm(null)">
+  <div class="modal-card sm">
+    <div class="modal-head">
+      <div class="row">
+        <div>
+          <div class="eyebrow" id="mc-eyebrow">Confirmation</div>
+          <h2 class="display" id="mc-title">Confirmer ?</h2>
+        </div>
+        <button class="modal-close" onclick="closeConfirm(null)">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p id="mc-msg" style="color:var(--ink-soft);font-size:13px;line-height:1.6;margin-bottom:14px;"></p>
+      <div id="mc-input-wrap" hidden>
+        <label class="input-lbl" id="mc-input-label">Motif</label>
+        <textarea id="mc-input" class="input" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeConfirm(null)">Annuler</button>
+      <button class="btn primary" id="mc-ok" onclick="closeConfirm('ok')">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div id="toast" class="toast"></div>
 
 <script>
-// =========================================================================
-//  Spacer's Business Club — PWA bootstrap
-//  Au chargement : lit ?siren=... → fetch /api/partner/:siren → rend le DOM
-// =========================================================================
+// =============================================================================
+//  PILOTE ADMIN V7 — Spacer's Business Club
+//  Auth via ?t=TOKEN_ADMIN, consume /api/admin/* routes
+// =============================================================================
 
 const $ = (id) => document.getElementById(id);
+const ADMIN_TOKEN = new URLSearchParams(location.search).get('t');
+let CURRENT_ADMIN = null;        // profil admin connecté
+let DASH_DATA = null;             // dashboard data en cache
+let OFFRES_CACHE = [];            // liste offres en cache
+let OFFRES_STATS = {};            // stats par statut
+let CURRENT_OFFRE_FILTER = 'all'; // filtre statut actif
+let CURRENT_OFFRE_DETAIL = null;  // offre actuellement ouverte dans la modale
 
-const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
+// ============================================================================
+//  HELPERS génériques
+// ============================================================================
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
 function formatDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (isNaN(d)) return '—';
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${FR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
-
-function daysBetween(isoEnd) {
-  if (!isoEnd) return null;
-  const end = new Date(isoEnd);
-  const now = new Date();
-  return Math.floor((end - now) / 86400000);
+function formatDateShort(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
-
+function formatRelative(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diffH = Math.floor((Date.now() - d) / 3600000);
+  if (diffH < 1) return 'à l\'instant';
+  if (diffH < 24) return `il y a ${diffH} h`;
+  const diffJ = Math.floor(diffH / 24);
+  if (diffJ < 7) return `il y a ${diffJ} j`;
+  return formatDate(iso);
+}
 function formatEUR(n) {
-  if (!n && n !== 0) return '—';
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  if (n === null || n === undefined || isNaN(Number(n))) return '—';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Number(n));
+}
+function initials(name) {
+  if (!name) return '—';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
 }
 
-function firstName(fullName) {
-  if (!fullName) return 'partenaire';
-  // "Céline TALON" → "Céline"  |  "Marc-Antoine DUBOIS" → "Marc-Antoine"
-  const parts = fullName.trim().split(/\s+/);
-  return parts[0];
-}
-
-function initials(fullName) {
-  if (!fullName) return '—';
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+let _toastTimeout = null;
+function showToast(msg, type='success') {
+  const el = $('toast');
+  clearTimeout(_toastTimeout);
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  _toastTimeout = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
 function showError(msg, detail) {
-  $('loading').hidden = true;
-  $('dashboard').hidden = true;
-  $('error').hidden = false;
+  $('screen-loading').hidden = true;
+  $('app').hidden = true;
+  $('screen-error').hidden = false;
   $('error-msg').textContent = msg;
-  if (detail) $('error-detail').textContent = detail;
+  if (detail) {
+    $('error-detail').textContent = detail;
+    $('error-detail').hidden = false;
+  }
 }
 
-// =========================================================================
-//  Helpers UI : modal "Bientôt" + navigation
-// =========================================================================
-let CURRENT_CONTRAT_LIEN = '';
+// ============================================================================
+//  AUTH — Vérification du token admin
+// ============================================================================
+async function init() {
+  if (!ADMIN_TOKEN || ADMIN_TOKEN.length < 16) {
+    showError('Aucun token pilote fourni.', 'Utilisez le lien personnel transmis par l\'équipe Spacers.');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/admin/auth/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showError(data.error || `Erreur ${res.status}`, data.detail || 'Vérifiez votre token d\'accès pilote.');
+      return;
+    }
+    CURRENT_ADMIN = data.admin;
+    renderApp();
+  } catch (e) {
+    showError('Connexion impossible', e.message);
+  }
+}
 
-function showSoon(title, text) {
-  $('modal-title').textContent = title;
-  $('modal-text').textContent = text;
-  $('modal').hidden = false;
+function renderApp() {
+  $('screen-loading').hidden = true;
+  $('app').hidden = false;
+  const name = `${CURRENT_ADMIN.prenom || ''} ${CURRENT_ADMIN.nom || ''}`.trim() || CURRENT_ADMIN.email;
+  $('sb-admin-name').textContent = name;
+  $('sb-admin-role').textContent = (CURRENT_ADMIN.role || 'pilote').toUpperCase();
+  $('sb-admin-av').textContent = initials(name);
+  loadDashboard();
 }
-function closeSoon() {
-  $('modal').hidden = true;
+
+// ============================================================================
+//  NAVIGATION (onglets)
+// ============================================================================
+function switchTab(tab) {
+  const link = document.querySelector(`.sb-link[data-tab="${tab}"]`);
+  if (link && link.classList.contains('soon')) {
+    showToast('Cet onglet sera disponible dans une prochaine version', 'error');
+    return;
+  }
+  document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+  if (link) link.classList.add('active');
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('on'));
+  $(`tab-${tab}`).classList.add('on');
+
+  if (tab === 'dashboard' && !DASH_DATA) loadDashboard();
+  if (tab === 'offres' && OFFRES_CACHE.length === 0) loadOffres();
 }
-function ouvrirContrat() {
-  if (CURRENT_CONTRAT_LIEN) {
-    window.open(CURRENT_CONTRAT_LIEN, '_blank');
-  } else {
-    showSoon('Mon contrat', 'Le lien vers ton contrat sera disponible une fois que tu seras identifié(e).');
+
+// ============================================================================
+//  DASHBOARD — Stats globales
+// ============================================================================
+async function loadDashboard(force=false) {
+  const btn = document.querySelector('#tab-dashboard .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+
+  try {
+    const res = await fetch(`/api/admin/dashboard/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    DASH_DATA = data;
+    $('dash-saison').textContent = data.saison || '—';
+    renderDashboard(data);
+  } catch (e) {
+    $('dash-content').innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
   }
 }
 
 function renderDashboard(data) {
-  const { partenaire, contrat, prestations, pack_places, alertes } = data;
+  const s = data.stats || {};
+  const cn = $('dash-content');
+  const name = `${CURRENT_ADMIN.prenom || ''}`.trim() || 'pilote';
 
-  // ===== HEADER USER CHIP =====
-  $('user-chip').hidden = false;
-  $('user-name').textContent = partenaire.raison_sociale || '—';
-  window.__PARTNER_RAISON_SOCIALE__ = partenaire.raison_sociale || '';
-  window.__PARTNER_REPRESENTANT__ = partenaire.representant || '';
-  $('user-role').textContent = partenaire.representant
-    ? `${partenaire.representant}${partenaire.fonction ? ' · ' + partenaire.fonction : ''}`
-    : '—';
-  $('user-avatar').textContent = initials(partenaire.representant || partenaire.raison_sociale);
+  cn.innerHTML = `
+    <div class="hero-card">
+      <div class="eyebrow">Bonjour ${escapeHtml(name)}</div>
+      <h2 class="display">Saison <em>${escapeHtml(data.saison || '—')}</em></h2>
+      <p>Voici l'état du Business Club côté partenariats, billetterie et candidatures. Les chiffres se rafraîchissent à chaque visite.</p>
+    </div>
 
-  // ===== HERO =====
-  $('greeting-firstname').textContent = firstName(partenaire.representant);
-  $('saison-label').textContent = `Saison ${contrat.saison || '—'}`;
-  $('stat-contract').textContent = `Contrat ${contrat.statut.toLowerCase()}`;
-
-  const jours = daysBetween(contrat.date_fin);
-  if (jours !== null) {
-    const stat = $('stat-echeance');
-    if (jours < 0) {
-      stat.textContent = `Contrat expiré depuis ${Math.abs(jours)} j`;
-      stat.classList.add('warn');
-    } else if (jours < 60) {
-      stat.textContent = `Renouvellement dans ${jours} j`;
-      stat.classList.add('warn');
-    } else {
-      stat.textContent = `${jours} j avant échéance`;
-    }
-  }
-
-  // ===== CARTE CONTRAT =====
-  $('contract-type').textContent = contrat.type || '—';
-  $('contract-meta').textContent = `Contrat ${contrat.id} · ${formatEUR(contrat.montant_ht)} HT`;
-  $('contract-date-debut').textContent = formatDate(contrat.date_debut);
-  $('contract-date-fin').textContent = formatDate(contrat.date_fin);
-  $('contract-prestations-count').textContent = (contrat.codes_prestations || []).length;
-
-  // ===== PRESTATIONS =====
-  $('prest-saison').textContent = contrat.saison || '—';
-  const prestList = $('prestations-list');
-  if (!prestations || prestations.length === 0) {
-    prestList.innerHTML = '<div style="padding:24px;color:var(--ink-muted);font-size:13px;">Aucune prestation enregistrée.</div>';
-  } else {
-    prestList.innerHTML = prestations.map(p => {
-      const pct = p.nb_total > 0 ? Math.round((p.nb_livre / p.nb_total) * 100) : 0;
-      const statutClass = p.statut === 'Livré' || p.statut === 'Livré complet' ? 'livre'
-                        : p.statut && p.statut.includes('cours') ? 'en-cours' : 'a-livrer';
-      return `
-        <article class="prest">
-          <div class="code">${p.code}</div>
-          <div class="designation">${p.designation || p.code}</div>
-          <div class="progress"><div style="width: ${pct}%"></div></div>
-          <div class="progress-meta"><span>${p.nb_livre}/${p.nb_total} livré(s)</span><span>${pct}%</span></div>
-          <span class="statut ${statutClass}">${p.statut || 'À livrer'}</span>
-        </article>
-      `;
-    }).join('');
-  }
-
-  // ===== PACK VIP =====
-  const packSection = $('pack-section');
-  const packCard = $('pack-vip-card');
-  if (pack_places) {
-    const pct = pack_places.alloues > 0 ? Math.round((pack_places.utilises / pack_places.alloues) * 100) : 0;
-    packCard.innerHTML = `
-      <div>
-        <div class="pack-label">${pack_places.libelle || 'Pack VIP'}</div>
-        <div class="pack-title">${pack_places.alloues} places allouées</div>
-        <div class="pack-bar"><div style="width: ${pct}%"></div></div>
-        <div class="pack-stats">
-          <div><b>${pack_places.utilises}</b>Utilisées</div>
-          <div><b>${pack_places.restants}</b>Restantes</div>
-          <div><b>${pack_places.seuil_alerte}</b>Seuil alerte</div>
-        </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Partenaires actifs</div>
+        <div class="value">${s.partenaires_actifs ?? 0}</div>
+        <div class="sub">Contrats signés cette saison</div>
       </div>
-      <div class="pack-counter">
-        <b>${pack_places.restants}</b>
-        <small>Places dispo</small>
+      <div class="stat-card accent-gold">
+        <div class="label">Chiffre signé</div>
+        <div class="value">${formatEUR(s.chiffre_signe)}</div>
+        <div class="sub">Hors taxes, cumulé</div>
       </div>
-    `;
-  } else {
-    packSection.style.display = 'none';
-  }
+      <div class="stat-card">
+        <div class="label">Packs VIP configurés</div>
+        <div class="value">${s.packs_configures ?? 0}</div>
+        <div class="sub">Avec places allouées</div>
+      </div>
+      <div class="stat-card ${(s.alertes_total||0) > 0 ? 'accent-red' : ''}">
+        <div class="label">Alertes ouvertes</div>
+        <div class="value">${s.alertes_total ?? 0}</div>
+        <div class="sub">À traiter</div>
+      </div>
+    </div>
 
-  // ===== ALERTES =====
-  const alertSection = $('alertes-section');
-  const alertList = $('alertes-list');
-  if (!alertes || alertes.length === 0) {
-    alertSection.style.display = 'none';
-  } else {
-    alertList.innerHTML = alertes.map(a => {
-      const icon = a.priorite === 'HAUTE' ? '!' : a.priorite === 'MOYENNE' ? '!' : '·';
-      return `
-        <div class="alerte ${a.priorite}">
-          <div class="a-icon">${icon}</div>
-          <div class="a-content">
-            <div class="a-type">${a.type}</div>
-            <div class="a-msg">${a.message}</div>
+    <div class="stats-grid" style="margin-top:8px;">
+      <div class="stat-card" style="grid-column:span 2;">
+        <div class="label">Modération annonces emploi</div>
+        <div style="display:flex;align-items:baseline;gap:20px;margin-top:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:var(--orange);line-height:1;" id="dash-attente-count">·</div>
+            <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.12em;">En attente</div>
+          </div>
+          <div>
+            <div style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:var(--green);line-height:1;" id="dash-publie-count">·</div>
+            <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.12em;">Publiées</div>
+          </div>
+          <div style="margin-left:auto;">
+            <button class="btn primary" onclick="switchTab('offres')">Modérer →</button>
           </div>
         </div>
-      `;
-    }).join('');
-  }
+      </div>
+      <div class="stat-card" style="grid-column:span 2;">
+        <div class="label">Génération PDF cube vidéo</div>
+        <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.6;">Pour chaque annonce publiée, génère un PDF paysage haute définition prêt à diffuser sur le cube vidéo en interset des matchs.</p>
+        <button class="btn gold" style="margin-top:12px;" onclick="switchTab('offres')">Voir les annonces publiées</button>
+      </div>
+    </div>
+  `;
 
-  // ===== CONTRAT DOC =====
-  if (contrat.lien_doc) {
-    $('contract-doc-link').href = contrat.lien_doc;
-    CURRENT_CONTRAT_LIEN = contrat.lien_doc;
-  } else {
-    $('contract-doc-link').style.display = 'none';
-  }
-
-  // ===== AFFICHAGE =====
-  $('loading').hidden = true;
-  $('dashboard').hidden = false;
+  // On va aussi pull les compteurs offres pour les chiffres ci-dessus
+  refreshOffreCountsLight();
 }
 
-// =========================================================================
-//  Bootstrap — résolution de l'identité partenaire
-//
-//  Ordre de priorité :
-//    1. ?t=TOKEN   → magic token (PROD, recommandé)
-//    2. ?siren=XXX → SIREN direct (DEV / debug uniquement)
-//    3. Pas de paramètre → écran "Accès requis"
-// =========================================================================
-(async () => {
-  const params = new URLSearchParams(location.search);
-  const magicToken = params.get('t');
-  const siren = params.get('siren');
-
-  let apiUrl;
-  let identityLabel;
-
-  if (magicToken) {
-    apiUrl = `/api/partner-by-token/${encodeURIComponent(magicToken)}`;
-    identityLabel = 'token';
-  } else if (siren) {
-    apiUrl = `/api/partner/${encodeURIComponent(siren)}`;
-    identityLabel = `SIREN ${siren}`;
-  } else {
-    showError(
-      'Accès requis',
-      'Aucun token d\'accès fourni. Utilisez le lien personnel envoyé par email.'
-    );
-    return;
-  }
-
+async function refreshOffreCountsLight() {
   try {
-    const r = await fetch(apiUrl);
-    const data = await r.json();
-    if (!r.ok || data.error) {
-      showError(
-        data.error || `Erreur ${r.status}`,
-        data.detail || `Identité : ${identityLabel}`
-      );
-      return;
+    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (data.stats) {
+      const att = $('dash-attente-count');
+      const pub = $('dash-publie-count');
+      if (att) att.textContent = data.stats.en_attente || 0;
+      if (pub) pub.textContent = data.stats.publie || 0;
+      // Mettre à jour le badge sidebar
+      const b = $('sb-badge-attente');
+      if (b) {
+        if (data.stats.en_attente > 0) { b.textContent = data.stats.en_attente; b.hidden = false; }
+        else { b.hidden = true; }
+      }
     }
-    renderDashboard(data);
-  } catch (e) {
-    showError('Connexion impossible', e.message);
-  }
-})();
-
-// =========================================================================
-//  MINUTE DE L'EMPLOI — Génération PDF avec logo
-// =========================================================================
-// URL du template PDF — chemin relatif au worker Cloudflare (sert /public/)
-const ME_TEMPLATE_URL = '/minute_de_l_emploi_template.pdf';
-const LOGO_STORAGE_KEY = 'spacers_partner_logo';
-
-let ME_LOGO_DATA_URL = null;
-
-function openMinuteEmploiModal() {
-  // Restaurer le logo depuis localStorage
-  const saved = localStorage.getItem(LOGO_STORAGE_KEY);
-  if (saved) {
-    ME_LOGO_DATA_URL = saved;
-    showLogoPreview(saved);
-  } else {
-    ME_LOGO_DATA_URL = null;
-    resetLogoPreview();
-  }
-
-  // Pré-remplir le formulaire avec le draft (email, lieu déjà saisis)
-  loadMinuteEmploiDraft();
-
-  $('me-status').textContent = '';
-  $('me-modal').hidden = false;
-}
-
-function closeMinuteEmploiModal() {
-  $('me-modal').hidden = true;
-}
-
-function showLogoPreview(dataUrl) {
-  $('me-logo-preview').innerHTML = `<img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
-  $('me-logo-remove').style.display = '';
-}
-
-function resetLogoPreview() {
-  $('me-logo-preview').innerHTML = '<span style="color:#5B6573;font-size:10px;">aucun</span>';
-  $('me-logo-remove').style.display = 'none';
-}
-
-function removeLogo() {
-  localStorage.removeItem(LOGO_STORAGE_KEY);
-  ME_LOGO_DATA_URL = null;
-  resetLogoPreview();
-  $('me-logo-input').value = '';
-}
-
-function onLogoSelected(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    $('me-status').textContent = '⚠ Logo trop volumineux (max 2 Mo).';
-    $('me-status').style.color = '#c62828';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    ME_LOGO_DATA_URL = e.target.result;
-    localStorage.setItem(LOGO_STORAGE_KEY, ME_LOGO_DATA_URL);
-    showLogoPreview(ME_LOGO_DATA_URL);
-    $('me-status').textContent = '✓ Logo enregistré localement.';
-    $('me-status').style.color = '#2e7d32';
-  };
-  reader.readAsDataURL(file);
-}
-
-async function submitMinuteEmploi() {
-  const btn = $('me-dl-btn');
-  const status = $('me-status');
-
-  // Validation côté client
-  const poste = $('me-input-poste').value.trim();
-  const email = $('me-input-email').value.trim();
-  if (!poste) { status.textContent = '⚠ Le poste est obligatoire.'; status.style.color = '#c62828'; $('me-input-poste').focus(); return; }
-  if (!email || !email.includes('@')) { status.textContent = '⚠ Email de candidatures invalide.'; status.style.color = '#c62828'; $('me-input-email').focus(); return; }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Envoi en cours…';
-  status.textContent = '';
-  status.style.color = '#5B6573';
-
-  // Récupérer le token magic depuis l'URL
-  const magicToken = new URLSearchParams(location.search).get('t');
-  if (!magicToken) {
-    status.textContent = '❌ Token partenaire introuvable. Reconnecte-toi via le lien envoyé par email.';
-    status.style.color = '#c62828';
-    btn.disabled = false;
-    btn.textContent = '✉ Envoyer mon annonce';
-    return;
-  }
-
-  // Construire le payload
-  const payload = {
-    titre: poste,
-    type_contrat: $('me-input-contrat').value || null,
-    lieu: $('me-input-lieux').value.trim() || null,
-    duree: $('me-input-heures').value.trim() || null,
-    salaire_indicatif: $('me-input-salaire').value.trim() || null,
-    description: $('me-input-prerequis').value.trim() || null,
-    contact_email: email,
-    contact_nom: window.__PARTNER_REPRESENTANT__ || null,
-    metadata: {
-      date_match: $('me-input-date_match').value.trim() || null,
-      les_plus: $('me-input-les_plus').value.trim() || null,
-      logo_b64: ME_LOGO_DATA_URL || null,
-      source: 'pwa-partenaire-minute-emploi',
-    },
-  };
-
-  try {
-    const res = await fetch(`/api/partner/${encodeURIComponent(magicToken)}/offres-emploi`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const json = await res.json();
-    if (!res.ok || json.error) {
-      throw new Error(json.error || `Erreur ${res.status}`);
-    }
-
-    // Succès — sauvegarder le brouillon (pour ré-utilisation prochaine)
-    saveMinuteEmploiDraft();
-
-    status.innerHTML = '✅ <b>Annonce envoyée</b> — l\'équipe Spacers la valide puis la diffuse. Vous serez informé(e) à <b>' + email + '</b>.';
-    status.style.color = '#2e7d32';
-    btn.textContent = '✓ Envoyée';
-
-    // Réinitialiser le formulaire après 2s
-    setTimeout(() => {
-      clearMinuteEmploiForm();
-      btn.disabled = false;
-      btn.textContent = '✉ Envoyer mon annonce';
-    }, 3000);
-  } catch (e) {
-    console.error(e);
-    status.textContent = '❌ Erreur : ' + e.message;
-    status.style.color = '#c62828';
-    btn.disabled = false;
-    btn.textContent = '✉ Envoyer mon annonce';
-  }
-}
-
-function saveMinuteEmploiDraft() {
-  // (Optionnel) Sauvegarder en localStorage pour pré-remplissage futur
-  const draft = {
-    contrat: $('me-input-contrat').value,
-    lieu: $('me-input-lieux').value,
-    contact_email: $('me-input-email').value,
-  };
-  try { localStorage.setItem('spacers_minute_emploi_draft', JSON.stringify(draft)); } catch {}
-}
-
-function loadMinuteEmploiDraft() {
-  try {
-    const raw = localStorage.getItem('spacers_minute_emploi_draft');
-    if (!raw) return;
-    const draft = JSON.parse(raw);
-    if (draft.contrat) $('me-input-contrat').value = draft.contrat;
-    if (draft.lieu) $('me-input-lieux').value = draft.lieu;
-    if (draft.contact_email) $('me-input-email').value = draft.contact_email;
   } catch {}
 }
 
-function clearMinuteEmploiForm() {
-  ['date_match', 'poste', 'prerequis', 'lieux', 'heures', 'salaire', 'les_plus'].forEach(k => {
-    const el = $('me-input-' + k);
-    if (el) el.value = '';
-  });
-  $('me-input-contrat').value = '';
-  // On garde email et logo, ils servent toujours
+// ============================================================================
+//  OFFRES EMPLOI — Modération
+// ============================================================================
+async function loadOffres(force=false) {
+  const btn = document.querySelector('#tab-offres .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('offres-list');
+
+  try {
+    const url = `/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}` +
+      (CURRENT_OFFRE_FILTER !== 'all' ? `?statut=${encodeURIComponent(CURRENT_OFFRE_FILTER)}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+
+    OFFRES_CACHE = data.offres || [];
+    OFFRES_STATS = data.stats || {};
+    renderOffreStats();
+    renderOffresList();
+
+    // refresh badge sidebar en cohérence
+    const b = $('sb-badge-attente');
+    if (b) {
+      if (OFFRES_STATS.en_attente > 0) { b.textContent = OFFRES_STATS.en_attente; b.hidden = false; }
+      else { b.hidden = true; }
+    }
+  } catch (e) {
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Échec chargement ' + src));
-    document.head.appendChild(s);
+function renderOffreStats() {
+  const s = OFFRES_STATS;
+  $('cnt-all').textContent = s.total ?? 0;
+  $('cnt-en_attente').textContent = s.en_attente ?? 0;
+  $('cnt-publie').textContent = s.publie ?? 0;
+  $('cnt-refuse').textContent = s.refuse ?? 0;
+  $('cnt-archive').textContent = s.archive ?? 0;
+}
+
+function setOffreFilter(statut, btn) {
+  CURRENT_OFFRE_FILTER = statut;
+  document.querySelectorAll('#offres-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  loadOffres();
+}
+
+function statusLabel(statut) {
+  return {
+    en_attente: 'À modérer',
+    publie:     'Publiée',
+    refuse:     'Refusée',
+    archive:    'Archivée',
+    expire:     'Expirée',
+    pourvue:    'Pourvue',
+  }[statut] || statut;
+}
+
+function renderOffresList() {
+  const el = $('offres-list');
+  if (!OFFRES_CACHE.length) {
+    el.innerHTML = `<div class="list-empty">
+      <h3>Aucune annonce</h3>
+      <p>${CURRENT_OFFRE_FILTER === 'en_attente' ? 'Aucune annonce en attente de modération — vous êtes à jour ✓' : 'Aucune annonce dans cette catégorie.'}</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = OFFRES_CACHE.map(o => {
+    const statutClass = o.statut || 'attente';
+    const meta = [];
+    if (o.type_contrat) meta.push(`<span class="tag">${escapeHtml(o.type_contrat)}</span>`);
+    if (o.lieu) meta.push(`<span>📍 ${escapeHtml(o.lieu)}</span>`);
+    if (o.salaire_indicatif) meta.push(`<span>💼 ${escapeHtml(o.salaire_indicatif)}</span>`);
+    meta.push(`<span>${o.statut === 'publie' ? 'Publiée' : 'Créée'} ${formatRelative(o.date_publication || o.created_at)}</span>`);
+
+    const actions = [];
+    actions.push(`<button class="btn sm" onclick="openOffreDetail('${o.id}')">Voir</button>`);
+    if (o.statut === 'en_attente') {
+      actions.push(`<button class="btn sm success" onclick="quickPublish('${o.id}')">Publier</button>`);
+      actions.push(`<button class="btn sm danger" onclick="quickReject('${o.id}')">Refuser</button>`);
+    } else if (o.statut === 'publie') {
+      actions.push(`<button class="btn sm gold" onclick="generateCubePdf('${o.id}')"><span class="ico">📄</span>PDF cube</button>`);
+    }
+
+    return `
+      <div class="offre-row ${statutClass}">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+            <span class="status-badge ${statutClass}">${statusLabel(o.statut)}</span>
+            ${o.created_by === 'partenaire' ? '<span style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;">↗ Proposée par partenaire</span>' : ''}
+          </div>
+          <div class="offre-titre">${escapeHtml(o.titre)}</div>
+          <div class="offre-partner"><b>${escapeHtml(o.partenaire || 'Partenaire inconnu')}</b></div>
+          <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
+        </div>
+        <div class="offre-actions">${actions.join('')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================================
+//  OFFRE — Détail modal
+// ============================================================================
+async function openOffreDetail(offreId) {
+  $('modal-offre').hidden = false;
+  $('modal-offre-card').innerHTML = `<div class="modal-body" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">Chargement…</p></div>`;
+  try {
+    const res = await fetch(`/api/admin/offre/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_OFFRE_DETAIL = data.offre;
+    renderOffreDetail(data.offre);
+  } catch (e) {
+    $('modal-offre-card').innerHTML = `<div class="modal-body"><div class="banner danger">Erreur : ${escapeHtml(e.message)}</div><div style="text-align:right;margin-top:14px;"><button class="btn" onclick="closeOffreModal()">Fermer</button></div></div>`;
+  }
+}
+
+function closeOffreModal() {
+  $('modal-offre').hidden = true;
+  CURRENT_OFFRE_DETAIL = null;
+}
+
+function renderOffreDetail(o) {
+  const card = $('modal-offre-card');
+  const isAttente = o.statut === 'en_attente';
+  const isPublie = o.statut === 'publie';
+  const isRefuse = o.statut === 'refuse';
+  const isArchive = o.statut === 'archive';
+  const meta = o.metadata || {};
+
+  // Logo preview
+  let logoPreview = '';
+  if (meta.logo_b64) {
+    logoPreview = `<div style="margin-top:8px;"><img src="${escapeHtml(meta.logo_b64)}" style="max-width:120px;max-height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:6px;background:white;"></div>`;
+  } else {
+    logoPreview = `<div style="margin-top:8px;color:var(--ink-muted);font-size:11px;font-style:italic;">Aucun logo fourni</div>`;
+  }
+
+  // Banner statut
+  let banner = '';
+  if (isAttente) banner = `<div class="banner warn"><b>Annonce en attente.</b>&nbsp;Vérifiez le contenu puis publiez ou refusez avec un motif clair (le partenaire pourra voir le motif côté espace).</div>`;
+  else if (isPublie) banner = `<div class="banner success"><b>Annonce publiée${o.date_publication ? ' le ' + formatDate(o.date_publication) : ''}.</b>&nbsp;Visible côté partenaire et côté bénévole (Sprint C). Générez le PDF cube vidéo pour la diffusion.</div>`;
+  else if (isRefuse) banner = `<div class="banner danger"><b>Annonce refusée.</b>&nbsp;${o.raison_refus ? 'Motif : <i>' + escapeHtml(o.raison_refus) + '</i>' : 'Pas de motif renseigné.'}</div>`;
+  else if (isArchive) banner = `<div class="banner info"><b>Annonce archivée.</b>&nbsp;Plus visible côté partenaire ni côté bénévole.</div>`;
+
+  // Actions selon statut
+  const actions = [`<button class="btn ghost" onclick="closeOffreModal()">Fermer</button>`];
+  if (isAttente) {
+    actions.push(`<button class="btn danger" onclick="quickReject('${o.id}')">Refuser</button>`);
+    actions.push(`<button class="btn success" onclick="quickPublish('${o.id}')">Publier l'annonce</button>`);
+  } else if (isPublie) {
+    actions.push(`<button class="btn ghost" onclick="quickArchive('${o.id}')">Archiver</button>`);
+    actions.push(`<button class="btn gold" onclick="generateCubePdf('${o.id}')"><span class="ico">📄</span>PDF cube vidéo</button>`);
+  } else if (isRefuse || isArchive) {
+    actions.push(`<button class="btn success" onclick="quickPublish('${o.id}')">Re-publier</button>`);
+  }
+
+  card.innerHTML = `
+    <div class="modal-head">
+      <div class="row">
+        <div style="flex:1;min-width:0;">
+          <div class="eyebrow">Annonce ${escapeHtml(o.id.slice(0,8))}…</div>
+          <h2 class="display">${escapeHtml(o.titre)}</h2>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+            <span class="status-badge ${o.statut}">${statusLabel(o.statut)}</span>
+            <span style="color:var(--ink-muted);font-size:12px;">${escapeHtml(o.partenaire || '—')} · contrat ${escapeHtml(o.contrat_id || '—')}</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeOffreModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      ${banner}
+
+      <div class="detail-grid">
+        <div class="detail-field"><div class="lbl">Type de contrat</div><div class="val ${!o.type_contrat?'empty':''}">${escapeHtml(o.type_contrat || '—')}</div></div>
+        <div class="detail-field"><div class="lbl">Lieu</div><div class="val ${!o.lieu?'empty':''}">${escapeHtml(o.lieu || '—')}</div></div>
+        <div class="detail-field"><div class="lbl">Salaire indicatif</div><div class="val ${!o.salaire_indicatif?'empty':''}">${escapeHtml(o.salaire_indicatif || '—')}</div></div>
+        <div class="detail-field"><div class="lbl">Durée / horaires</div><div class="val ${!o.duree?'empty':''}">${escapeHtml(o.duree || '—')}</div></div>
+        <div class="detail-field"><div class="lbl">Expérience requise</div><div class="val ${!o.experience_requise?'empty':''}">${escapeHtml(o.experience_requise || '—')}</div></div>
+        <div class="detail-field"><div class="lbl">Diffusion cube · date match</div><div class="val ${!meta.date_match?'empty':''}">${escapeHtml(meta.date_match || '—')}</div></div>
+      </div>
+
+      ${o.description ? `<div class="detail-section">
+        <div class="detail-section-h">Description / Profil recherché</div>
+        <div class="descr">${escapeHtml(o.description)}</div>
+      </div>` : ''}
+
+      ${meta.les_plus ? `<div class="detail-section">
+        <div class="detail-section-h">Les + de l'offre</div>
+        <div class="descr">${escapeHtml(meta.les_plus)}</div>
+      </div>` : ''}
+
+      <div class="detail-section">
+        <div class="detail-section-h">Contact candidatures</div>
+        <div class="detail-grid" style="margin-bottom:0;">
+          <div class="detail-field"><div class="lbl">Nom</div><div class="val ${!o.contact_nom?'empty':''}">${escapeHtml(o.contact_nom || '—')}</div></div>
+          <div class="detail-field"><div class="lbl">Email</div><div class="val ${!o.contact_email?'empty':''}">${o.contact_email ? `<a href="mailto:${escapeHtml(o.contact_email)}" style="color:var(--gold);">${escapeHtml(o.contact_email)}</a>` : '—'}</div></div>
+          <div class="detail-field"><div class="lbl">Téléphone</div><div class="val ${!o.contact_telephone?'empty':''}">${escapeHtml(o.contact_telephone || '—')}</div></div>
+          <div class="detail-field"><div class="lbl">URL externe</div><div class="val ${!o.url_externe?'empty':''}">${o.url_externe ? `<a href="${escapeHtml(o.url_externe)}" target="_blank" style="color:var(--gold);">${escapeHtml(o.url_externe)}</a>` : '—'}</div></div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-h">Logo partenaire fourni</div>
+        ${logoPreview}
+      </div>
+
+      <div class="detail-grid" style="margin-top:6px;">
+        <div class="detail-field"><div class="lbl">Soumise par</div><div class="val">${escapeHtml(o.created_by || '—')}</div></div>
+        <div class="detail-field"><div class="lbl">Créée le</div><div class="val">${formatDate(o.created_at)}</div></div>
+        <div class="detail-field"><div class="lbl">Expire le</div><div class="val ${!o.date_expiration?'empty':''}">${formatDate(o.date_expiration)}</div></div>
+        <div class="detail-field"><div class="lbl">Statistiques</div><div class="val">${o.vues_count || 0} vue(s) · ${o.candidatures_count || 0} cand.</div></div>
+      </div>
+    </div>
+    <div class="modal-foot">${actions.join('')}</div>
+  `;
+}
+
+// ============================================================================
+//  ACTIONS — Publier / Refuser / Archiver
+// ============================================================================
+async function quickPublish(offreId) {
+  const ok = await confirmModal({
+    title: 'Publier cette annonce ?',
+    eyebrow: 'Validation',
+    message: 'L\'annonce sera visible dans l\'espace partenaire et bientôt aux bénévoles. Tu pourras toujours l\'archiver plus tard.',
+    confirmText: 'Publier',
+    confirmStyle: 'success',
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/publish`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Annonce publiée', 'success');
+    closeOffreModal();
+    loadOffres();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function quickReject(offreId) {
+  const raison = await promptModal({
+    title: 'Refuser cette annonce',
+    eyebrow: 'Refus',
+    message: 'Le motif sera transmis au partenaire. Sois précis et constructif.',
+    inputLabel: 'Motif du refus',
+    inputPlaceholder: 'ex: Description trop courte, manque de détails sur le poste…',
+    confirmText: 'Refuser',
+    confirmStyle: 'danger',
+  });
+  if (raison === null) return;
+  if (!raison.trim()) { showToast('Le motif est obligatoire', 'error'); return; }
+  try {
+    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raison: raison.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('Annonce refusée', 'success');
+    closeOffreModal();
+    loadOffres();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function quickArchive(offreId) {
+  const ok = await confirmModal({
+    title: 'Archiver cette annonce ?',
+    eyebrow: 'Archivage',
+    message: 'L\'annonce ne sera plus visible côté partenaire ni côté bénévole. C\'est réversible (tu peux la re-publier).',
+    confirmText: 'Archiver',
+    confirmStyle: 'primary',
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/archive`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('Annonce archivée', 'success');
+    closeOffreModal();
+    loadOffres();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ============================================================================
+//  CONFIRM / PROMPT modals (réutilisables)
+// ============================================================================
+let _confirmResolve = null;
+function confirmModal(opts) {
+  return new Promise((resolve) => {
+    _confirmResolve = resolve;
+    $('mc-eyebrow').textContent = opts.eyebrow || 'Confirmation';
+    $('mc-title').textContent = opts.title || 'Confirmer ?';
+    $('mc-msg').textContent = opts.message || '';
+    $('mc-input-wrap').hidden = true;
+    const okBtn = $('mc-ok');
+    okBtn.textContent = opts.confirmText || 'Confirmer';
+    okBtn.className = 'btn ' + (opts.confirmStyle || 'primary');
+    $('modal-confirm').hidden = false;
   });
 }
+function promptModal(opts) {
+  return new Promise((resolve) => {
+    _confirmResolve = resolve;
+    $('mc-eyebrow').textContent = opts.eyebrow || 'Saisie';
+    $('mc-title').textContent = opts.title || 'Saisir…';
+    $('mc-msg').textContent = opts.message || '';
+    $('mc-input-wrap').hidden = false;
+    $('mc-input-label').textContent = opts.inputLabel || 'Motif';
+    const inp = $('mc-input');
+    inp.value = opts.defaultValue || '';
+    inp.placeholder = opts.inputPlaceholder || '';
+    const okBtn = $('mc-ok');
+    okBtn.textContent = opts.confirmText || 'Valider';
+    okBtn.className = 'btn ' + (opts.confirmStyle || 'primary');
+    $('modal-confirm').hidden = false;
+    setTimeout(() => inp.focus(), 60);
+  });
+}
+function closeConfirm(result) {
+  $('modal-confirm').hidden = true;
+  if (_confirmResolve) {
+    if (result === 'ok') {
+      const inputWrap = $('mc-input-wrap');
+      if (!inputWrap.hidden) _confirmResolve($('mc-input').value);
+      else _confirmResolve(true);
+    } else {
+      _confirmResolve(null);
+    }
+    _confirmResolve = null;
+  }
+}
+
+// ============================================================================
+//  ╔════════════════════════════════════════════════════════════════════════╗
+//  ║  PDF CUBE VIDÉO — Génération paysage 16:9 (1920×1080) pour interset    ║
+//  ╚════════════════════════════════════════════════════════════════════════╝
+// ============================================================================
+async function generateCubePdf(offreId) {
+  // Si pas déjà en cache détail, on fetch
+  let offre = CURRENT_OFFRE_DETAIL && CURRENT_OFFRE_DETAIL.id === offreId
+    ? CURRENT_OFFRE_DETAIL
+    : null;
+
+  if (!offre) {
+    showToast('Chargement de l\'annonce…', 'success');
+    try {
+      const res = await fetch(`/api/admin/offre/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+      offre = data.offre;
+    } catch (e) {
+      showToast('Erreur chargement : ' + e.message, 'error');
+      return;
+    }
+  }
+
+  try {
+    showToast('Génération du PDF…', 'success');
+    await buildAndDownloadCubePdf(offre);
+    showToast('✓ PDF cube vidéo téléchargé', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast('Erreur PDF : ' + e.message, 'error');
+  }
+}
+
+async function buildAndDownloadCubePdf(offre) {
+  if (!window.jspdf) throw new Error('jsPDF non chargé');
+  const { jsPDF } = window.jspdf;
+
+  // Format paysage 16:9 — 1920×1080 points (très haute déf pour diffusion écran géant)
+  const W = 1920, H = 1080;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] });
+
+  // === Palette Spacers (alignée sur les CSS variables) ===
+  const COLORS = {
+    ink:      [10, 22, 40],     // #0A1628
+    ink2:     [17, 32, 58],     // #11203a
+    gold:     [200, 147, 43],   // #C8932B
+    goldSoft: [232, 201, 119],  // #E8C977
+    cream:    [250, 247, 242],  // #FAF7F2
+    line:     [70, 60, 30],     // accent doré tamisé
+    white:    [255, 255, 255],
+    muted:    [200, 195, 180],
+  };
+
+  // === Fond : navy avec halo doré en haut-droite ===
+  doc.setFillColor(...COLORS.ink);
+  doc.rect(0, 0, W, H, 'F');
+
+  // Halo doré (simulé par des cercles dégradés)
+  for (let i = 0; i < 12; i++) {
+    const alpha = 0.025 - i * 0.0018;
+    if (alpha <= 0) break;
+    doc.setFillColor(200, 147, 43);
+    doc.setGState(new doc.GState({ opacity: alpha }));
+    doc.circle(W - 120, 100 + i * 18, 350 + i * 60, 'F');
+  }
+  doc.setGState(new doc.GState({ opacity: 1 })); // reset
+
+  // === Bandeau haut : "MINUTE EMPLOI" eyebrow + filet doré ===
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...COLORS.goldSoft);
+  doc.text('MINUTE EMPLOI · DIFFUSION INTERSET', 100, 110, { charSpace: 4 });
+
+  // Filet doré sous l'eyebrow
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(2);
+  doc.line(100, 130, 240, 130);
+
+  // === Logo Spacers (carré "S") en haut-gauche, sous l'eyebrow ===
+  drawSpacersLogo(doc, 100, 160, 90, COLORS);
+
+  // === Logo partenaire en haut-droite (depuis metadata.logo_b64) ===
+  const meta = offre.metadata || {};
+  if (meta.logo_b64) {
+    try {
+      const fmt = meta.logo_b64.startsWith('data:image/png') ? 'PNG' :
+                  meta.logo_b64.startsWith('data:image/jpeg') ? 'JPEG' :
+                  meta.logo_b64.startsWith('data:image/jpg') ? 'JPEG' : null;
+      if (fmt) {
+        // Cadre blanc autour du logo (visibilité sur fond navy)
+        const logoBoxW = 280, logoBoxH = 180;
+        const logoX = W - 100 - logoBoxW;
+        const logoY = 160;
+        doc.setFillColor(...COLORS.white);
+        doc.roundedRect(logoX, logoY, logoBoxW, logoBoxH, 12, 12, 'F');
+        // Image avec padding
+        doc.addImage(meta.logo_b64, fmt, logoX + 20, logoY + 20, logoBoxW - 40, logoBoxH - 40, undefined, 'FAST');
+      }
+    } catch (e) {
+      console.warn('Logo partenaire non rendu :', e.message);
+    }
+  }
+
+  // === Raison sociale ===
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  doc.setTextColor(...COLORS.muted);
+  const partenaireName = (offre.partenaire || '').toUpperCase();
+  doc.text(partenaireName.slice(0, 50), 100, 290);
+
+  // === Titre du poste (TRÈS GROS pour lecture à distance) ===
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.white);
+  const titre = offre.titre || 'Annonce';
+  const titreLines = doc.splitTextToSize(titre, W - 200);
+  const titreSize = titreLines.length > 2 ? 80 : titreLines.length > 1 ? 100 : 120;
+  doc.setFontSize(titreSize);
+  let titreY = 400;
+  titreLines.slice(0, 3).forEach((line, i) => {
+    doc.text(line, 100, titreY + i * (titreSize * 1.05));
+  });
+  const titreEndY = titreY + (Math.min(titreLines.length, 3) - 1) * (titreSize * 1.05);
+
+  // === Filet doré sous le titre ===
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(4);
+  doc.line(100, titreEndY + 40, 300, titreEndY + 40);
+
+  // === Bandeau infos clés (type contrat / lieu / durée / salaire) ===
+  let infoY = titreEndY + 90;
+  const infoChips = [];
+  if (offre.type_contrat) infoChips.push({ icon: '◆', text: offre.type_contrat });
+  if (offre.lieu) infoChips.push({ icon: '⌖', text: offre.lieu });
+  if (offre.duree) infoChips.push({ icon: '⌚', text: offre.duree });
+  if (offre.salaire_indicatif) infoChips.push({ icon: '€', text: offre.salaire_indicatif });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(32);
+  let chipX = 100;
+  infoChips.forEach((chip, idx) => {
+    const fullText = `${chip.icon}  ${chip.text}`;
+    const w = doc.getTextWidth(fullText);
+    if (chipX + w > W - 100) return; // overflow guard
+    // Background pill
+    doc.setFillColor(...COLORS.ink2);
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(1);
+    doc.roundedRect(chipX - 18, infoY - 36, w + 36, 56, 28, 28, 'FD');
+    doc.setTextColor(...COLORS.goldSoft);
+    doc.text(fullText, chipX, infoY);
+    chipX += w + 60;
+  });
+
+  // === "Les +" si fourni ===
+  if (meta.les_plus) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(24);
+    doc.setTextColor(...COLORS.cream);
+    const plusLines = doc.splitTextToSize('« ' + meta.les_plus + ' »', W - 200);
+    let py = infoY + 110;
+    plusLines.slice(0, 3).forEach((line, i) => {
+      doc.text(line, 100, py + i * 36);
+    });
+  }
+
+  // === Footer : Contact + Date match ===
+  // Ligne or séparatrice
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(2);
+  doc.line(100, H - 180, W - 100, H - 180);
+
+  // Bloc gauche : POSTULER
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...COLORS.goldSoft);
+  doc.text('POSTULER', 100, H - 130, { charSpace: 3 });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(38);
+  doc.setTextColor(...COLORS.white);
+  const contact = offre.contact_email || offre.url_externe || offre.contact_telephone || '—';
+  doc.text(contact, 100, H - 75);
+
+  // Bloc droite : Diffusion match
+  if (meta.date_match) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...COLORS.muted);
+    const dmText = 'DIFFUSION · ' + meta.date_match;
+    const dmW = doc.getTextWidth(dmText);
+    doc.text(dmText, W - 100 - dmW, H - 90, { charSpace: 2 });
+  }
+
+  // Bloc droite bas : footer club
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(14);
+  doc.setTextColor(...COLORS.muted);
+  const footerText = 'Spacer\'s Toulouse Volley · Business Club';
+  const footerW = doc.getTextWidth(footerText);
+  doc.text(footerText, W - 100 - footerW, H - 60);
+
+  // === Save ===
+  const safeName = (offre.titre || 'annonce').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 50);
+  const safePartner = (offre.partenaire || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 30);
+  const filename = `cube_${safePartner}_${safeName}.pdf`;
+  doc.save(filename);
+}
+
+// Logo "S" Spacers carré (cohérent avec la version HTML : carré navy bordure or)
+function drawSpacersLogo(doc, x, y, size, COLORS) {
+  // Cadre carré or
+  doc.setFillColor(...COLORS.gold);
+  doc.roundedRect(x, y, size, size, 14, 14, 'F');
+  // Lettre S
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(size * 0.7);
+  doc.setTextColor(...COLORS.ink);
+  // Centrer "S" dans le carré
+  const text = 'S';
+  const tw = doc.getTextWidth(text);
+  doc.text(text, x + (size - tw) / 2, y + size * 0.72);
+}
+
+// ============================================================================
+//  BOOT
+// ============================================================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!$('modal-offre').hidden) closeOffreModal();
+    if (!$('modal-confirm').hidden) closeConfirm(null);
+  }
+});
+
+init();
 </script>
 
 </body>
