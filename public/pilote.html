@@ -2,763 +2,384 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spacer's Pilote · Espace équipe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0A1628" />
+<title>Spacer's Business Club · Espace partenaire</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #F4F1EA;
-    --bg-soft: #ECE7DB;
+    --bg: #FAF7F2;
+    --bg-soft: #F1ECE2;
     --ink: #0A1628;
-    --ink-2: #0F1D33;
-    --ink-soft: #3F4A5E;
-    --ink-muted: #8B8775;
+    --ink-soft: #4A5568;
+    --ink-muted: #8A8478;
     --gold: #C8932B;
     --gold-soft: #E8C977;
-    --gold-faint: rgba(200,147,43,.12);
+    --silver: #9CA3AF;
+    --bronze: #A56F3E;
     --red: #B23A48;
-    --green: #3A8264;
     --orange: #D97743;
-    --line: #DDD6C6;
-    --line-strong: #C8C0AC;
+    --green: #3A8264;
+    --line: #E5DED1;
     --card: #FFFFFF;
-    --sidebar: #0A1628;
-    --sidebar-soft: #152238;
-    --sidebar-line: rgba(255,255,255,.08);
-    --shadow-sm: 0 1px 3px rgba(10,22,40,.06);
-    --shadow-md: 0 4px 16px rgba(10,22,40,.06), 0 0 0 1px rgba(10,22,40,.04);
-    --radius: 10px;
-    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px rgba(10,22,40,.04), 0 0 0 1px rgba(10,22,40,.04);
+    --shadow-md: 0 8px 24px rgba(10,22,40,.06), 0 0 0 1px rgba(10,22,40,.04);
+    --radius: 14px;
+    --radius-lg: 22px;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { font-family: 'Manrope', system-ui, sans-serif; font-size: 14px; line-height: 1.5; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
-  body { display: flex; min-height: 100vh; overflow-x: hidden; }
-  button { font-family: inherit; cursor: pointer; border: none; background: none; }
-  a { color: inherit; text-decoration: none; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-
-  /* ====== SIDEBAR ====== */
-  .sidebar {
-    width: 240px; flex-shrink: 0;
-    background: var(--sidebar);
-    color: rgba(255,255,255,.78);
-    padding: 22px 0 18px;
-    display: flex; flex-direction: column;
-    position: sticky; top: 0; height: 100vh;
-    border-right: 1px solid var(--sidebar-line);
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Manrope', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body {
+    background: radial-gradient(circle at 12% -8%, rgba(200,147,43,.08), transparent 35%), radial-gradient(circle at 92% 6%, rgba(178,58,72,.05), transparent 40%), var(--bg);
+    min-height: 100vh; padding-bottom: 100px;
   }
-  .sb-brand { padding: 0 22px 26px; border-bottom: 1px solid var(--sidebar-line); margin-bottom: 14px; }
-  .sb-brand-row { display: flex; align-items: center; gap: 11px; }
-  .sb-logo { width: 36px; height: 36px; border-radius: 9px; background: linear-gradient(135deg, var(--gold), #A57518); display: grid; place-items: center; color: var(--ink); font-weight: 800; font-size: 16px; }
-  .sb-brand-text { flex: 1; }
-  .sb-brand-title { color: white; font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
-  .sb-brand-sub { font-size: 10.5px; color: rgba(255,255,255,.5); letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; }
+  .display { font-family: 'Fraunces', serif; font-variation-settings: "opsz" 144; font-weight: 500; letter-spacing: -.02em; line-height: 1.05; }
+  .display-italic { font-family: 'Fraunces', serif; font-style: italic; font-variation-settings: "opsz" 144; font-weight: 400; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; color: var(--ink-muted); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 700px) { .container { padding: 0 16px; } }
 
-  .sb-section { padding: 14px 22px 8px; font-size: 10.5px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .12em; font-weight: 600; }
-  .sb-nav { padding: 0 12px; display: flex; flex-direction: column; gap: 2px; }
-  .sb-link { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 7px; color: rgba(255,255,255,.72); font-size: 13.5px; font-weight: 500; transition: all .15s; cursor: pointer; }
-  .sb-link:hover { background: var(--sidebar-soft); color: white; }
-  .sb-link.active { background: var(--sidebar-soft); color: white; box-shadow: inset 2px 0 0 var(--gold); }
-  .sb-link.active::before { content: ''; }
-  .sb-ico { width: 18px; height: 18px; display: grid; place-items: center; opacity: .8; }
-  .sb-link .sb-badge { margin-left: auto; background: var(--red); color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px; }
+  /* HEADER */
+  header { padding: 24px 0 8px; }
+  header .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--ink); color: var(--gold-soft); display: grid; place-items: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
+  .brand .name { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+  .brand .name small { display: block; font-weight: 500; font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .14em; margin-top: 2px; }
+  .user-chip { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+  .user-chip .meta { text-align: right; font-size: 12px; line-height: 1.2; }
+  .user-chip .meta b { display: block; font-size: 13px; }
+  .user-chip .meta small { color: var(--ink-muted); font-size: 11px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: white; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
 
-  .sb-user { margin-top: auto; padding: 16px 22px 0; border-top: 1px solid var(--sidebar-line); }
-  .sb-user-row { display: flex; align-items: center; gap: 10px; }
-  .sb-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); color: var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 12.5px; }
-  .sb-user-info { flex: 1; min-width: 0; }
-  .sb-user-name { color: white; font-size: 13px; font-weight: 600; }
-  .sb-user-role { font-size: 11px; color: rgba(255,255,255,.5); }
+  /* HERO */
+  .hero { padding: 48px 0 32px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; gap: 24px; padding: 32px 0 24px; } }
+  .hero .saison { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; margin-bottom: 16px; }
+  .hero h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(36px, 5.5vw, 64px); letter-spacing: -.025em; line-height: 1.02; }
+  .hero h1 em { font-style: italic; color: var(--gold); font-weight: 400; }
+  .hero-stats { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 16px 24px; font-size: 13px; }
+  .hero-stats span { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
+  .hero-stats span:before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  .hero-stats span.warn:before { background: var(--orange); }
 
-  /* ====== MAIN ====== */
-  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  /* CARTE CONTRAT */
+  .contract-card { background: linear-gradient(155deg, #11203a 0%, #0A1628 60%); color: white; border-radius: var(--radius-lg); padding: 28px; position: relative; overflow: hidden; }
+  .contract-card:before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(200,147,43,.15), transparent 60%); pointer-events: none; }
+  .niveau-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
+  .niveau-badge.or { color: var(--gold-soft); }
+  .niveau-badge.or:before { content: '★'; color: var(--gold); }
+  .niveau-badge.argent { color: #D1D5DB; }
+  .niveau-badge.argent:before { content: '●'; color: var(--silver); }
+  .niveau-badge.bronze { color: #D4B5A0; }
+  .niveau-badge.bronze:before { content: '●'; color: var(--bronze); }
+  .contract-card h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; margin: 18px 0 6px; }
+  .contract-card .subtitle { color: rgba(255,255,255,.55); font-size: 13px; }
+  .contract-divider { height: 1px; background: rgba(255,255,255,.1); margin: 20px 0; }
+  .contract-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .contract-grid .col b { display: block; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin-bottom: 2px; }
+  .contract-grid .col small { font-size: 11px; color: rgba(255,255,255,.55); letter-spacing: .04em; }
 
-  .topbar { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
-  .breadcrumb { font-size: 13.5px; color: var(--ink-muted); display: flex; align-items: center; gap: 8px; }
-  .breadcrumb b { color: var(--ink); font-weight: 600; }
-  .breadcrumb-sep { color: var(--ink-muted); opacity: .4; }
-  .topbar-spacer { flex: 1; }
-  .topbar-search { position: relative; }
-  .topbar-search input { background: var(--bg); border: 1px solid var(--line); padding: 8px 12px 8px 34px; border-radius: 8px; width: 240px; font-family: inherit; font-size: 13px; color: var(--ink); transition: all .15s; }
-  .topbar-search input:focus { outline: none; border-color: var(--ink); background: white; }
-  .topbar-search .ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); }
-  .icon-btn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-soft); transition: all .15s; cursor: pointer; }
-  .icon-btn:hover { background: var(--bg); color: var(--ink); }
-  .icon-btn .dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; background: var(--red); border-radius: 50%; border: 2px solid white; }
-  .icon-btn-wrap { position: relative; }
+  /* SECTIONS */
+  section { margin-top: 48px; }
+  section h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; line-height: 1.1; margin-bottom: 6px; }
+  section h3 em { font-style: italic; color: var(--gold); }
+  section .section-desc { color: var(--ink-muted); font-size: 13px; margin-bottom: 22px; }
 
-  .content { padding: 32px; max-width: 100%; }
+  /* PRESTATIONS */
+  .prestations { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .prest { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; transition: transform .2s ease, box-shadow .2s ease; }
+  .prest:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .prest .code { font-size: 10px; letter-spacing: .14em; color: var(--gold); font-weight: 700; text-transform: uppercase; }
+  .prest .designation { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin: 6px 0 14px; line-height: 1.2; }
+  .prest .progress { background: var(--bg-soft); height: 4px; border-radius: 2px; overflow: hidden; }
+  .prest .progress div { background: var(--gold); height: 100%; transition: width .6s ease; }
+  .prest .progress-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--ink-muted); }
+  .prest .statut { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 999px; font-size: 10px; letter-spacing: .04em; font-weight: 600; }
+  .prest .statut.a-livrer { background: #FEF3E2; color: #A66B17; }
+  .prest .statut.en-cours { background: #FFF8E5; color: var(--gold); }
+  .prest .statut.livre { background: #E5F4EC; color: var(--green); }
 
-  /* ====== PAGE HEADER ====== */
-  .page-head { margin-bottom: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .page-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .15em; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
-  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; color: var(--ink); }
-  .page-sub { color: var(--ink-soft); margin-top: 4px; font-size: 13.5px; }
+  /* PACK VIP */
+  .pack-vip { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: center; }
+  @media (max-width: 700px) { .pack-vip { grid-template-columns: 1fr; gap: 18px; } }
+  .pack-vip .pack-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 8px; }
+  .pack-vip .pack-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1.1; letter-spacing: -.02em; margin-bottom: 14px; }
+  .pack-bar { width: 100%; background: var(--bg-soft); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+  .pack-bar div { background: linear-gradient(90deg, var(--gold), var(--gold-soft)); height: 100%; transition: width .8s ease; }
+  .pack-stats { display: flex; gap: 24px; font-size: 12px; color: var(--ink-muted); }
+  .pack-stats b { color: var(--ink); font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; display: block; margin-bottom: 2px; }
+  .pack-counter { text-align: right; }
+  .pack-counter b { font-family: 'Fraunces', serif; font-size: 64px; font-weight: 500; line-height: 1; color: var(--gold); }
+  .pack-counter small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); margin-top: 6px; }
 
-  /* ====== BUTTONS ====== */
-  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: all .15s; border: 1px solid transparent; }
-  .btn.primary { background: var(--ink); color: white; }
-  .btn.primary:hover { background: var(--ink-2); }
-  .btn.gold { background: var(--gold); color: var(--ink); }
-  .btn.gold:hover { background: #B8821F; }
-  .btn.ghost { background: white; color: var(--ink); border-color: var(--line); }
-  .btn.ghost:hover { background: var(--bg); border-color: var(--line-strong); }
-  .btn.sm { padding: 6px 10px; font-size: 12px; }
+  /* ALERTES */
+  .alertes { display: flex; flex-direction: column; gap: 10px; }
+  .alerte { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); }
+  .alerte.HAUTE { border-left: 3px solid var(--red); }
+  .alerte.MOYENNE { border-left: 3px solid var(--orange); }
+  .alerte.BASSE { border-left: 3px solid var(--ink-muted); }
+  .alerte .a-icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; flex-shrink: 0; font-weight: 700; }
+  .alerte.HAUTE .a-icon { background: rgba(178,58,72,.1); color: var(--red); }
+  .alerte.MOYENNE .a-icon { background: rgba(217,119,67,.1); color: var(--orange); }
+  .alerte.BASSE .a-icon { background: var(--bg-soft); color: var(--ink-muted); }
+  .alerte .a-content { flex: 1; }
+  .alerte .a-type { font-weight: 700; font-size: 13px; }
+  .alerte .a-msg { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .alerte .a-action { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s ease; flex-shrink: 0; align-self: center; }
+  .alerte .a-action:hover { background: var(--ink); color: white; border-color: var(--ink); }
 
-  /* ====== STATS GRID ====== */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
-  .stat-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 16px; transition: all .15s; }
-  .stat-card:hover { border-color: var(--line-strong); }
-  .stat-label { font-size: 11.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; margin-bottom: 6px; }
-  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; }
-  .stat-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
-  .stat-trend { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; }
-  .stat-trend.up { background: rgba(58,130,100,.12); color: var(--green); }
-  .stat-trend.warn { background: rgba(178,58,72,.1); color: var(--red); }
+  /* CONTACT */
+  .contact-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
 
-  /* ====== CARD / PANEL ====== */
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
-  .panel-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .panel-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
-  .panel-sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 2px; }
-  .panel-body { padding: 0; }
-  .panel-foot { padding: 12px 20px; border-top: 1px solid var(--line); background: var(--bg-soft); font-size: 12.5px; color: var(--ink-soft); }
+  /* MA VIE PARTENAIRE */
+  .vp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 700px) { .vp-grid { grid-template-columns: 1fr; } }
+  .vp-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; cursor: pointer; transition: transform .2s, border-color .2s, box-shadow .2s; }
+  .vp-card:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 6px 20px rgba(10,22,40,.08); }
+  .vp-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--gold); color: white; display: grid; place-items: center; font-size: 20px; font-weight: 600; margin-bottom: 14px; }
+  .vp-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 4px; color: var(--ink); }
+  .vp-sub { color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
+  .mp-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; }
+  .mp-item-content { flex: 1; }
+  .mp-item-title { font-weight: 600; font-size: 14px; color: var(--ink); }
+  .mp-item-meta { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+  .mp-badge { padding: 3px 10px; border-radius: 11px; font-size: 11px; font-weight: 600; }
+  .mp-badge-attente { background: #fff8e1; color: #a36b00; }
+  .mp-badge-publie { background: #e8f5e9; color: #2e7d32; }
+  .mp-badge-refuse { background: #ffebee; color: #c62828; }
+  .mp-badge-archive { background: #f3f6fa; color: #5b6573; }
 
-  .two-col { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
-  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+  /* MINUTE DE L'EMPLOI — Form inputs */
+  .me-label { display:block; font-size:11px; color:#A98A4D; font-weight:bold; text-transform:uppercase; letter-spacing:.05em; }
+  .me-input { display:block; width:100%; box-sizing:border-box; margin-top:4px; padding:10px 12px; border:1px solid #E8E2D4; border-radius:8px; font-size:14px; font-family:inherit; background:white; color:#0A1628; transition:border-color .15s; }
+  .me-input:focus { outline:none; border-color:#C9A864; box-shadow:0 0 0 3px rgba(201,168,100,.15); }
+  @media (max-width: 700px) { .contact-card { grid-template-columns: 1fr; gap: 14px; } .contact-card .actions { display: flex; gap: 8px; } }
+  .contact-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: white; font-weight: 700; font-size: 24px; display: grid; place-items: center; font-family: 'Fraunces', serif; }
+  .contact-info b { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; display: block; }
+  .contact-info small { color: var(--ink-muted); font-size: 13px; }
+  .btn { padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .2s; }
+  .btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn.primary:hover { background: var(--gold); border-color: var(--gold); }
 
-  /* ====== TABLE ====== */
-  .table { width: 100%; border-collapse: collapse; }
-  .table th { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--ink-muted); text-align: left; padding: 12px 20px; background: var(--bg-soft); border-bottom: 1px solid var(--line); }
-  .table td { padding: 14px 20px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle; }
-  .table tr:last-child td { border-bottom: none; }
-  .table tr.clickable:hover td { background: var(--bg); cursor: pointer; }
-  .partner-cell { display: flex; align-items: center; gap: 12px; }
-  .partner-mark { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: 12.5px; flex-shrink: 0; }
-  .partner-info b { font-weight: 600; color: var(--ink); display: block; }
-  .partner-info small { color: var(--ink-muted); font-size: 11.5px; }
+  /* LOADING */
+  .loading { padding: 80px 24px; text-align: center; }
+  .loading .spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--bg-soft); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: var(--ink-muted); font-size: 13px; }
 
-  /* ====== BADGES ====== */
-  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; line-height: 1.4; }
-  .badge.green { background: rgba(58,130,100,.12); color: var(--green); }
-  .badge.gold { background: var(--gold-faint); color: #8E6818; }
-  .badge.red { background: rgba(178,58,72,.1); color: var(--red); }
-  .badge.gray { background: var(--bg-soft); color: var(--ink-soft); }
-  .badge.dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+  /* ERROR */
+  .error-box { padding: 60px 32px; text-align: center; max-width: 480px; margin: 60px auto; background: var(--card); border-radius: var(--radius-lg); border: 1px solid var(--line); }
+  .error-box h2 { font-family: 'Fraunces', serif; font-size: 28px; margin-bottom: 12px; }
+  .error-box p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; }
+  .error-box .detail { font-size: 11px; color: var(--ink-muted); margin: 16px 0; font-family: monospace; }
 
-  /* ====== ACTIVITY FEED ====== */
-  .feed { display: flex; flex-direction: column; }
-  .feed-item { display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); transition: background .15s; }
-  .feed-item:hover { background: var(--bg); }
-  .feed-item:last-child { border-bottom: none; }
-  .feed-marker { width: 28px; height: 28px; border-radius: 7px; background: var(--bg-soft); color: var(--ink-soft); display: grid; place-items: center; flex-shrink: 0; font-size: 13px; }
-  .feed-marker.gold { background: var(--gold-faint); color: var(--gold); }
-  .feed-marker.green { background: rgba(58,130,100,.12); color: var(--green); }
-  .feed-marker.red { background: rgba(178,58,72,.1); color: var(--red); }
-  .feed-content { flex: 1; min-width: 0; }
-  .feed-title { font-size: 13.5px; color: var(--ink); }
-  .feed-title b { font-weight: 600; }
-  .feed-meta { font-size: 11.5px; color: var(--ink-muted); margin-top: 2px; }
+  /* BOTTOM NAV PWA */
+  .bottom-nav { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; border-radius: 999px; padding: 8px; display: flex; gap: 4px; box-shadow: 0 12px 32px rgba(10,22,40,.2); z-index: 100; }
+  .bottom-nav button { background: none; border: none; color: rgba(255,255,255,.6); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; transition: all .2s; font-size: 18px; }
+  .bottom-nav button.active { background: var(--gold); color: white; }
+  .bottom-nav button:hover:not(.active) { color: white; }
 
-  /* ====== DETAIL PAGE ====== */
-  .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-  @media (max-width: 1000px) { .detail-grid { grid-template-columns: 1fr; } }
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 18px; padding: 20px; }
-  .info-cell { }
-  .info-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-muted); font-weight: 600; margin-bottom: 4px; }
-  .info-val { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .info-val.lg { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+  /* MODAL "Bientôt" */
+  .modal { position: fixed; inset: 0; background: rgba(10,22,40,.55); display: grid; place-items: center; z-index: 200; padding: 20px; backdrop-filter: blur(4px); animation: fadeIn .25s ease; }
+  .modal-card { background: var(--card); border-radius: var(--radius-lg); padding: 32px 28px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(10,22,40,.3); }
+  .modal-eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+  .modal-card h3 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; margin-bottom: 12px; letter-spacing: -.02em; }
+  .modal-card p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
 
-  /* Hidden pages */
-  .page { display: none; }
-  .page.active { display: block; animation: fadeUp .35s ease; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
-
-  /* Placeholder for unfinished pages */
-  .empty-state { padding: 80px 20px; text-align: center; }
-  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
-  .empty-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-  .empty-sub { color: var(--ink-soft); max-width: 360px; margin: 0 auto; font-size: 13.5px; }
-
-  /* Section spacing */
-  .stack > * + * { margin-top: 20px; }
-
-  /* Quick actions row */
-  .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
-  .quick-action { background: var(--card); border: 1px solid var(--line); padding: 14px 16px; border-radius: var(--radius); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all .15s; }
-  .quick-action:hover { border-color: var(--ink); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-  .qa-ico { width: 36px; height: 36px; border-radius: 9px; background: var(--gold-faint); color: var(--gold); display: grid; place-items: center; flex-shrink: 0; }
-  .qa-text { flex: 1; }
-  .qa-text b { display: block; font-weight: 600; font-size: 13.5px; }
-  .qa-text small { color: var(--ink-muted); font-size: 11.5px; }
-
-  /* Mobile */
-  @media (max-width: 768px) {
-    .sidebar { position: fixed; left: -240px; z-index: 100; transition: left .3s; }
-    .sidebar.open { left: 0; }
-    .content { padding: 18px; }
-    .topbar { padding: 0 18px; }
-    .topbar-search { display: none; }
-    .stats { grid-template-columns: 1fr 1fr; }
-  }
-
-  /* TOAST notifications */
-  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
-  .toast { background: var(--ink); color: white; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 20px rgba(10,22,40,.25); opacity: 0; transform: translateY(20px) scale(.95); transition: opacity .25s, transform .25s; pointer-events: auto; max-width: 360px; }
-  .toast.show { opacity: 1; transform: translateY(0) scale(1); }
-  .toast-success { background: var(--green); }
-  .toast-error { background: var(--red); }
-  .toast-info { background: var(--ink); }
-
-  /* Disable state while mutating */
-  .mutating { opacity: .5; pointer-events: none; }
+  /* FADE IN */
+  .fade-in { animation: fadeIn .5s ease both; }
+  .fade-in.delay-1 { animation-delay: .1s; }
+  .fade-in.delay-2 { animation-delay: .2s; }
+  .fade-in.delay-3 { animation-delay: .3s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 
-<!-- TOAST CONTAINER -->
-<div class="toast-wrap" id="toast-wrap"></div>
-
-<!-- ====================== LOADING ====================== -->
-<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:1000;">
-  <div style="text-align:center;">
-    <div style="width:48px;height:48px;border:3px solid var(--gold-faint);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
-    <div style="color:var(--ink-muted);font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;">Connexion au pilote</div>
+<header>
+  <div class="container">
+    <div class="row">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div class="name">Spacer's Business Club<small>Espace partenaire</small></div>
+      </div>
+      <div id="user-chip" class="user-chip" hidden>
+        <div class="meta">
+          <b id="user-name">—</b>
+          <small id="user-role">—</small>
+        </div>
+        <div id="user-avatar" class="avatar">—</div>
+      </div>
+    </div>
   </div>
+</header>
+
+<!-- LOADING -->
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+  <p>Chargement de votre espace partenaire…</p>
 </div>
-<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
-<!-- ====================== ERROR ====================== -->
-<div id="error-screen" style="position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:1000;padding:24px;">
-  <div style="max-width:440px;text-align:center;background:white;border-radius:16px;padding:36px 32px;box-shadow:var(--shadow-md);">
-    <div style="font-size:40px;margin-bottom:16px;">🔒</div>
-    <h2 style="font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em;">Accès non autorisé</h2>
-    <p id="error-message" style="color:var(--ink-soft);font-size:14px;margin-bottom:24px;line-height:1.55;">Ton lien admin est invalide ou a expiré. Demande à Clément ou Treicy un nouveau lien.</p>
-    <div style="font-size:11.5px;color:var(--ink-muted);font-family:'JetBrains Mono',monospace;padding:10px;background:var(--bg);border-radius:8px;" id="error-detail"></div>
-  </div>
+<!-- ERROR -->
+<div id="error" class="error-box" hidden>
+  <h2 class="display">Espace introuvable</h2>
+  <p id="error-msg">Une erreur est survenue.</p>
+  <div class="detail" id="error-detail"></div>
+  <button class="btn primary" onclick="location.reload()">Réessayer</button>
 </div>
 
-<!-- ====================== SIDEBAR ====================== -->
-<aside class="sidebar" id="sidebar" style="display:none;">
-  <div class="sb-brand">
-    <div class="sb-brand-row">
-      <div class="sb-logo">S</div>
-      <div class="sb-brand-text">
-        <div class="sb-brand-title">Spacer's Club</div>
-        <div class="sb-brand-sub">Pilote</div>
+<!-- DASHBOARD -->
+<main id="dashboard" class="container" hidden>
+
+  <!-- HERO + CARTE CONTRAT -->
+  <section class="hero fade-in">
+    <div>
+      <div class="saison" id="saison-label">—</div>
+      <h1 class="display">Bonjour <em id="greeting-firstname">—</em>,<br />prêt pour la <em>nouvelle saison ?</em></h1>
+      <div class="hero-stats">
+        <span id="stat-contract">—</span>
+        <span id="stat-echeance">—</span>
       </div>
     </div>
-  </div>
-
-  <div class="sb-section">Pilotage</div>
-  <nav class="sb-nav">
-    <a class="sb-link active" onclick="showPage('home')">
-      <span class="sb-ico">▤</span>Accueil
-    </a>
-    <a class="sb-link" onclick="showPage('partners')">
-      <span class="sb-ico">◉</span>Partenaires
-      <span class="sb-badge" id="sb-badge-partners">—</span>
-    </a>
-    <a class="sb-link" onclick="showPublications('forum')">
-      <span class="sb-ico">⌘</span>Forum
-      <span class="sb-badge" id="sb-badge-forum" style="display:none;"></span>
-    </a>
-    <a class="sb-link" onclick="showPublications('proposition')">
-      <span class="sb-ico">◈</span>Propositions business
-      <span class="sb-badge" id="sb-badge-proposition" style="display:none;"></span>
-    </a>
-    <a class="sb-link" onclick="showPage('annonces')">
-      <span class="sb-ico">◐</span>Annonces emploi
-      <span class="sb-badge" id="sb-badge-annonces" style="display:none;"></span>
-    </a>
-    <a class="sb-link" onclick="showPublications('echange')">
-      <span class="sb-ico">⌬</span>Échanges business
-      <span class="sb-badge" id="sb-badge-echange" style="display:none;"></span>
-    </a>
-    <a class="sb-link" onclick="showPage('soon')">
-      <span class="sb-ico">◇</span>Événements
-    </a>
-    <a class="sb-link" onclick="showPage('soon')">
-      <span class="sb-ico">✉</span>Communication
-    </a>
-  </nav>
-
-  <div class="sb-section">Gestion</div>
-  <nav class="sb-nav">
-    <a class="sb-link" onclick="showPage('soon')">
-      <span class="sb-ico">⌥</span>Annuaire
-    </a>
-    <a class="sb-link" onclick="showPage('soon')">
-      <span class="sb-ico">⌃</span>Facturation
-    </a>
-    <a class="sb-link" onclick="showPage('soon')">
-      <span class="sb-ico">⚙</span>Paramètres
-    </a>
-  </nav>
-
-  <div class="sb-user">
-    <div class="sb-user-row">
-      <div class="sb-avatar" id="sb-avatar">—</div>
-      <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-user-name">—</div>
-        <div class="sb-user-role" id="sb-user-role">—</div>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<!-- ====================== MAIN ====================== -->
-<main class="main" id="main" style="display:none;">
-
-  <header class="topbar">
-    <div class="breadcrumb">
-      <span id="breadcrumb-current"><b>Accueil</b></span>
-    </div>
-    <div class="topbar-spacer"></div>
-    <div class="topbar-search">
-      <span class="ico">⌕</span>
-      <input type="text" placeholder="Rechercher un partenaire, événement, sujet…" />
-    </div>
-    <div class="icon-btn-wrap">
-      <button class="icon-btn">🔔</button>
-      <span class="dot"></span>
-    </div>
-  </header>
-
-  <!-- ============ PAGE ACCUEIL ============ -->
-  <section class="page active" id="page-home">
-    <div class="content">
-      <div class="page-head">
-        <div>
-          <div class="page-eyebrow">Saison 2026-2027</div>
-          <h1 class="page-title">Bonjour <span id="greeting-name">—</span>.</h1>
-          <p class="page-sub"><span id="stat-partenaires-mini">—</span> partenaires actifs · <span id="stat-alertes-mini">—</span> alertes à traiter</p>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn ghost sm">Exporter CRM</button>
-          <button class="btn gold sm">+ Nouveau partenaire</button>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-label">Chiffre signé</div>
-          <div class="stat-value" id="stat-chiffre">—</div>
-          <div class="stat-foot">
-            <span>Saison <span id="stat-saison">—</span></span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Partenaires actifs</div>
-          <div class="stat-value" id="stat-partenaires">—</div>
-          <div class="stat-foot">
-            <span>Saison active</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Packs VIP configurés</div>
-          <div class="stat-value" id="stat-packs">—</div>
-          <div class="stat-foot">
-            <span>Avec places allouées</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Alertes au CRM</div>
-          <div class="stat-value" id="stat-alertes">—</div>
-          <div class="stat-foot">
-            <span>À traiter</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick actions -->
-      <div class="quick-actions">
-        <div class="quick-action" onclick="showPage('soon')">
-          <div class="qa-ico">+</div>
-          <div class="qa-text"><b>Créer un événement</b><small>Repas, meeting, pétanque</small></div>
-        </div>
-        <div class="quick-action" onclick="showPage('soon')">
-          <div class="qa-ico">✉</div>
-          <div class="qa-text"><b>Envoyer un mail groupé</b><small>Communication partenaires</small></div>
-        </div>
-        <div class="quick-action" onclick="showPage('soon')">
-          <div class="qa-ico">€</div>
-          <div class="qa-text"><b>Générer une facture</b><small>Stripe + PDF</small></div>
-        </div>
-      </div>
-
-      <!-- Two-col -->
-      <div class="two-col">
-        <!-- Alertes -->
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Alertes à traiter</div>
-              <div class="panel-sub">16 actions en attente</div>
-            </div>
-            <button class="btn ghost sm">Tout voir</button>
-          </div>
-          <div class="panel-body feed">
-            <div class="feed-item">
-              <div class="feed-marker red">!</div>
-              <div class="feed-content">
-                <div class="feed-title"><b>PICOTY</b> — Prestation P001 non démarrée</div>
-                <div class="feed-meta">PRE-262027-020 · Priorité moyenne · Saison débute en sept.</div>
-              </div>
-              <button class="btn ghost sm">Traiter</button>
-            </div>
-            <div class="feed-item">
-              <div class="feed-marker red">!</div>
-              <div class="feed-content">
-                <div class="feed-title"><b>A.P.C.R.A</b> — Prestation P002 non démarrée</div>
-                <div class="feed-meta">PRE-262027-015 · Priorité moyenne</div>
-              </div>
-              <button class="btn ghost sm">Traiter</button>
-            </div>
-            <div class="feed-item">
-              <div class="feed-marker gold">⌃</div>
-              <div class="feed-content">
-                <div class="feed-title"><b>LA BRIGADE</b> — Renouvellement dans 405 jours</div>
-                <div class="feed-meta">CON-262027-001 · Anticiper le contact commercial</div>
-              </div>
-              <button class="btn ghost sm">Traiter</button>
-            </div>
-            <div class="feed-item">
-              <div class="feed-marker gold">⌃</div>
-              <div class="feed-content">
-                <div class="feed-title"><b>COMFORT APARTHOTEL</b> — Suivi prestation P101</div>
-                <div class="feed-meta">PRE-262027-014 · Vérifier diffusion LED</div>
-              </div>
-              <button class="btn ghost sm">Traiter</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activité récente -->
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Activité récente</div>
-              <div class="panel-sub">Modifications du CRM</div>
-            </div>
-          </div>
-          <div class="panel-body feed">
-            <div class="feed-item">
-              <div class="feed-marker green">✓</div>
-              <div class="feed-content">
-                <div class="feed-title">Pack VIP PICOTY configuré (15 places)</div>
-                <div class="feed-meta">il y a 12 min · Clément</div>
-              </div>
-            </div>
-            <div class="feed-item">
-              <div class="feed-marker gold">+</div>
-              <div class="feed-content">
-                <div class="feed-title">Magic links générés (7 partenaires)</div>
-                <div class="feed-meta">il y a 1 h · Système</div>
-              </div>
-            </div>
-            <div class="feed-item">
-              <div class="feed-marker green">✓</div>
-              <div class="feed-content">
-                <div class="feed-title">Contrat PICOTY finalisé</div>
-                <div class="feed-meta">hier · Treicy</div>
-              </div>
-            </div>
-            <div class="feed-item">
-              <div class="feed-marker gold">+</div>
-              <div class="feed-content">
-                <div class="feed-title">Partenaire A.P.C.R.A ajouté</div>
-                <div class="feed-meta">2 j · Clément</div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="contract-card">
+      <h2 class="display" id="contract-type">—</h2>
+      <div class="subtitle" id="contract-meta">—</div>
+      <div class="contract-divider"></div>
+      <div class="contract-grid">
+        <div class="col"><b id="contract-date-debut">—</b><small>Date d'effet</small></div>
+        <div class="col"><b id="contract-date-fin">—</b><small>Échéance</small></div>
+        <div class="col"><b id="contract-prestations-count">—</b><small>Prestations</small></div>
       </div>
     </div>
   </section>
 
-  <!-- ============ PAGE PARTENAIRES ============ -->
-  <!-- ============ PAGE PARTENAIRES (data réelle) ============ -->
-  <section class="page" id="page-partners">
-    <div class="content">
-      <div class="page-head">
-        <div>
-          <div class="page-eyebrow">Annuaire</div>
-          <h1 class="page-title">Partenaires</h1>
-          <p class="page-sub" id="partners-subtitle">Chargement…</p>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn ghost sm" disabled>⬇ Export</button>
-          <button class="btn gold sm" disabled>+ Ajouter</button>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
-        <button class="btn primary sm">Saison active</button>
-        <button class="btn ghost sm" disabled>Toutes saisons</button>
-        <button class="btn ghost sm" disabled>Prospects</button>
-        <button class="btn ghost sm" disabled>Archivés</button>
-        <div style="flex:1;"></div>
-        <span style="font-size:12px;color:var(--ink-muted);">Trier par : <b style="color:var(--ink);">Contrat ID ↓</b></span>
-      </div>
-
-      <div class="panel">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Partenaire</th>
-              <th>Contrat</th>
-              <th>Type</th>
-              <th>Montant</th>
-              <th>Prestations</th>
-              <th>Pack VIP</th>
-              <th>Statut</th>
-              <th style="text-align:right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="partners-tbody">
-            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement des partenaires…</td></tr>
-          </tbody>
-        </table>
-        <div class="panel-foot" id="partners-foot">—</div>
-      </div>
-    </div>
+  <!-- PRESTATIONS -->
+  <section class="fade-in delay-1">
+    <h3 class="display">Mes <em>prestations</em></h3>
+    <p class="section-desc">Suivi de vos avantages contractuels saison <span id="prest-saison">—</span></p>
+    <div class="prestations" id="prestations-list"></div>
   </section>
 
-  <!-- ============ PAGE PARTENAIRE DÉTAIL (data réelle) ============ -->
-  <section class="page" id="page-partner-detail">
-    <div class="content">
-      <div style="margin-bottom:14px;">
-        <button class="btn ghost sm" onclick="showPage('partners')">← Retour à la liste</button>
-      </div>
-      <div class="page-head">
-        <div>
-          <div class="page-eyebrow mono" id="detail-contract-id">—</div>
-          <h1 class="page-title" id="detail-raison-sociale">Chargement…</h1>
-          <p class="page-sub" id="detail-subtitle">—</p>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn ghost sm" id="detail-btn-link" onclick="copyPartnerLink()">📋 Lien partenaire</button>
-          <button class="btn ghost sm" id="detail-btn-doc" onclick="openContractDoc()">📄 Voir contrat</button>
-          <button class="btn primary sm" disabled>✎ Éditer</button>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-bottom:20px;">
-        <div class="info-grid" id="detail-info-grid">
-          <!-- rempli par JS -->
-        </div>
-      </div>
-
-      <div class="detail-grid">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Prestations contractuelles</div>
-              <div class="panel-sub" id="detail-prestations-sub">—</div>
-            </div>
-            <button class="btn ghost sm" disabled>+ Ajouter</button>
-          </div>
-          <table class="table">
-            <thead>
-              <tr><th>Code</th><th>Désignation</th><th>Avancement</th><th style="text-align:right;">Action</th></tr>
-            </thead>
-            <tbody id="detail-prestations-tbody"><tr><td colspan="4">—</td></tr></tbody>
-          </table>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Pack VIP</div>
-              <div class="panel-sub" id="detail-pack-id">—</div>
-            </div>
-          </div>
-          <div style="padding: 20px;" id="detail-pack-body">
-            <div style="text-align:center;padding:20px;color:var(--ink-muted);">Aucun pack VIP</div>
-          </div>
-        </div>
-
-        <div class="panel" style="margin-top:18px;">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Compte Tickie</div>
-              <div class="panel-sub">Billetterie partenaire</div>
-            </div>
-          </div>
-          <div style="padding:20px;" id="detail-tickie-body">
-            <div style="text-align:center;padding:14px;color:var(--ink-muted);font-size:13px;">Chargement…</div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- PACK VIP -->
+  <section class="fade-in delay-2" id="pack-section">
+    <h3 class="display">Mes <em>invitations VIP</em></h3>
+    <p class="section-desc">Pack hospitalité associé à votre contrat</p>
+    <div class="pack-vip" id="pack-vip-card"></div>
   </section>
 
-  <!-- ============ PAGE ANNONCES EMPLOI ============ -->
-  <section class="page" id="page-annonces" style="display:none;">
-    <div class="topbar">
-      <div style="font-family:var(--font-display);font-weight:600;font-size:22px;">Annonces emploi</div>
-      <div style="flex:1;"></div>
-      <button class="btn primary" onclick="openOffreModal()">+ Nouvelle annonce</button>
-    </div>
-    <div class="content">
-
-      <!-- Filtres -->
-      <div class="panel" style="margin-bottom:16px;">
-        <div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button class="btn ghost sm offre-filter active" data-filter="all" onclick="loadOffres('all')">Toutes <span id="cnt-all" style="opacity:.6;">—</span></button>
-          <button class="btn ghost sm offre-filter" data-filter="en_attente" onclick="loadOffres('en_attente')">⏱ En attente <span id="cnt-en_attente" style="background:var(--gold);color:white;border-radius:10px;padding:2px 8px;font-size:11px;margin-left:4px;">—</span></button>
-          <button class="btn ghost sm offre-filter" data-filter="publie" onclick="loadOffres('publie')">✓ Publiées <span id="cnt-publie" style="opacity:.6;">—</span></button>
-          <button class="btn ghost sm offre-filter" data-filter="refuse" onclick="loadOffres('refuse')">✕ Refusées <span id="cnt-refuse" style="opacity:.6;">—</span></button>
-          <button class="btn ghost sm offre-filter" data-filter="archive" onclick="loadOffres('archive')">Archives <span id="cnt-archive" style="opacity:.6;">—</span></button>
-        </div>
-      </div>
-
-      <!-- Liste -->
-      <div class="panel">
-        <div style="padding:18px;">
-          <div id="offres-list" style="min-height:200px;">
-            <div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
+  <!-- ALERTES -->
+  <section class="fade-in delay-3" id="alertes-section">
+    <h3 class="display">Mes <em>alertes</em></h3>
+    <p class="section-desc">Actions à suivre cette saison</p>
+    <div class="alertes" id="alertes-list"></div>
   </section>
 
-  <!-- ============ PAGE PUBLICATIONS (Forum / Propositions / Échanges) ============ -->
-  <section class="page" id="page-publications" style="display:none;">
-    <div class="topbar">
-      <div>
-        <div style="font-family:var(--font-display);font-weight:600;font-size:22px;" id="pub-page-title">Publications</div>
-        <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;" id="pub-page-subtitle">—</div>
+  <!-- MA VIE PARTENAIRE -->
+  <section class="fade-in delay-3" id="vie-partenaire-section">
+    <h3 class="display">Ma <em>vie partenaire</em></h3>
+    <p class="section-desc">Partager, proposer, recruter — directement depuis votre espace</p>
+    <div class="vp-grid">
+      <div class="vp-card" onclick="showSoon('Forum partenaires','Bientôt — vous pourrez proposer ici des sorties, padel, afterworks et événements informels.')">
+        <div class="vp-icon">⌘</div>
+        <div class="vp-title">Forum</div>
+        <div class="vp-sub">Sport, social, divers : proposer un padel, un afterwork, un moment partagé</div>
       </div>
-      <div style="flex:1;"></div>
-      <button class="btn primary" onclick="openPubModal()">+ Nouvelle publication</button>
+      <div class="vp-card" onclick="showSoon('Proposer un service','Bientôt — partagez vos offres et remises entre partenaires Spacers.')">
+        <div class="vp-icon">◈</div>
+        <div class="vp-title">Proposer un service / produit</div>
+        <div class="vp-sub">Faites connaître votre offre aux autres partenaires du club</div>
+      </div>
+      <div class="vp-card" onclick="openMinuteEmploiModal()">
+        <div class="vp-icon">◐</div>
+        <div class="vp-title">Minute de l'emploi</div>
+        <div class="vp-sub">Recruter via le réseau bénévoles — annonce PDF diffusée au match</div>
+      </div>
+      <div class="vp-card" onclick="showSoon('Demande de service','Bientôt — cherchez un prestataire (plombier, électricien…) parmi les partenaires.')">
+        <div class="vp-icon">⌬</div>
+        <div class="vp-title">Demander un service</div>
+        <div class="vp-sub">Chercher un prestataire (plombier, électricien…) parmi les partenaires</div>
+      </div>
     </div>
-    <div class="content">
 
-      <!-- Filtres -->
-      <div class="panel" style="margin-bottom:16px;">
-        <div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button class="btn ghost sm pub-filter active" data-filter="all" onclick="loadPublications('all')">Toutes <span id="pub-cnt-all" style="opacity:.6;">—</span></button>
-          <button class="btn ghost sm pub-filter" data-filter="en_attente" onclick="loadPublications('en_attente')">⏱ En attente <span id="pub-cnt-en_attente" style="background:var(--gold);color:white;border-radius:10px;padding:2px 8px;font-size:11px;margin-left:4px;">—</span></button>
-          <button class="btn ghost sm pub-filter" data-filter="publie" onclick="loadPublications('publie')">✓ Publiées <span id="pub-cnt-publie" style="opacity:.6;">—</span></button>
-          <button class="btn ghost sm pub-filter" data-filter="refuse" onclick="loadPublications('refuse')">✕ Refusées <span id="pub-cnt-refuse" style="opacity:.6;">—</span></button>
-          <button class="btn ghost sm pub-filter" data-filter="archive" onclick="loadPublications('archive')">Archives <span id="pub-cnt-archive" style="opacity:.6;">—</span></button>
-        </div>
-      </div>
-
-      <!-- Liste -->
-      <div class="panel">
-        <div style="padding:18px;">
-          <div id="pub-list" style="min-height:200px;">
-            <div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <div id="mes-publications" style="margin-top:24px;"></div>
   </section>
 
-  <!-- ============ PAGE PLACEHOLDER ============ -->
-  <section class="page" id="page-soon">
-    <div class="content">
-      <div class="empty-state">
-        <div class="empty-icon">◇</div>
-        <div class="empty-title">Bientôt disponible</div>
-        <div class="empty-sub">Ce module est en préparation. On le développera dans les prochains sprints — d'abord Forum, puis Événements business avec paiements Stripe.</div>
-        <div style="margin-top:24px;"><button class="btn primary" onclick="showPage('home')">Retour à l'accueil</button></div>
+  <!-- CONTACT -->
+  <section class="fade-in delay-3">
+    <h3 class="display">Mon <em>contact club</em></h3>
+    <p class="section-desc">L'équipe Spacers à votre disposition</p>
+    <div class="contact-card">
+      <div class="contact-avatar" id="contact-avatar">SP</div>
+      <div class="contact-info">
+        <b>Équipe Spacer's</b>
+        <small>Toulouse Volleyball · Palais des Sports André Brouat</small>
+      </div>
+      <div class="actions" style="display:flex;gap:8px;">
+        <a class="btn" href="mailto:treicy@fitgroup.fr">Email</a>
+        <a class="btn primary" id="contract-doc-link" href="#" target="_blank">Mon contrat</a>
       </div>
     </div>
   </section>
 
 </main>
 
-<!-- ============ MODALE PUBLICATION (forum / proposition / echange) ============ -->
-<div id="pub-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
-  <div style="background:var(--bg);border-radius:14px;max-width:680px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
-    <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;" id="pub-modal-title">Nouvelle publication</div>
-    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:20px;" id="pub-modal-sub">—</div>
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="active" title="Accueil" onclick="window.scrollTo({top:0,behavior:'smooth'})">🏠</button>
+  <button title="Mon contrat" onclick="ouvrirContrat()">📄</button>
+  <button title="Billetterie" onclick="showSoon('Billetterie','La gestion de vos invitations VIP arrive bientôt — synchronisation avec Tickie en cours.')">🎫</button>
+  <button title="Boutique" onclick="showSoon('Boutique','Achat de places en ligne et boutique partenaire en préparation.')">🛍</button>
+  <button title="Forum" onclick="showSoon('Forum','Espace de discussion entre partenaires et club bientôt disponible.')">💬</button>
+</nav>
 
-    <div style="display:grid;gap:14px;">
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Partenaire émetteur
-        <select id="pub-input-contrat" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
-          <option value="">— Aucun (publié par l'admin) —</option>
-        </select>
-      </label>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Titre *
-        <input id="pub-input-titre" type="text" placeholder="—" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Description
-        <textarea id="pub-input-description" rows="5" placeholder="—" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
-      </label>
-
-      <!-- Champs spécifiques selon type -->
-      <div id="pub-specific-fields"></div>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Catégorie (optionnel)
-        <input id="pub-input-categorie" type="text" placeholder="ex: sport, social, urgent…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
-
-      <div style="border-top:1px solid var(--line);padding-top:14px;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--ink-muted);">Contact pour réponses (optionnel)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Nom
-            <input id="pub-input-contact-nom" type="text" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Email
-            <input id="pub-input-contact-email" type="email" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-        </div>
-      </div>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:flex;align-items:center;gap:8px;background:#f3f6fa;padding:10px 14px;border-radius:8px;">
-        <input id="pub-input-publish-now" type="checkbox" style="width:16px;height:16px;">
-        Publier immédiatement (sans passer par "en attente")
-      </label>
-    </div>
-
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
-      <button class="btn ghost" onclick="closePubModal()">Annuler</button>
-      <button class="btn primary" id="pub-modal-submit" onclick="submitPublication()">Créer</button>
-    </div>
+<!-- MODAL "Bientôt" -->
+<div id="modal" class="modal" hidden onclick="if(event.target.id==='modal')closeSoon()">
+  <div class="modal-card">
+    <div class="modal-eyebrow">À venir</div>
+    <h3 id="modal-title" class="display">—</h3>
+    <p id="modal-text">—</p>
+    <button class="btn primary" onclick="closeSoon()">Compris</button>
   </div>
 </div>
 
-<!-- ============ MODALE REFUS PUB (réutilise reject-modal pour les 2 contextes) ============ -->
+<!-- MODAL Minute de l'emploi -->
+<div id="me-modal" class="modal" hidden onclick="if(event.target.id==='me-modal')closeMinuteEmploiModal()">
+  <div class="modal-card" style="max-width:640px;text-align:left;max-height:90vh;overflow-y:auto;">
+    <div class="modal-eyebrow" style="text-align:center;">📥 ANNONCE EMPLOI</div>
+    <h3 class="display" style="text-align:center;">Minute de l'emploi</h3>
+    <p style="text-align:center;font-size:13px;">Remplissez votre annonce ci-dessous. Le PDF aux couleurs Spacers se génère automatiquement.</p>
 
-<!-- ============ MODALE OFFRE EMPLOI (créer/éditer) ============ -->
-<div id="offre-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
-  <div style="background:var(--bg);border-radius:14px;max-width:680px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
-    <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;" id="offre-modal-title">Nouvelle annonce d'emploi</div>
-    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:20px;">Renseigne le contenu de l'annonce. Tu pourras la publier directement ou la laisser en brouillon.</div>
+    <!-- LOGO -->
+    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:16px;margin:18px 0;">
+      <div style="font-size:11px;color:#A98A4D;font-weight:bold;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Votre logo (PNG ou JPG, ≤ 2 Mo)</div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div id="me-logo-preview" style="width:56px;height:56px;border:2px dashed #C9A864;border-radius:8px;display:grid;place-items:center;background:white;overflow:hidden;flex-shrink:0;">
+          <span style="color:#5B6573;font-size:10px;">aucun</span>
+        </div>
+        <label class="btn" style="cursor:pointer;margin-bottom:0;font-size:13px;">
+          <input type="file" id="me-logo-input" accept="image/png,image/jpeg" style="display:none;" onchange="onLogoSelected(event)">
+          Choisir un logo
+        </label>
+        <button class="btn" id="me-logo-remove" style="display:none;font-size:13px;" onclick="removeLogo()">Retirer</button>
+      </div>
+    </div>
 
-    <div style="display:grid;gap:14px;">
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Partenaire concerné *
-        <select id="offre-input-contrat" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
-          <option value="">— Sélectionner —</option>
-        </select>
-      </label>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Titre du poste *
-        <input id="offre-input-titre" type="text" placeholder="ex: Développeur Full-Stack" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Description
-        <textarea id="offre-input-description" rows="5" placeholder="Mission, profil recherché, environnement…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
-      </label>
-
+    <!-- FORMULAIRE -->
+    <div style="display:grid;gap:12px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Type de contrat
-          <select id="offre-input-type" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
+        <label class="me-label">Date / match
+          <input id="me-input-date_match" type="text" placeholder="14/03/2026" class="me-input">
+        </label>
+        <label class="me-label">Type de contrat
+          <select id="me-input-contrat" class="me-input">
             <option value="">—</option>
             <option value="CDI">CDI</option>
             <option value="CDD">CDD</option>
@@ -769,1293 +390,471 @@
             <option value="Intérim">Intérim</option>
           </select>
         </label>
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Lieu
-          <input id="offre-input-lieu" type="text" placeholder="Toulouse / Remote / Hybride" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-        </label>
       </div>
+
+      <label class="me-label">Poste recherché *
+        <input id="me-input-poste" type="text" placeholder="ex: Vendeur(se) d'articles de sport" class="me-input">
+      </label>
+
+      <label class="me-label">Prérequis & profil recherché
+        <textarea id="me-input-prerequis" rows="3" placeholder="ex: Très forte appétence pour le sport, expérience en magasin appréciée…" class="me-input" style="resize:vertical;"></textarea>
+      </label>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Durée (si CDD/stage)
-          <input id="offre-input-duree" type="text" placeholder="ex: 6 mois" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        <label class="me-label">Lieu(x) de travail
+          <input id="me-input-lieux" type="text" placeholder="Toulouse" class="me-input">
         </label>
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Expérience requise
-          <input id="offre-input-experience" type="text" placeholder="Junior / Confirmé / Senior" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-        </label>
-      </div>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Salaire indicatif
-        <input id="offre-input-salaire" type="text" placeholder="ex: 35-40k€ brut/an ou À négocier" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
-
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">URL externe (site carrière partenaire)
-        <input id="offre-input-url" type="url" placeholder="https://www.entreprise.fr/carrieres/poste-xxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
-
-      <div style="border-top:1px solid var(--line);padding-top:14px;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--ink-muted);">Contact pour candidatures</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Nom du contact RH
-            <input id="offre-input-contact-nom" type="text" placeholder="Marie Dupont" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Email *
-            <input id="offre-input-contact-email" type="email" placeholder="rh@entreprise.fr" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-        </div>
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:block;margin-top:10px;">Téléphone (optionnel)
-          <input id="offre-input-contact-tel" type="tel" placeholder="06 12 34 56 78" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        <label class="me-label">Heures / semaine
+          <input id="me-input-heures" type="text" placeholder="35h" class="me-input">
         </label>
       </div>
 
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:flex;align-items:center;gap:8px;background:#f3f6fa;padding:10px 14px;border-radius:8px;">
-        <input id="offre-input-publish-now" type="checkbox" style="width:16px;height:16px;">
-        Publier immédiatement (sans passer par "en attente")
+      <label class="me-label">Salaire indicatif
+        <input id="me-input-salaire" type="text" placeholder="ex: SMIC horaire, 30k€/an, à négocier" class="me-input">
+      </label>
+
+      <label class="me-label">Les + de l'offre
+        <textarea id="me-input-les_plus" rows="2" placeholder="ex: Planning modulable, mutuelle, ambiance familiale…" class="me-input" style="resize:vertical;"></textarea>
+      </label>
+
+      <label class="me-label">Email pour candidatures *
+        <input id="me-input-email" type="email" placeholder="rh@entreprise.fr" class="me-input">
       </label>
     </div>
 
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
-      <button class="btn ghost" onclick="closeOffreModal()">Annuler</button>
-      <button class="btn primary" id="offre-modal-submit" onclick="submitOffre()">Créer l'annonce</button>
-    </div>
-  </div>
-</div>
+    <button class="btn primary" id="me-dl-btn" onclick="submitMinuteEmploi()" style="width:100%;margin-top:18px;">
+      ✉ Envoyer mon annonce
+    </button>
 
-<!-- ============ MODALE REFUS ============ -->
-<div id="reject-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--bg);border-radius:14px;max-width:440px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
-    <div style="font-family:var(--font-display);font-size:20px;font-weight:600;margin-bottom:6px;">Refuser cette annonce</div>
-    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:16px;">Indique la raison du refus (visible par le partenaire dans son espace).</div>
-    <textarea id="reject-input-raison" rows="3" placeholder="ex: Description trop vague, à compléter" style="display:block;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-      <button class="btn ghost" onclick="closeRejectModal()">Annuler</button>
-      <button class="btn primary" id="reject-modal-submit" onclick="confirmReject()" style="background:var(--red);">Refuser</button>
-    </div>
-  </div>
-</div>
-<div id="tickie-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--bg);border-radius:14px;max-width:480px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
-    <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;">Créer un compte Tickie</div>
-    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:20px;" id="tickie-modal-sub">Pour <span id="tickie-modal-company">—</span></div>
+    <div id="me-status" style="font-size:13px;text-align:center;color:#5B6573;min-height:20px;margin-top:10px;"></div>
 
-    <div style="display:grid;gap:12px;">
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Email du contact partenaire *
-        <input id="tickie-input-email" type="email" placeholder="contact@picoty.fr"
-          style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Prénom
-          <input id="tickie-input-prenom" type="text" placeholder="Thomas"
-            style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-        </label>
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Nom
-          <input id="tickie-input-nom" type="text" placeholder="BOZEC"
-            style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-        </label>
-      </div>
-      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Téléphone (optionnel)
-        <input id="tickie-input-telephone" type="tel" placeholder="06 12 34 56 78"
-          style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-      </label>
+    <div style="background:#FAF7EF;border-left:3px solid #C9A864;padding:12px 14px;margin-top:14px;border-radius:6px;">
+      <small style="color:#5B6573;font-size:12px;">📺 Après validation par l'équipe Spacers, votre annonce est diffusée sur le <b style="color:#0A1628;">cube vidéo en interset</b> et publiée auprès du <b style="color:#0A1628;">réseau bénévoles</b>.</small>
     </div>
 
-    <div style="margin-top:14px;padding:10px 14px;background:#fff8e1;border-left:3px solid var(--gold);border-radius:6px;font-size:12px;color:var(--ink-muted);line-height:1.5;">
-      ℹ️ Le customer sera créé dans Tickie avec le tag <code>PARTENAIRE_BC</code>. L'email de connexion peut être envoyé dans un second temps.
-    </div>
-
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
-      <button class="btn ghost" onclick="closeTickieModal()">Annuler</button>
-      <button class="btn primary" id="tickie-modal-submit" onclick="submitTickieCustomer()">Créer le compte</button>
-    </div>
+    <button class="btn" onclick="closeMinuteEmploiModal()" style="width:100%;margin-top:14px;">Fermer</button>
   </div>
 </div>
 
 <script>
-  // =========================================================================
-  //  Helpers
-  // =========================================================================
-  const $ = id => document.getElementById(id);
+// =========================================================================
+//  Spacer's Business Club — PWA bootstrap
+//  Au chargement : lit ?siren=... → fetch /api/partner/:siren → rend le DOM
+// =========================================================================
 
-  // =========================================================================
-  //  Cache global + état
-  // =========================================================================
-  let ADMIN_TOKEN = null;
-  let PARTNERS_CACHE = null;
-  let CURRENT_PARTNER = null;
+const $ = (id) => document.getElementById(id);
 
-  function fmtEUR(n) {
-    if (!n) return '0 €';
-    return Number(n).toLocaleString('fr-FR') + ' €';
+const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function daysBetween(isoEnd) {
+  if (!isoEnd) return null;
+  const end = new Date(isoEnd);
+  const now = new Date();
+  return Math.floor((end - now) / 86400000);
+}
+
+function formatEUR(n) {
+  if (!n && n !== 0) return '—';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+}
+
+function firstName(fullName) {
+  if (!fullName) return 'partenaire';
+  // "Céline TALON" → "Céline"  |  "Marc-Antoine DUBOIS" → "Marc-Antoine"
+  const parts = fullName.trim().split(/\s+/);
+  return parts[0];
+}
+
+function initials(fullName) {
+  if (!fullName) return '—';
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function showError(msg, detail) {
+  $('loading').hidden = true;
+  $('dashboard').hidden = true;
+  $('error').hidden = false;
+  $('error-msg').textContent = msg;
+  if (detail) $('error-detail').textContent = detail;
+}
+
+// =========================================================================
+//  Helpers UI : modal "Bientôt" + navigation
+// =========================================================================
+let CURRENT_CONTRAT_LIEN = '';
+
+function showSoon(title, text) {
+  $('modal-title').textContent = title;
+  $('modal-text').textContent = text;
+  $('modal').hidden = false;
+}
+function closeSoon() {
+  $('modal').hidden = true;
+}
+function ouvrirContrat() {
+  if (CURRENT_CONTRAT_LIEN) {
+    window.open(CURRENT_CONTRAT_LIEN, '_blank');
+  } else {
+    showSoon('Mon contrat', 'Le lien vers ton contrat sera disponible une fois que tu seras identifié(e).');
   }
-  function initiales(prenom, nom) {
-    return ((prenom||'?')[0] + (nom||'?')[0]).toUpperCase();
-  }
-  function fmtDateFR(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-  }
-  function markFromName(name) {
-    // Returns 2 initials and a stable color from name
-    const initials = (name || '?').split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-    const colors = [
-      'rgba(200,147,43,.15);color:var(--gold);',
-      'rgba(58,130,100,.15);color:var(--green);',
-      'rgba(217,119,67,.15);color:var(--orange);',
-      'rgba(178,58,72,.15);color:var(--red);',
-      'rgba(15,29,51,.15);color:var(--ink);',
-    ];
-    const idx = (name || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length;
-    return { initials, style: colors[idx] };
-  }
+}
 
-  function showError(message, detail) {
-    $('loading-screen').style.display = 'none';
-    $('error-screen').style.display = 'grid';
-    if (message) $('error-message').textContent = message;
-    if (detail) $('error-detail').textContent = detail;
-  }
+function renderDashboard(data) {
+  const { partenaire, contrat, prestations, pack_places, alertes } = data;
 
-  // =========================================================================
-  //  Boot : auth + dashboard
-  // =========================================================================
-  async function boot() {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('t');
+  // ===== HEADER USER CHIP =====
+  $('user-chip').hidden = false;
+  $('user-name').textContent = partenaire.raison_sociale || '—';
+  window.__PARTNER_RAISON_SOCIALE__ = partenaire.raison_sociale || '';
+  window.__PARTNER_REPRESENTANT__ = partenaire.representant || '';
+  $('user-role').textContent = partenaire.representant
+    ? `${partenaire.representant}${partenaire.fonction ? ' · ' + partenaire.fonction : ''}`
+    : '—';
+  $('user-avatar').textContent = initials(partenaire.representant || partenaire.raison_sociale);
 
-    if (!token) {
-      showError('Aucun lien admin détecté.', 'Ouvre cette page via le lien personnel.');
-      return;
-    }
-    ADMIN_TOKEN = token;
+  // ===== HERO =====
+  $('greeting-firstname').textContent = firstName(partenaire.representant);
+  $('saison-label').textContent = `Saison ${contrat.saison || '—'}`;
+  $('stat-contract').textContent = `Contrat ${contrat.statut.toLowerCase()}`;
 
-    try {
-      const res = await fetch(`/api/admin/dashboard/${token}`);
-      const json = await res.json();
-      if (json.error) {
-        showError(json.error === 'Invalid admin token' ? 'Lien admin invalide.' : json.error, token.slice(0, 12) + '…');
-        return;
-      }
-      renderDashboard(json);
-    } catch (err) {
-      showError('Erreur réseau', err.message);
-    }
-  }
-
-  function renderDashboard(data) {
-    const { admin, saison, stats } = data;
-    $('sb-avatar').textContent = initiales(admin.prenom, admin.nom);
-    $('sb-user-name').textContent = `${admin.prenom} ${admin.nom}`;
-    $('sb-user-role').textContent = admin.role === 'admin' ? 'Administrateur' : admin.role;
-    $('sb-badge-partners').textContent = stats.partenaires_actifs || 0;
-    $('greeting-name').textContent = admin.prenom || 'équipe';
-    $('stat-partenaires-mini').textContent = stats.partenaires_actifs || 0;
-    $('stat-alertes-mini').textContent = stats.alertes_total || 0;
-    $('stat-chiffre').textContent = fmtEUR(stats.chiffre_signe);
-    $('stat-saison').textContent = saison || '—';
-    $('stat-partenaires').textContent = stats.partenaires_actifs || 0;
-    $('stat-packs').textContent = stats.packs_configures || 0;
-    $('stat-alertes').textContent = stats.alertes_total || 0;
-    $('loading-screen').style.display = 'none';
-    $('sidebar').style.display = 'flex';
-    $('main').style.display = 'flex';
-  }
-
-  // =========================================================================
-  //  Partenaires : liste
-  // =========================================================================
-  async function loadPartners(force = false) {
-    if (PARTNERS_CACHE && !force) {
-      renderPartners(PARTNERS_CACHE);
-      return;
-    }
-    $('partners-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement des partenaires…</td></tr>';
-    try {
-      const res = await fetch(`/api/admin/partners/${ADMIN_TOKEN}`);
-      const json = await res.json();
-      if (json.error) {
-        $('partners-tbody').innerHTML = `<tr><td colspan="8" style="padding:20px;color:var(--red);">Erreur : ${json.error}</td></tr>`;
-        return;
-      }
-      PARTNERS_CACHE = json;
-      renderPartners(json);
-    } catch (err) {
-      $('partners-tbody').innerHTML = `<tr><td colspan="8" style="padding:20px;color:var(--red);">Erreur réseau : ${err.message}</td></tr>`;
+  const jours = daysBetween(contrat.date_fin);
+  if (jours !== null) {
+    const stat = $('stat-echeance');
+    if (jours < 0) {
+      stat.textContent = `Contrat expiré depuis ${Math.abs(jours)} j`;
+      stat.classList.add('warn');
+    } else if (jours < 60) {
+      stat.textContent = `Renouvellement dans ${jours} j`;
+      stat.classList.add('warn');
+    } else {
+      stat.textContent = `${jours} j avant échéance`;
     }
   }
 
-  function renderPartners(data) {
-    const { saison, count_total, partners } = data;
-    $('partners-subtitle').textContent = `${count_total} actifs en saison ${saison}`;
-    $('partners-foot').textContent = `${count_total} partenaire(s) affiché(s)`;
+  // ===== CARTE CONTRAT =====
+  $('contract-type').textContent = contrat.type || '—';
+  $('contract-meta').textContent = `Contrat ${contrat.id} · ${formatEUR(contrat.montant_ht)} HT`;
+  $('contract-date-debut').textContent = formatDate(contrat.date_debut);
+  $('contract-date-fin').textContent = formatDate(contrat.date_fin);
+  $('contract-prestations-count').textContent = (contrat.codes_prestations || []).length;
 
-    if (!partners || partners.length === 0) {
-      $('partners-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-muted);">Aucun partenaire trouvé</td></tr>';
-      return;
-    }
-
-    $('partners-tbody').innerHTML = partners.map(p => {
-      const mark = markFromName(p.raison_sociale);
-      const prestBadge = p.nb_prestations > 0
-        ? `<span class="badge gold dot">${p.nb_prestations_livrees}/${p.nb_prestations} livrées</span>`
-        : `<span class="badge gray">—</span>`;
-      const packLabel = p.pack_alloues > 0
-        ? `${p.pack_alloues} places`
-        : '—';
-      const statutBadge = p.statut === 'Signé'
-        ? `<span class="badge green dot">${p.statut}</span>`
-        : `<span class="badge gold dot">${p.statut}</span>`;
+  // ===== PRESTATIONS =====
+  $('prest-saison').textContent = contrat.saison || '—';
+  const prestList = $('prestations-list');
+  if (!prestations || prestations.length === 0) {
+    prestList.innerHTML = '<div style="padding:24px;color:var(--ink-muted);font-size:13px;">Aucune prestation enregistrée.</div>';
+  } else {
+    prestList.innerHTML = prestations.map(p => {
+      const pct = p.nb_total > 0 ? Math.round((p.nb_livre / p.nb_total) * 100) : 0;
+      const statutClass = p.statut === 'Livré' || p.statut === 'Livré complet' ? 'livre'
+                        : p.statut && p.statut.includes('cours') ? 'en-cours' : 'a-livrer';
       return `
-        <tr class="clickable" onclick="showPartnerDetail('${p.contrat_id}')">
-          <td>
-            <div class="partner-cell">
-              <div class="partner-mark" style="background:${mark.style}">${mark.initials}</div>
-              <div class="partner-info">
-                <b>${p.raison_sociale}</b>
-                <small>${[p.representant, p.fonction].filter(Boolean).join(' · ') || '—'}</small>
-              </div>
-            </div>
-          </td>
-          <td class="mono">${p.contrat_id}</td>
-          <td>${p.type}</td>
-          <td><b>${fmtEUR(p.montant_ht)}</b> HT</td>
-          <td>${prestBadge}</td>
-          <td>${packLabel}</td>
-          <td>${statutBadge}</td>
-          <td style="text-align:right;"><button class="btn ghost sm">→</button></td>
-        </tr>
+        <article class="prest">
+          <div class="code">${p.code}</div>
+          <div class="designation">${p.designation || p.code}</div>
+          <div class="progress"><div style="width: ${pct}%"></div></div>
+          <div class="progress-meta"><span>${p.nb_livre}/${p.nb_total} livré(s)</span><span>${pct}%</span></div>
+          <span class="statut ${statutClass}">${p.statut || 'À livrer'}</span>
+        </article>
       `;
     }).join('');
   }
 
-  // =========================================================================
-  //  Partenaire détail
-  // =========================================================================
-  async function showPartnerDetail(contractId) {
-    showPage('partner-detail');
-    $('detail-raison-sociale').textContent = 'Chargement…';
-    $('detail-contract-id').textContent = contractId;
-    $('detail-info-grid').innerHTML = '';
-    $('detail-prestations-tbody').innerHTML = '<tr><td colspan="4">—</td></tr>';
-    $('detail-pack-body').innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-muted);">Chargement…</div>';
-
-    try {
-      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}`);
-      const json = await res.json();
-      if (json.error) {
-        $('detail-raison-sociale').textContent = 'Erreur';
-        $('detail-info-grid').innerHTML = `<div style="color:var(--red);">${json.error}</div>`;
-        return;
-      }
-      CURRENT_PARTNER = json;
-      renderPartnerDetail(json);
-    } catch (err) {
-      $('detail-raison-sociale').textContent = 'Erreur réseau';
-      $('detail-info-grid').innerHTML = `<div style="color:var(--red);">${err.message}</div>`;
-    }
-  }
-
-  function renderPartnerDetail(d) {
-    const { partenaire, contrat, prestations, pack_places } = d;
-
-    // Header
-    $('detail-raison-sociale').textContent = partenaire.raison_sociale || '—';
-    $('detail-contract-id').textContent = contrat.id;
-    const sub = [
-      partenaire.representant,
-      partenaire.siren ? `SIREN ${partenaire.siren}` : '',
-      contrat.type,
-    ].filter(Boolean).join(' · ');
-    $('detail-subtitle').textContent = sub;
-
-    // Breadcrumb
-    document.getElementById('breadcrumb-current').innerHTML =
-      `<span style="color:var(--ink-muted);">Partenaires</span> <span class="breadcrumb-sep">/</span> <b>${partenaire.raison_sociale}</b>`;
-
-    // Info grid
-    $('detail-info-grid').innerHTML = `
-      <div class="info-cell"><div class="info-label">Saison</div><div class="info-val">${contrat.saison || '—'}</div></div>
-      <div class="info-cell"><div class="info-label">Montant HT</div><div class="info-val lg">${fmtEUR(contrat.montant_ht)}</div></div>
-      <div class="info-cell"><div class="info-label">TVA / TTC</div><div class="info-val">${fmtEUR(contrat.tva)} / ${fmtEUR(contrat.montant_ttc)}</div></div>
-      <div class="info-cell"><div class="info-label">Date début</div><div class="info-val">${fmtDateFR(contrat.date_debut)}</div></div>
-      <div class="info-cell"><div class="info-label">Date fin</div><div class="info-val">${fmtDateFR(contrat.date_fin)}</div></div>
-      <div class="info-cell"><div class="info-label">Statut</div><div class="info-val"><span class="badge ${contrat.statut === 'Signé' ? 'green' : 'gold'} dot">${contrat.statut || '—'}</span></div></div>
+  // ===== PACK VIP =====
+  const packSection = $('pack-section');
+  const packCard = $('pack-vip-card');
+  if (pack_places) {
+    const pct = pack_places.alloues > 0 ? Math.round((pack_places.utilises / pack_places.alloues) * 100) : 0;
+    packCard.innerHTML = `
+      <div>
+        <div class="pack-label">${pack_places.libelle || 'Pack VIP'}</div>
+        <div class="pack-title">${pack_places.alloues} places allouées</div>
+        <div class="pack-bar"><div style="width: ${pct}%"></div></div>
+        <div class="pack-stats">
+          <div><b>${pack_places.utilises}</b>Utilisées</div>
+          <div><b>${pack_places.restants}</b>Restantes</div>
+          <div><b>${pack_places.seuil_alerte}</b>Seuil alerte</div>
+        </div>
+      </div>
+      <div class="pack-counter">
+        <b>${pack_places.restants}</b>
+        <small>Places dispo</small>
+      </div>
     `;
-
-    // Prestations
-    $('detail-prestations-sub').textContent = `${prestations.length} prestation(s)`;
-    if (prestations.length === 0) {
-      $('detail-prestations-tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--ink-muted);">Aucune prestation</td></tr>';
-    } else {
-      $('detail-prestations-tbody').innerHTML = prestations.map(pr => {
-        const pct = pr.nb_total > 0 ? Math.round(100 * pr.nb_livre / pr.nb_total) : 0;
-        const badgeClass = pct === 100 ? 'green' : 'gold';
-        const livreesComplete = pr.nb_total > 0 && pr.nb_livre >= pr.nb_total;
-        return `
-          <tr>
-            <td class="mono">${pr.code}</td>
-            <td><b>${pr.designation || pr.code}</b>${pr.detail ? '<br><small style="color:var(--ink-muted);">' + pr.detail + '</small>' : ''}</td>
-            <td><span class="badge ${badgeClass} dot">${pr.nb_livre}/${pr.nb_total}</span></td>
-            <td style="text-align:right;">
-              <button class="btn ${livreesComplete ? 'ghost' : 'primary'} sm" ${livreesComplete ? 'disabled' : ''} onclick="livrerPrestation('${pr.id}')">+1 livré</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Pack VIP
-    if (pack_places) {
-      const packEpuise = pack_places.restants <= 0;
-      $('detail-pack-id').textContent = pack_places.id;
-      $('detail-pack-body').innerHTML = `
-        <div style="font-size:36px;font-weight:700;letter-spacing:-.02em;line-height:1;">${pack_places.restants}<span style="font-size:14px;font-weight:500;color:var(--ink-muted);">/${pack_places.alloues}</span></div>
-        <div style="font-size:12px;color:var(--ink-muted);margin-top:4px;">places restantes · ${pack_places.utilises} utilisée(s)</div>
-        <div style="margin-top:14px;height:6px;background:var(--bg-soft);border-radius:99px;overflow:hidden;">
-          <div style="width:${pack_places.alloues > 0 ? (100 * pack_places.restants / pack_places.alloues) : 0}%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-soft));"></div>
-        </div>
-        <div style="margin-top:18px;">
-          <button class="btn ${packEpuise ? 'ghost' : 'primary'} sm" style="width:100%;" ${packEpuise ? 'disabled' : ''} onclick="utiliserPack('${pack_places.id}')">+1 présence</button>
-        </div>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-muted);">
-          Seuil alerte : ${pack_places.seuil_alerte} places
-        </div>
-      `;
-    } else {
-      $('detail-pack-id').textContent = '—';
-      $('detail-pack-body').innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-muted);">Pas de pack VIP sur ce contrat</div>';
-    }
-
-    // Tickie
-    renderTickieSection();
+  } else {
+    packSection.style.display = 'none';
   }
 
-  function renderTickieSection() {
-    const p = CURRENT_PARTNER && CURRENT_PARTNER.partenaire;
-    if (!p) return;
-    const tid = p.tickie_customer_id;
-
-    if (!tid) {
-      $('detail-tickie-body').innerHTML = `
-        <div style="text-align:center;">
-          <div style="font-size:32px;margin-bottom:8px;">🎫</div>
-          <div style="color:var(--ink-muted);font-size:13px;margin-bottom:14px;">Pas de compte Tickie lié à ce partenaire</div>
-          <button class="btn primary" onclick="openTickieModal()">Créer compte Tickie</button>
-        </div>
-      `;
-    } else {
-      $('detail-tickie-body').innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <span style="display:inline-flex;width:32px;height:32px;border-radius:50%;background:var(--green);color:white;align-items:center;justify-content:center;font-weight:600;">✓</span>
-          <div>
-            <div style="font-weight:500;font-size:14px;">Compte lié</div>
-            <div style="font-family:monospace;font-size:11px;color:var(--ink-muted);">${tid}</div>
+  // ===== ALERTES =====
+  const alertSection = $('alertes-section');
+  const alertList = $('alertes-list');
+  if (!alertes || alertes.length === 0) {
+    alertSection.style.display = 'none';
+  } else {
+    alertList.innerHTML = alertes.map(a => {
+      const icon = a.priorite === 'HAUTE' ? '!' : a.priorite === 'MOYENNE' ? '!' : '·';
+      return `
+        <div class="alerte ${a.priorite}">
+          <div class="a-icon">${icon}</div>
+          <div class="a-content">
+            <div class="a-type">${a.type}</div>
+            <div class="a-msg">${a.message}</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn ghost sm" onclick="sendTickieLogin()" id="btn-send-login">📧 Envoyer login</button>
-          <button class="btn ghost sm" onclick="unlinkTickie()" style="color:var(--red);">Délier</button>
-        </div>
-        <div style="margin-top:14px;padding:10px 14px;background:#f3f6fa;border-radius:6px;font-size:12px;color:var(--ink-muted);line-height:1.5;">
-          ℹ️ "Envoyer login" déclenche un email automatique de Tickie avec les identifiants de connexion.
-        </div>
       `;
-    }
+    }).join('');
   }
 
-  // Tickie modal handlers
-  function openTickieModal() {
-    if (!CURRENT_PARTNER) return;
-    const p = CURRENT_PARTNER.partenaire;
-    $('tickie-modal-company').textContent = p.raison_sociale || '—';
-    $('tickie-input-email').value = p.representant_email || '';
-    // Split representant en prenom + nom approximativement
-    const rep = (p.representant || '').trim();
-    if (rep) {
-      const parts = rep.split(/\s+/);
-      $('tickie-input-prenom').value = parts[0] || '';
-      $('tickie-input-nom').value = parts.slice(1).join(' ') || '';
-    } else {
-      $('tickie-input-prenom').value = '';
-      $('tickie-input-nom').value = '';
-    }
-    $('tickie-input-telephone').value = '';
-    $('tickie-modal').style.display = 'flex';
-    setTimeout(() => $('tickie-input-email').focus(), 100);
+  // ===== CONTRAT DOC =====
+  if (contrat.lien_doc) {
+    $('contract-doc-link').href = contrat.lien_doc;
+    CURRENT_CONTRAT_LIEN = contrat.lien_doc;
+  } else {
+    $('contract-doc-link').style.display = 'none';
   }
 
-  function closeTickieModal() {
-    $('tickie-modal').style.display = 'none';
+  // ===== AFFICHAGE =====
+  $('loading').hidden = true;
+  $('dashboard').hidden = false;
+}
+
+// =========================================================================
+//  Bootstrap — résolution de l'identité partenaire
+//
+//  Ordre de priorité :
+//    1. ?t=TOKEN   → magic token (PROD, recommandé)
+//    2. ?siren=XXX → SIREN direct (DEV / debug uniquement)
+//    3. Pas de paramètre → écran "Accès requis"
+// =========================================================================
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const magicToken = params.get('t');
+  const siren = params.get('siren');
+
+  let apiUrl;
+  let identityLabel;
+
+  if (magicToken) {
+    apiUrl = `/api/partner-by-token/${encodeURIComponent(magicToken)}`;
+    identityLabel = 'token';
+  } else if (siren) {
+    apiUrl = `/api/partner/${encodeURIComponent(siren)}`;
+    identityLabel = `SIREN ${siren}`;
+  } else {
+    showError(
+      'Accès requis',
+      'Aucun token d\'accès fourni. Utilisez le lien personnel envoyé par email.'
+    );
+    return;
   }
 
-  async function submitTickieCustomer() {
-    if (!CURRENT_PARTNER) return;
-    const email = $('tickie-input-email').value.trim();
-    const prenom = $('tickie-input-prenom').value.trim();
-    const nom = $('tickie-input-nom').value.trim();
-    const telephone = $('tickie-input-telephone').value.trim();
-
-    if (!email || !email.includes('@')) {
-      toast('Email invalide', 'error');
-      $('tickie-input-email').focus();
+  try {
+    const r = await fetch(apiUrl);
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      showError(
+        data.error || `Erreur ${r.status}`,
+        data.detail || `Identité : ${identityLabel}`
+      );
       return;
     }
+    renderDashboard(data);
+  } catch (e) {
+    showError('Connexion impossible', e.message);
+  }
+})();
 
-    const btn = $('tickie-modal-submit');
-    btn.disabled = true;
-    btn.textContent = 'Création…';
+// =========================================================================
+//  MINUTE DE L'EMPLOI — Génération PDF avec logo
+// =========================================================================
+// URL du template PDF — chemin relatif au worker Cloudflare (sert /public/)
+const ME_TEMPLATE_URL = '/minute_de_l_emploi_template.pdf';
+const LOGO_STORAGE_KEY = 'spacers_partner_logo';
 
-    try {
-      const contractId = CURRENT_PARTNER.contrat.id;
-      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}/create-tickie-customer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, prenom, nom, telephone }),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        toast(json.error || 'Erreur création', 'error');
-        console.error(json);
-        btn.disabled = false;
-        btn.textContent = 'Créer le compte';
-        return;
-      }
-      toast(`✅ Compte Tickie créé pour ${json.company}`, 'success');
-      closeTickieModal();
-      // Update local state + refresh section
-      CURRENT_PARTNER.partenaire.tickie_customer_id = json.tickie_customer_id;
-      renderTickieSection();
-    } catch (e) {
-      console.error(e);
-      toast('Erreur réseau : ' + e.message, 'error');
-      btn.disabled = false;
-      btn.textContent = 'Créer le compte';
-    }
+let ME_LOGO_DATA_URL = null;
+
+function openMinuteEmploiModal() {
+  // Restaurer le logo depuis localStorage
+  const saved = localStorage.getItem(LOGO_STORAGE_KEY);
+  if (saved) {
+    ME_LOGO_DATA_URL = saved;
+    showLogoPreview(saved);
+  } else {
+    ME_LOGO_DATA_URL = null;
+    resetLogoPreview();
   }
 
-  async function sendTickieLogin() {
-    if (!CURRENT_PARTNER || !CURRENT_PARTNER.partenaire.tickie_customer_id) return;
-    if (!confirm("Envoyer l'email de connexion Tickie au partenaire ?\nTickie enverra automatiquement un mail avec les identifiants.")) return;
+  // Pré-remplir le formulaire avec le draft (email, lieu déjà saisis)
+  loadMinuteEmploiDraft();
 
-    const btn = $('btn-send-login');
-    if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+  $('me-status').textContent = '';
+  $('me-modal').hidden = false;
+}
 
-    try {
-      const contractId = CURRENT_PARTNER.contrat.id;
-      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}/send-tickie-login`, { method: 'POST' });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        toast(json.error || 'Erreur envoi', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '📧 Envoyer login'; }
-        return;
-      }
-      toast('✅ Email de connexion envoyé au partenaire', 'success');
-      if (btn) { btn.disabled = false; btn.textContent = '📧 Envoyer login'; }
-    } catch (e) {
-      toast('Erreur réseau', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '📧 Envoyer login'; }
-    }
+function closeMinuteEmploiModal() {
+  $('me-modal').hidden = true;
+}
+
+function showLogoPreview(dataUrl) {
+  $('me-logo-preview').innerHTML = `<img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  $('me-logo-remove').style.display = '';
+}
+
+function resetLogoPreview() {
+  $('me-logo-preview').innerHTML = '<span style="color:#5B6573;font-size:10px;">aucun</span>';
+  $('me-logo-remove').style.display = 'none';
+}
+
+function removeLogo() {
+  localStorage.removeItem(LOGO_STORAGE_KEY);
+  ME_LOGO_DATA_URL = null;
+  resetLogoPreview();
+  $('me-logo-input').value = '';
+}
+
+function onLogoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    $('me-status').textContent = '⚠ Logo trop volumineux (max 2 Mo).';
+    $('me-status').style.color = '#c62828';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    ME_LOGO_DATA_URL = e.target.result;
+    localStorage.setItem(LOGO_STORAGE_KEY, ME_LOGO_DATA_URL);
+    showLogoPreview(ME_LOGO_DATA_URL);
+    $('me-status').textContent = '✓ Logo enregistré localement.';
+    $('me-status').style.color = '#2e7d32';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitMinuteEmploi() {
+  const btn = $('me-dl-btn');
+  const status = $('me-status');
+
+  // Validation côté client
+  const poste = $('me-input-poste').value.trim();
+  const email = $('me-input-email').value.trim();
+  if (!poste) { status.textContent = '⚠ Le poste est obligatoire.'; status.style.color = '#c62828'; $('me-input-poste').focus(); return; }
+  if (!email || !email.includes('@')) { status.textContent = '⚠ Email de candidatures invalide.'; status.style.color = '#c62828'; $('me-input-email').focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Envoi en cours…';
+  status.textContent = '';
+  status.style.color = '#5B6573';
+
+  // Récupérer le token magic depuis l'URL
+  const magicToken = new URLSearchParams(location.search).get('t');
+  if (!magicToken) {
+    status.textContent = '❌ Token partenaire introuvable. Reconnecte-toi via le lien envoyé par email.';
+    status.style.color = '#c62828';
+    btn.disabled = false;
+    btn.textContent = '✉ Envoyer mon annonce';
+    return;
   }
 
-  async function unlinkTickie() {
-    if (!CURRENT_PARTNER || !CURRENT_PARTNER.partenaire.tickie_customer_id) return;
-    if (!confirm('Délier ce partenaire de son customer Tickie ?\n\nLe customer Tickie ne sera PAS supprimé côté Tickie — seul le mapping côté pilote sera retiré. Tu pourras le re-lier ou en créer un nouveau ensuite.')) return;
-
-    try {
-      const contractId = CURRENT_PARTNER.contrat.id;
-      const res = await fetch(`/api/admin/partner/${ADMIN_TOKEN}/${contractId}/unlink-tickie`, { method: 'POST' });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        toast(json.error || 'Erreur', 'error');
-        return;
-      }
-      toast('✅ Partenaire délié de Tickie', 'success');
-      CURRENT_PARTNER.partenaire.tickie_customer_id = null;
-      renderTickieSection();
-    } catch (e) {
-      toast('Erreur réseau', 'error');
-    }
-  }
-
-  function copyPartnerLink() {
-    if (!CURRENT_PARTNER || !CURRENT_PARTNER.contrat || !CURRENT_PARTNER.contrat.magic_token) {
-      alert('Pas de lien partenaire disponible.');
-      return;
-    }
-    const url = `${window.location.origin}/?t=${CURRENT_PARTNER.contrat.magic_token}`;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('✅ Lien copié dans le presse-papier :\n' + url);
-    }).catch(() => {
-      prompt('Copie ce lien :', url);
-    });
-  }
-
-  function openContractDoc() {
-    if (!CURRENT_PARTNER || !CURRENT_PARTNER.contrat.lien_doc) {
-      alert('Pas de lien doc disponible.');
-      return;
-    }
-    window.open(CURRENT_PARTNER.contrat.lien_doc, '_blank');
-  }
-
-  // =========================================================================
-  //  Mutations
-  // =========================================================================
-  async function livrerPrestation(prestationId) {
-    if (!confirm('Marquer 1 unité supplémentaire comme livrée ?\n\nCette action est tracée dans l\'audit log.')) return;
-    try {
-      const res = await fetch(`/api/admin/prestation-livrer/${ADMIN_TOKEN}/${prestationId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count: 1 }),
-      });
-      const json = await res.json();
-      if (json.error) {
-        toast('❌ ' + json.error, 'red');
-        return;
-      }
-      toast(`✅ Prestation ${json.prestation.code} : ${json.prestation.nb_livre}/${json.prestation.nb_total}`, 'green');
-      if (CURRENT_PARTNER) {
-        await showPartnerDetail(CURRENT_PARTNER.contrat.id);
-      }
-      PARTNERS_CACHE = null; // invalide le cache liste
-    } catch (err) {
-      toast('❌ Erreur réseau : ' + err.message, 'red');
-    }
-  }
-
-  async function utiliserPack(packId) {
-    if (!confirm('Décompter 1 place du pack VIP ?\n\nCette action est tracée dans l\'audit log.')) return;
-    try {
-      const res = await fetch(`/api/admin/pack-utiliser/${ADMIN_TOKEN}/${packId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count: 1 }),
-      });
-      const json = await res.json();
-      if (json.error) {
-        toast('❌ ' + json.error, 'red');
-        return;
-      }
-      toast(`✅ Pack ${packId} : ${json.pack.restants}/${json.pack.alloues} places restantes`, 'green');
-      if (CURRENT_PARTNER) {
-        await showPartnerDetail(CURRENT_PARTNER.contrat.id);
-      }
-      PARTNERS_CACHE = null;
-    } catch (err) {
-      toast('❌ Erreur réseau : ' + err.message, 'red');
-    }
-  }
-
-  // =========================================================================
-  //  Toast notifications
-  // =========================================================================
-  function toast(message, color = 'green') {
-    const existing = document.querySelector('.toast');
-    if (existing) existing.remove();
-    const el = document.createElement('div');
-    el.className = 'toast';
-    const bg = color === 'red' ? 'var(--red)' : (color === 'green' ? 'var(--green)' : 'var(--ink)');
-    el.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${bg};color:white;padding:12px 20px;border-radius:8px;font-size:13.5px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:300;animation:slideUp .25s ease;`;
-    el.textContent = message;
-    document.body.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3500);
-  }
-
-  // =========================================================================
-  //  Navigation
-  // =========================================================================
-  function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => {
-      p.classList.remove('active');
-      p.style.display = '';
-    });
-    const target = document.getElementById('page-' + name);
-    if (target) {
-      target.classList.add('active');
-      target.style.display = '';
-    }
-
-    const bc = document.getElementById('breadcrumb-current');
-    const labels = {
-      'home': 'Accueil',
-      'partners': 'Partenaires',
-      'annonces': 'Annonces emploi',
-      'soon': 'Module en préparation',
-    };
-    if (name !== 'partner-detail') {
-      bc.innerHTML = '<b>' + (labels[name] || name) + '</b>';
-    }
-
-    document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
-    const activeSb = document.querySelector(`[onclick="showPage('${name}')"]`);
-    if (activeSb && activeSb.classList.contains('sb-link')) activeSb.classList.add('active');
-    else if (name === 'partner-detail') document.querySelector('[onclick="showPage(\'partners\')"]').classList.add('active');
-
-    // Lazy load
-    if (name === 'partners') loadPartners();
-    if (name === 'annonces') loadOffres(OFFRE_CURRENT_FILTER || 'all');
-
-    window.scrollTo({top:0,behavior:'smooth'});
-  }
-
-  // =========================================================================
-  //  ANNONCES EMPLOI
-  // =========================================================================
-  let OFFRE_CURRENT_FILTER = 'all';
-  let OFFRE_EDITING_ID = null;
-  let OFFRES_CACHE = [];
-
-  async function loadOffres(filter) {
-    OFFRE_CURRENT_FILTER = filter;
-    // Update filter buttons UI
-    document.querySelectorAll('.offre-filter').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
-    $('offres-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>';
-
-    const url = filter === 'all'
-      ? `/api/admin/offres/${ADMIN_TOKEN}`
-      : `/api/admin/offres/${ADMIN_TOKEN}?statut=${filter}`;
-    try {
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json.error) {
-        $('offres-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur : ${json.error}</div>`;
-        return;
-      }
-      OFFRES_CACHE = json.offres || [];
-      renderOffres(json.offres, json.stats);
-    } catch (e) {
-      $('offres-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur réseau : ${e.message}</div>`;
-    }
-  }
-
-  function renderOffres(offres, stats) {
-    // Update badges
-    $('cnt-all').textContent = stats.total || 0;
-    ['en_attente','publie','refuse','archive'].forEach(s => {
-      const el = $('cnt-' + s);
-      if (el) el.textContent = stats[s] || 0;
-    });
-    // Sidebar badge si en_attente > 0
-    const sbBadge = $('sb-badge-annonces');
-    if (sbBadge) {
-      const wait = stats.en_attente || 0;
-      if (wait > 0) { sbBadge.style.display = 'inline-block'; sbBadge.textContent = wait; sbBadge.style.background = 'var(--gold)'; sbBadge.style.color = 'white'; }
-      else sbBadge.style.display = 'none';
-    }
-
-    if (!offres || offres.length === 0) {
-      $('offres-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Aucune annonce dans cette catégorie</div>';
-      return;
-    }
-
-    const statutColors = {
-      en_attente: { bg: '#fff8e1', color: '#a36b00', label: '⏱ En attente' },
-      publie:     { bg: '#e8f5e9', color: '#2e7d32', label: '✓ Publiée' },
-      refuse:     { bg: '#ffebee', color: '#c62828', label: '✕ Refusée' },
-      archive:    { bg: '#f3f6fa', color: '#5b6573', label: 'Archivée' },
-      expire:     { bg: '#f3f6fa', color: '#5b6573', label: 'Expirée' },
-      pourvue:    { bg: '#e3f2fd', color: '#1565c0', label: 'Pourvue' },
-    };
-
-    const html = `<table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="text-align:left;border-bottom:1px solid var(--line);">
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Titre / Partenaire</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Type</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Lieu</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Statut</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;text-align:right;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${offres.map(o => {
-          const st = statutColors[o.statut] || statutColors.en_attente;
-          const actions = [];
-          if (o.statut === 'en_attente') {
-            actions.push(`<button class="btn primary sm" style="background:var(--green);" onclick="publishOffre('${o.id}')">✓ Publier</button>`);
-            actions.push(`<button class="btn ghost sm" style="color:var(--red);" onclick="openRejectModal('${o.id}')">✕ Refuser</button>`);
-          }
-          actions.push(`<button class="btn ghost sm" onclick="editOffre('${o.id}')">✎ Éditer</button>`);
-          if (o.statut !== 'archive') actions.push(`<button class="btn ghost sm" onclick="archiveOffre('${o.id}')" style="color:var(--ink-muted);">🗑</button>`);
-          return `
-            <tr style="border-bottom:1px solid var(--line);">
-              <td style="padding:14px 12px;">
-                <div style="font-weight:600;font-size:14px;">${escapeHtml(o.titre)}</div>
-                <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;">${escapeHtml(o.partenaire)}</div>
-              </td>
-              <td style="padding:14px 12px;font-size:13px;">${escapeHtml(o.type_contrat || '—')}</td>
-              <td style="padding:14px 12px;font-size:13px;">${escapeHtml(o.lieu || '—')}</td>
-              <td style="padding:14px 12px;"><span style="background:${st.bg};color:${st.color};padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;">${st.label}</span></td>
-              <td style="padding:14px 12px;text-align:right;white-space:nowrap;"><div style="display:inline-flex;gap:6px;">${actions.join('')}</div></td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>`;
-    $('offres-list').innerHTML = html;
-  }
-
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  // Modale création/édition
-  async function openOffreModal(offreId) {
-    OFFRE_EDITING_ID = offreId || null;
-    $('offre-modal-title').textContent = offreId ? 'Modifier l\'annonce' : 'Nouvelle annonce d\'emploi';
-    $('offre-modal-submit').textContent = offreId ? 'Enregistrer' : 'Créer l\'annonce';
-
-    // Pré-charger PARTNERS_CACHE si pas encore en cache
-    if (!PARTNERS_CACHE) {
-      await loadPartners();
-    }
-
-    // Remplir le select partenaires
-    const sel = $('offre-input-contrat');
-    sel.innerHTML = '<option value="">— Sélectionner —</option>';
-    const partners = (PARTNERS_CACHE && PARTNERS_CACHE.partners) || [];
-    partners.forEach(p => {
-      sel.innerHTML += `<option value="${p.contrat_id}">${escapeHtml(p.raison_sociale)} — ${p.contrat_id}</option>`;
-    });
-
-    // Reset / fill
-    if (offreId) {
-      const o = OFFRES_CACHE.find(x => x.id === offreId);
-      // Pour edit on a besoin du détail complet
-      fetchOffreDetail(offreId).then(detail => {
-        if (!detail) return;
-        $('offre-input-contrat').value = detail.contrat_id || '';
-        $('offre-input-contrat').disabled = true;
-        $('offre-input-titre').value = detail.titre || '';
-        $('offre-input-description').value = detail.description || '';
-        $('offre-input-type').value = detail.type_contrat || '';
-        $('offre-input-lieu').value = detail.lieu || '';
-        $('offre-input-duree').value = detail.duree || '';
-        $('offre-input-experience').value = detail.experience_requise || '';
-        $('offre-input-salaire').value = detail.salaire_indicatif || '';
-        $('offre-input-url').value = detail.url_externe || '';
-        $('offre-input-contact-nom').value = detail.contact_nom || '';
-        $('offre-input-contact-email').value = detail.contact_email || '';
-        $('offre-input-contact-tel').value = detail.contact_telephone || '';
-        $('offre-input-publish-now').checked = false;
-        $('offre-input-publish-now').parentElement.style.display = 'none';
-      });
-    } else {
-      $('offre-input-contrat').disabled = false;
-      ['titre','description','type','lieu','duree','experience','salaire','url','contact-nom','contact-email','contact-tel'].forEach(k => {
-        const el = $('offre-input-' + k);
-        if (el) el.value = '';
-      });
-      $('offre-input-publish-now').checked = false;
-      $('offre-input-publish-now').parentElement.style.display = 'flex';
-    }
-    $('offre-modal').style.display = 'flex';
-  }
-
-  function closeOffreModal() {
-    $('offre-modal').style.display = 'none';
-    OFFRE_EDITING_ID = null;
-  }
-
-  async function fetchOffreDetail(offreId) {
-    try {
-      const res = await fetch(`/api/admin/offre/${ADMIN_TOKEN}/${offreId}`);
-      const json = await res.json();
-      return json.offre;
-    } catch (e) {
-      toast('Erreur chargement offre', 'error');
-      return null;
-    }
-  }
-
-  async function submitOffre() {
-    const contrat_id = $('offre-input-contrat').value.trim();
-    const titre = $('offre-input-titre').value.trim();
-    const contact_email = $('offre-input-contact-email').value.trim();
-
-    if (!OFFRE_EDITING_ID && !contrat_id) { toast('Sélectionne un partenaire', 'error'); return; }
-    if (!titre) { toast('Titre obligatoire', 'error'); return; }
-    if (!contact_email || !contact_email.includes('@')) { toast('Email contact invalide', 'error'); return; }
-
-    const body = {
-      titre,
-      description: $('offre-input-description').value.trim(),
-      type_contrat: $('offre-input-type').value,
-      lieu: $('offre-input-lieu').value.trim(),
-      duree: $('offre-input-duree').value.trim(),
-      experience_requise: $('offre-input-experience').value.trim(),
-      salaire_indicatif: $('offre-input-salaire').value.trim(),
-      url_externe: $('offre-input-url').value.trim(),
-      contact_nom: $('offre-input-contact-nom').value.trim(),
-      contact_email,
-      contact_telephone: $('offre-input-contact-tel').value.trim(),
-    };
-
-    const btn = $('offre-modal-submit');
-    btn.disabled = true;
-    btn.textContent = OFFRE_EDITING_ID ? 'Enregistrement…' : 'Création…';
-
-    try {
-      let url, payload;
-      if (OFFRE_EDITING_ID) {
-        url = `/api/admin/offres/${ADMIN_TOKEN}/${OFFRE_EDITING_ID}/update`;
-        payload = body;
-      } else {
-        url = `/api/admin/offres/${ADMIN_TOKEN}/create`;
-        payload = { ...body, contrat_id, publish_now: $('offre-input-publish-now').checked };
-      }
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        toast(json.error || 'Erreur', 'error');
-        btn.disabled = false;
-        btn.textContent = OFFRE_EDITING_ID ? 'Enregistrer' : 'Créer l\'annonce';
-        return;
-      }
-      toast(OFFRE_EDITING_ID ? '✅ Annonce mise à jour' : '✅ Annonce créée', 'success');
-      closeOffreModal();
-      loadOffres(OFFRE_CURRENT_FILTER);
-    } catch (e) {
-      toast('Erreur réseau', 'error');
-      btn.disabled = false;
-      btn.textContent = OFFRE_EDITING_ID ? 'Enregistrer' : 'Créer l\'annonce';
-    }
-  }
-
-  function editOffre(id) { openOffreModal(id); }
-
-  async function publishOffre(id) {
-    if (!confirm('Publier cette annonce ? Elle deviendra visible par les bénévoles.')) return;
-    try {
-      const res = await fetch(`/api/admin/offres/${ADMIN_TOKEN}/${id}/publish`, { method: 'POST' });
-      const json = await res.json();
-      if (json.error) { toast(json.error, 'error'); return; }
-      toast('✅ Annonce publiée', 'success');
-      loadOffres(OFFRE_CURRENT_FILTER);
-    } catch (e) { toast('Erreur réseau', 'error'); }
-  }
-
-  let REJECT_OFFRE_ID = null;
-  function openRejectModal(id) {
-    REJECT_OFFRE_ID = id;
-    $('reject-input-raison').value = '';
-    $('reject-modal').style.display = 'flex';
-  }
-  function closeRejectModal() { $('reject-modal').style.display = 'none'; REJECT_OFFRE_ID = null; }
-  async function confirmReject() {
-    const raison = $('reject-input-raison').value.trim();
-    if (!REJECT_OFFRE_ID) return;
-    try {
-      const res = await fetch(`/api/admin/offres/${ADMIN_TOKEN}/${REJECT_OFFRE_ID}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raison }),
-      });
-      const json = await res.json();
-      if (json.error) { toast(json.error, 'error'); return; }
-      toast('✅ Annonce refusée', 'success');
-      closeRejectModal();
-      loadOffres(OFFRE_CURRENT_FILTER);
-    } catch (e) { toast('Erreur réseau', 'error'); }
-  }
-
-  async function archiveOffre(id) {
-    if (!confirm('Archiver cette annonce ?')) return;
-    try {
-      const res = await fetch(`/api/admin/offres/${ADMIN_TOKEN}/${id}/archive`, { method: 'POST' });
-      const json = await res.json();
-      if (json.error) { toast(json.error, 'error'); return; }
-      toast('✅ Annonce archivée', 'success');
-      loadOffres(OFFRE_CURRENT_FILTER);
-    } catch (e) { toast('Erreur réseau', 'error'); }
-  }
-
-  // =========================================================================
-  //  PUBLICATIONS (Forum / Propositions / Échanges)
-  // =========================================================================
-  let PUB_CURRENT_TYPE = 'forum';   // forum | proposition | echange
-  let PUB_CURRENT_FILTER = 'all';
-  let PUB_EDITING_ID = null;
-  let PUB_CACHE = [];
-
-  const PUB_LABELS = {
-    forum:       { titre: 'Forum',                sub: 'Discussions entre partenaires (sport, social, divers)', placeholder_titre: 'ex: Qui est dispo pour un padel jeudi soir ?' },
-    proposition: { titre: 'Propositions business',sub: 'Services et produits proposés par les partenaires aux autres', placeholder_titre: 'ex: Cartes carburant pro avec 10% de remise' },
-    echange:     { titre: 'Échanges business',    sub: 'Recherche de prestataires entre partenaires', placeholder_titre: 'ex: Je cherche un plombier pour mon entreprise' },
+  // Construire le payload
+  const payload = {
+    titre: poste,
+    type_contrat: $('me-input-contrat').value || null,
+    lieu: $('me-input-lieux').value.trim() || null,
+    duree: $('me-input-heures').value.trim() || null,
+    salaire_indicatif: $('me-input-salaire').value.trim() || null,
+    description: $('me-input-prerequis').value.trim() || null,
+    contact_email: email,
+    contact_nom: window.__PARTNER_REPRESENTANT__ || null,
+    metadata: {
+      date_match: $('me-input-date_match').value.trim() || null,
+      les_plus: $('me-input-les_plus').value.trim() || null,
+      logo_b64: ME_LOGO_DATA_URL || null,
+      source: 'pwa-partenaire-minute-emploi',
+    },
   };
 
-  function showPublications(type) {
-    PUB_CURRENT_TYPE = type;
-    const label = PUB_LABELS[type] || PUB_LABELS.forum;
-
-    // Activer la page
-    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
-    const target = $('page-publications');
-    if (target) { target.classList.add('active'); target.style.display = ''; }
-    $('pub-page-title').textContent = label.titre;
-    $('pub-page-subtitle').textContent = label.sub;
-
-    // Breadcrumb
-    const bc = $('breadcrumb-current');
-    if (bc) bc.innerHTML = '<b>' + label.titre + '</b>';
-
-    // Active sidebar link
-    document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
-    const sb = document.querySelector(`[onclick="showPublications('${type}')"]`);
-    if (sb) sb.classList.add('active');
-
-    // Reset filter
-    PUB_CURRENT_FILTER = 'all';
-    loadPublications('all');
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  async function loadPublications(filter) {
-    PUB_CURRENT_FILTER = filter;
-    document.querySelectorAll('.pub-filter').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
-    $('pub-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>';
-
-    const params = new URLSearchParams();
-    params.set('type', PUB_CURRENT_TYPE);
-    if (filter !== 'all') params.set('statut', filter);
-    const url = `/api/admin/publications/${ADMIN_TOKEN}?${params.toString()}`;
-
-    try {
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json.error) {
-        $('pub-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur : ${json.error}</div>`;
-        return;
-      }
-      PUB_CACHE = json.publications || [];
-      renderPublications(json.publications, json.stats);
-    } catch (e) {
-      $('pub-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur réseau : ${e.message}</div>`;
-    }
-  }
-
-  function renderPublications(pubs, statsByType) {
-    // Stats du type courant
-    const stats = (statsByType && statsByType[PUB_CURRENT_TYPE]) || { en_attente: 0, publie: 0, refuse: 0, archive: 0, total: 0 };
-    $('pub-cnt-all').textContent = stats.total || 0;
-    ['en_attente', 'publie', 'refuse', 'archive'].forEach(s => {
-      const el = $('pub-cnt-' + s);
-      if (el) el.textContent = stats[s] || 0;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(magicToken)}/offres-emploi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
-
-    // Badges sidebar (count en_attente par type)
-    if (statsByType) {
-      ['forum', 'proposition', 'echange'].forEach(t => {
-        const wait = (statsByType[t] || {}).en_attente || 0;
-        const el = $('sb-badge-' + t);
-        if (el) {
-          if (wait > 0) {
-            el.style.display = 'inline-block';
-            el.textContent = wait;
-            el.style.background = 'var(--gold)';
-            el.style.color = 'white';
-          } else el.style.display = 'none';
-        }
-      });
+    const json = await res.json();
+    if (!res.ok || json.error) {
+      throw new Error(json.error || `Erreur ${res.status}`);
     }
 
-    if (!pubs || pubs.length === 0) {
-      $('pub-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Aucune publication dans cette catégorie</div>';
-      return;
-    }
+    // Succès — sauvegarder le brouillon (pour ré-utilisation prochaine)
+    saveMinuteEmploiDraft();
 
-    const statutColors = {
-      en_attente: { bg: '#fff8e1', color: '#a36b00', label: '⏱ En attente' },
-      publie:     { bg: '#e8f5e9', color: '#2e7d32', label: '✓ Publiée' },
-      refuse:     { bg: '#ffebee', color: '#c62828', label: '✕ Refusée' },
-      archive:    { bg: '#f3f6fa', color: '#5b6573', label: 'Archivée' },
-      expire:     { bg: '#f3f6fa', color: '#5b6573', label: 'Expirée' },
-    };
+    status.innerHTML = '✅ <b>Annonce envoyée</b> — l\'équipe Spacers la valide puis la diffuse. Vous serez informé(e) à <b>' + email + '</b>.';
+    status.style.color = '#2e7d32';
+    btn.textContent = '✓ Envoyée';
 
-    const html = `<table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="text-align:left;border-bottom:1px solid var(--line);">
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Titre / Émetteur</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Catégorie</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Statut</th>
-          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;text-align:right;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${pubs.map(p => {
-          const st = statutColors[p.statut] || statutColors.en_attente;
-          const actions = [];
-          if (p.statut === 'en_attente') {
-            actions.push(`<button class="btn primary sm" style="background:var(--green);" onclick="publishPub('${p.id}')">✓ Publier</button>`);
-            actions.push(`<button class="btn ghost sm" style="color:var(--red);" onclick="openRejectPubModal('${p.id}')">✕ Refuser</button>`);
-          }
-          actions.push(`<button class="btn ghost sm" onclick="editPub('${p.id}')">✎ Éditer</button>`);
-          if (p.statut !== 'archive') actions.push(`<button class="btn ghost sm" onclick="archivePub('${p.id}')" style="color:var(--ink-muted);">🗑</button>`);
-          const truncDesc = (p.description || '').slice(0, 100);
-          return `
-            <tr style="border-bottom:1px solid var(--line);">
-              <td style="padding:14px 12px;">
-                <div style="font-weight:600;font-size:14px;">${escapeHtml(p.titre)}</div>
-                <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;">${escapeHtml(p.partenaire)}</div>
-                ${truncDesc ? `<div style="font-size:12px;color:var(--ink-muted);margin-top:4px;">${escapeHtml(truncDesc)}${p.description.length > 100 ? '…' : ''}</div>` : ''}
-              </td>
-              <td style="padding:14px 12px;font-size:13px;">${escapeHtml(p.categorie || '—')}</td>
-              <td style="padding:14px 12px;"><span style="background:${st.bg};color:${st.color};padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;">${st.label}</span></td>
-              <td style="padding:14px 12px;text-align:right;white-space:nowrap;"><div style="display:inline-flex;gap:6px;">${actions.join('')}</div></td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>`;
-    $('pub-list').innerHTML = html;
-  }
-
-  async function openPubModal(pubId) {
-    PUB_EDITING_ID = pubId || null;
-    const label = PUB_LABELS[PUB_CURRENT_TYPE];
-    $('pub-modal-title').textContent = pubId ? `Modifier — ${label.titre}` : `Nouvelle publication — ${label.titre}`;
-    $('pub-modal-sub').textContent = label.sub;
-    $('pub-modal-submit').textContent = pubId ? 'Enregistrer' : 'Créer';
-    $('pub-input-titre').placeholder = label.placeholder_titre;
-
-    // Préchargement partenaires
-    if (!PARTNERS_CACHE) await loadPartners();
-    const sel = $('pub-input-contrat');
-    sel.innerHTML = '<option value="">— Aucun (publié par l\'admin) —</option>';
-    const partners = (PARTNERS_CACHE && PARTNERS_CACHE.partners) || [];
-    partners.forEach(p => {
-      sel.innerHTML += `<option value="${p.contrat_id}">${escapeHtml(p.raison_sociale)}</option>`;
-    });
-
-    // Champs spécifiques par type
-    $('pub-specific-fields').innerHTML = renderPubSpecificFields(PUB_CURRENT_TYPE, {});
-
-    if (pubId) {
-      // Fetch détail
-      const detail = await fetchPubDetail(pubId);
-      if (!detail) return;
-      $('pub-input-contrat').value = detail.contrat_id || '';
-      $('pub-input-titre').value = detail.titre || '';
-      $('pub-input-description').value = detail.description || '';
-      $('pub-input-categorie').value = detail.categorie || '';
-      $('pub-input-contact-nom').value = detail.contact_nom || '';
-      $('pub-input-contact-email').value = detail.contact_email || '';
-      $('pub-input-publish-now').checked = false;
-      $('pub-input-publish-now').parentElement.style.display = 'none';
-      $('pub-specific-fields').innerHTML = renderPubSpecificFields(detail.type || PUB_CURRENT_TYPE, detail.data || {});
-    } else {
-      ['titre','description','categorie','contact-nom','contact-email'].forEach(k => {
-        const el = $('pub-input-' + k);
-        if (el) el.value = '';
-      });
-      $('pub-input-publish-now').checked = false;
-      $('pub-input-publish-now').parentElement.style.display = 'flex';
-    }
-
-    $('pub-modal').style.display = 'flex';
-  }
-
-  function renderPubSpecificFields(type, data) {
-    const d = data || {};
-    if (type === 'forum') {
-      return `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Sport / Activité
-            <input id="pub-data-sport" type="text" value="${escapeHtml(d.sport || '')}" placeholder="padel, ski, footing…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Date / créneau
-            <input id="pub-data-quand" type="text" value="${escapeHtml(d.quand || '')}" placeholder="jeudi 18h" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-        </div>
-      `;
-    }
-    if (type === 'proposition') {
-      return `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Type d'offre
-            <input id="pub-data-offre_type" type="text" value="${escapeHtml(d.offre_type || '')}" placeholder="produit / service" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Remise / condition
-            <input id="pub-data-remise" type="text" value="${escapeHtml(d.remise || '')}" placeholder="-10% partenaires Spacers" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-        </div>
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:block;margin-top:10px;">Validité de l'offre
-          <input id="pub-data-validite" type="text" value="${escapeHtml(d.validite || '')}" placeholder="jusqu'au 31/12/2026" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-        </label>
-        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:block;margin-top:10px;">URL externe
-          <input id="pub-data-url" type="url" value="${escapeHtml(d.url || '')}" placeholder="https://…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-        </label>
-      `;
-    }
-    if (type === 'echange') {
-      return `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Type de prestation recherchée
-            <input id="pub-data-prestation" type="text" value="${escapeHtml(d.prestation || '')}" placeholder="plomberie, électricité…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Urgence
-            <select id="pub-data-urgence" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
-              <option value="">—</option>
-              <option value="urgent" ${d.urgence==='urgent'?'selected':''}>Urgent</option>
-              <option value="moyen" ${d.urgence==='moyen'?'selected':''}>Sous quelques semaines</option>
-              <option value="souple" ${d.urgence==='souple'?'selected':''}>Pas pressé</option>
-            </select>
-          </label>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Lieu du chantier
-            <input id="pub-data-lieu" type="text" value="${escapeHtml(d.lieu || '')}" placeholder="Toulouse 31000" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Budget indicatif
-            <input id="pub-data-budget" type="text" value="${escapeHtml(d.budget || '')}" placeholder="1500€ HT" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
-          </label>
-        </div>
-      `;
-    }
-    return '';
-  }
-
-  function collectPubSpecificData(type) {
-    const d = {};
-    if (type === 'forum') {
-      const s = $('pub-data-sport'); if (s) d.sport = s.value.trim();
-      const q = $('pub-data-quand'); if (q) d.quand = q.value.trim();
-    } else if (type === 'proposition') {
-      ['offre_type','remise','validite','url'].forEach(k => {
-        const el = $('pub-data-' + k);
-        if (el) d[k] = el.value.trim();
-      });
-    } else if (type === 'echange') {
-      ['prestation','urgence','lieu','budget'].forEach(k => {
-        const el = $('pub-data-' + k);
-        if (el) d[k] = el.value.trim();
-      });
-    }
-    // Nettoyer les vides
-    Object.keys(d).forEach(k => { if (!d[k]) delete d[k]; });
-    return d;
-  }
-
-  function closePubModal() { $('pub-modal').style.display = 'none'; PUB_EDITING_ID = null; }
-
-  async function fetchPubDetail(pubId) {
-    try {
-      const res = await fetch(`/api/admin/publication/${ADMIN_TOKEN}/${pubId}`);
-      const json = await res.json();
-      return json.publication;
-    } catch (e) { toast('Erreur chargement', 'error'); return null; }
-  }
-
-  async function submitPublication() {
-    const titre = $('pub-input-titre').value.trim();
-    if (!titre) { toast('Titre obligatoire', 'error'); return; }
-
-    const body = {
-      type: PUB_CURRENT_TYPE,
-      contrat_id: $('pub-input-contrat').value || null,
-      titre,
-      description: $('pub-input-description').value.trim() || null,
-      categorie: $('pub-input-categorie').value.trim() || null,
-      data: collectPubSpecificData(PUB_CURRENT_TYPE),
-      contact_nom: $('pub-input-contact-nom').value.trim() || null,
-      contact_email: $('pub-input-contact-email').value.trim() || null,
-    };
-
-    const btn = $('pub-modal-submit');
-    btn.disabled = true;
-    btn.textContent = PUB_EDITING_ID ? 'Enregistrement…' : 'Création…';
-
-    try {
-      let url, payload;
-      if (PUB_EDITING_ID) {
-        url = `/api/admin/publications/${ADMIN_TOKEN}/${PUB_EDITING_ID}/update`;
-        payload = body;
-      } else {
-        url = `/api/admin/publications/${ADMIN_TOKEN}/create`;
-        payload = { ...body, publish_now: $('pub-input-publish-now').checked };
-      }
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        toast(json.error || 'Erreur', 'error');
-        btn.disabled = false;
-        btn.textContent = PUB_EDITING_ID ? 'Enregistrer' : 'Créer';
-        return;
-      }
-      toast(PUB_EDITING_ID ? '✅ Publication mise à jour' : '✅ Publication créée', 'success');
-      closePubModal();
-      loadPublications(PUB_CURRENT_FILTER);
-    } catch (e) {
-      toast('Erreur réseau', 'error');
+    // Réinitialiser le formulaire après 2s
+    setTimeout(() => {
+      clearMinuteEmploiForm();
       btn.disabled = false;
-      btn.textContent = PUB_EDITING_ID ? 'Enregistrer' : 'Créer';
-    }
+      btn.textContent = '✉ Envoyer mon annonce';
+    }, 3000);
+  } catch (e) {
+    console.error(e);
+    status.textContent = '❌ Erreur : ' + e.message;
+    status.style.color = '#c62828';
+    btn.disabled = false;
+    btn.textContent = '✉ Envoyer mon annonce';
   }
+}
 
-  function editPub(id) { openPubModal(id); }
+function saveMinuteEmploiDraft() {
+  // (Optionnel) Sauvegarder en localStorage pour pré-remplissage futur
+  const draft = {
+    contrat: $('me-input-contrat').value,
+    lieu: $('me-input-lieux').value,
+    contact_email: $('me-input-email').value,
+  };
+  try { localStorage.setItem('spacers_minute_emploi_draft', JSON.stringify(draft)); } catch {}
+}
 
-  async function publishPub(id) {
-    if (!confirm('Publier cette publication ?')) return;
-    try {
-      const res = await fetch(`/api/admin/publications/${ADMIN_TOKEN}/${id}/publish`, { method: 'POST' });
-      const json = await res.json();
-      if (json.error) { toast(json.error, 'error'); return; }
-      toast('✅ Publiée', 'success');
-      loadPublications(PUB_CURRENT_FILTER);
-    } catch (e) { toast('Erreur réseau', 'error'); }
-  }
+function loadMinuteEmploiDraft() {
+  try {
+    const raw = localStorage.getItem('spacers_minute_emploi_draft');
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (draft.contrat) $('me-input-contrat').value = draft.contrat;
+    if (draft.lieu) $('me-input-lieux').value = draft.lieu;
+    if (draft.contact_email) $('me-input-email').value = draft.contact_email;
+  } catch {}
+}
 
-  let REJECT_PUB_ID = null;
-  function openRejectPubModal(id) {
-    REJECT_PUB_ID = id;
-    $('reject-input-raison').value = '';
-    // Réutilise la modale reject mais on adapte le bouton OK
-    const btn = $('reject-modal-submit');
-    btn.onclick = confirmRejectPub;
-    $('reject-modal').style.display = 'flex';
-  }
+function clearMinuteEmploiForm() {
+  ['date_match', 'poste', 'prerequis', 'lieux', 'heures', 'salaire', 'les_plus'].forEach(k => {
+    const el = $('me-input-' + k);
+    if (el) el.value = '';
+  });
+  $('me-input-contrat').value = '';
+  // On garde email et logo, ils servent toujours
+}
 
-  async function confirmRejectPub() {
-    if (!REJECT_PUB_ID) return;
-    const raison = $('reject-input-raison').value.trim();
-    try {
-      const res = await fetch(`/api/admin/publications/${ADMIN_TOKEN}/${REJECT_PUB_ID}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raison }),
-      });
-      const json = await res.json();
-      if (json.error) { toast(json.error, 'error'); return; }
-      toast('✅ Refusée', 'success');
-      closeRejectModal();
-      // Restore default onclick (offre)
-      $('reject-modal-submit').onclick = confirmReject;
-      loadPublications(PUB_CURRENT_FILTER);
-    } catch (e) { toast('Erreur réseau', 'error'); }
-  }
-
-  async function archivePub(id) {
-    if (!confirm('Archiver ?')) return;
-    try {
-      const res = await fetch(`/api/admin/publications/${ADMIN_TOKEN}/${id}/archive`, { method: 'POST' });
-      const json = await res.json();
-      if (json.error) { toast(json.error, 'error'); return; }
-      toast('✅ Archivée', 'success');
-      loadPublications(PUB_CURRENT_FILTER);
-    } catch (e) { toast('Erreur réseau', 'error'); }
-  }
-
-  // Démarrage
-  boot();
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Échec chargement ' + src));
+    document.head.appendChild(s);
+  });
+}
 </script>
 
 </body>
