@@ -698,7 +698,7 @@ async function handleTickiePing(token, env) {
     // Pull les 3 premiers events et 3 premiers customers pour valider la connexion
     const [eventsRes, customersRes] = await Promise.all([
       tickieRequest_('/events', env, { top: '3' }).catch(e => ({ error: e.message })),
-      tickieRequest_('/customers', env, { top: '3' }).catch(e => ({ error: e.message })),
+      tickieRequest_('/customers/rich', env, { top: '3' }).catch(e => ({ error: e.message })),
     ]);
 
     return jsonResponseNoCache({
@@ -728,17 +728,22 @@ async function handleTickieCustomers(token, env) {
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
   try {
-    const raw = await tickieRequest_('/customers', env, { top: '500' });
+    const raw = await tickieRequest_('/customers/rich', env, { top: '500' });
     // Vivenu retourne { rows: [...], total } OU { docs: [...] } selon endpoint
     const customers = raw.rows || raw.docs || (Array.isArray(raw) ? raw : []);
 
     // On mappe seulement les champs utiles
     const simplified = customers.map(c => ({
       tickie_id: c._id || c.id,
-      email: c.email || '',
+      email: c.primaryEmail || c.email || '',
       company: c.company || '',
-      firstname: c.firstname || '',
+      firstname: c.prename || c.firstname || '',
       lastname: c.lastname || '',
+      name: c.name || '',
+      phone: c.phone || '',
+      external_id: c.externalId || '',
+      tags: c.tags || [],
+      verified: c.verified || false,
       created_at: c.createdAt || null,
     }));
 
