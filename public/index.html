@@ -136,6 +136,24 @@
 
   /* CONTACT */
   .contact-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
+
+  /* MA VIE PARTENAIRE */
+  .vp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 700px) { .vp-grid { grid-template-columns: 1fr; } }
+  .vp-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; cursor: pointer; transition: transform .2s, border-color .2s, box-shadow .2s; }
+  .vp-card:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 6px 20px rgba(10,22,40,.08); }
+  .vp-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--gold); color: white; display: grid; place-items: center; font-size: 20px; font-weight: 600; margin-bottom: 14px; }
+  .vp-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 4px; color: var(--ink); }
+  .vp-sub { color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
+  .mp-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; }
+  .mp-item-content { flex: 1; }
+  .mp-item-title { font-weight: 600; font-size: 14px; color: var(--ink); }
+  .mp-item-meta { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+  .mp-badge { padding: 3px 10px; border-radius: 11px; font-size: 11px; font-weight: 600; }
+  .mp-badge-attente { background: #fff8e1; color: #a36b00; }
+  .mp-badge-publie { background: #e8f5e9; color: #2e7d32; }
+  .mp-badge-refuse { background: #ffebee; color: #c62828; }
+  .mp-badge-archive { background: #f3f6fa; color: #5b6573; }
   @media (max-width: 700px) { .contact-card { grid-template-columns: 1fr; gap: 14px; } .contact-card .actions { display: flex; gap: 8px; } }
   .contact-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: white; font-weight: 700; font-size: 24px; display: grid; place-items: center; font-family: 'Fraunces', serif; }
   .contact-info b { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; display: block; }
@@ -259,6 +277,36 @@
     <div class="alertes" id="alertes-list"></div>
   </section>
 
+  <!-- MA VIE PARTENAIRE -->
+  <section class="fade-in delay-3" id="vie-partenaire-section">
+    <h3 class="display">Ma <em>vie partenaire</em></h3>
+    <p class="section-desc">Partager, proposer, recruter — directement depuis votre espace</p>
+    <div class="vp-grid">
+      <div class="vp-card" onclick="showSoon('Forum partenaires','Bientôt — vous pourrez proposer ici des sorties, padel, afterworks et événements informels.')">
+        <div class="vp-icon">⌘</div>
+        <div class="vp-title">Forum</div>
+        <div class="vp-sub">Sport, social, divers : proposer un padel, un afterwork, un moment partagé</div>
+      </div>
+      <div class="vp-card" onclick="showSoon('Proposer un service','Bientôt — partagez vos offres et remises entre partenaires Spacers.')">
+        <div class="vp-icon">◈</div>
+        <div class="vp-title">Proposer un service / produit</div>
+        <div class="vp-sub">Faites connaître votre offre aux autres partenaires du club</div>
+      </div>
+      <div class="vp-card" onclick="openMinuteEmploiModal()">
+        <div class="vp-icon">◐</div>
+        <div class="vp-title">Minute de l'emploi</div>
+        <div class="vp-sub">Recruter via le réseau bénévoles — annonce PDF diffusée au match</div>
+      </div>
+      <div class="vp-card" onclick="showSoon('Demande de service','Bientôt — cherchez un prestataire (plombier, électricien…) parmi les partenaires.')">
+        <div class="vp-icon">⌬</div>
+        <div class="vp-title">Demander un service</div>
+        <div class="vp-sub">Chercher un prestataire (plombier, électricien…) parmi les partenaires</div>
+      </div>
+    </div>
+
+    <div id="mes-publications" style="margin-top:24px;"></div>
+  </section>
+
   <!-- CONTACT -->
   <section class="fade-in delay-3">
     <h3 class="display">Mon <em>contact club</em></h3>
@@ -294,6 +342,56 @@
     <h3 id="modal-title" class="display">—</h3>
     <p id="modal-text">—</p>
     <button class="btn primary" onclick="closeSoon()">Compris</button>
+  </div>
+</div>
+
+<!-- MODAL Minute de l'emploi -->
+<div id="me-modal" class="modal" hidden onclick="if(event.target.id==='me-modal')closeMinuteEmploiModal()">
+  <div class="modal-card" style="max-width:520px;text-align:left;">
+    <div class="modal-eyebrow" style="text-align:center;">📥 PDF À TÉLÉCHARGER</div>
+    <h3 class="display" style="text-align:center;">Minute de l'emploi</h3>
+    <p style="text-align:center;">Fiche PDF aux couleurs Spacers — vous remplissez les champs, nous diffusons l'annonce pendant les matchs.</p>
+
+    <!-- Étape 1 : Upload logo -->
+    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:18px;margin:18px 0;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="background:#C9A864;color:white;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:13px;">1</div>
+        <div><b style="font-size:14px;">Votre logo</b><br><small style="color:#5B6573;">Format PNG ou JPG, fond transparent recommandé</small></div>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+        <div id="me-logo-preview" style="width:64px;height:64px;border:2px dashed #C9A864;border-radius:8px;display:grid;place-items:center;background:white;overflow:hidden;">
+          <span style="color:#5B6573;font-size:10px;">aucun</span>
+        </div>
+        <label class="btn" style="cursor:pointer;margin-bottom:0;">
+          <input type="file" id="me-logo-input" accept="image/png,image/jpeg" style="display:none;" onchange="onLogoSelected(event)">
+          Choisir un logo
+        </label>
+        <button class="btn" id="me-logo-remove" style="display:none;" onclick="removeLogo()">Retirer</button>
+      </div>
+    </div>
+
+    <!-- Étape 2 : Téléchargement -->
+    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:18px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="background:#C9A864;color:white;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:13px;">2</div>
+        <div><b style="font-size:14px;">Téléchargez votre fiche personnalisée</b><br><small style="color:#5B6573;">PDF interactif aux couleurs Spacers, à remplir dans n'importe quel viewer PDF</small></div>
+      </div>
+      <button class="btn primary" id="me-dl-btn" onclick="generateMinuteEmploi()" style="width:100%;margin-top:14px;">
+        📥 Télécharger ma fiche
+      </button>
+    </div>
+
+    <!-- Étape 3 : Renvoi -->
+    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:18px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="background:#C9A864;color:white;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:13px;">3</div>
+        <div><b style="font-size:14px;">Une fois rempli, renvoyez-le</b><br><small style="color:#5B6573;">À <b>spacersytb@gmail.com</b> — nous validons puis diffusons</small></div>
+      </div>
+    </div>
+
+    <div id="me-status" style="font-size:13px;text-align:center;color:#5B6573;min-height:20px;margin-bottom:10px;"></div>
+
+    <button class="btn" onclick="closeMinuteEmploiModal()" style="width:100%;">Fermer</button>
   </div>
 </div>
 
@@ -375,6 +473,7 @@ function renderDashboard(data) {
   // ===== HEADER USER CHIP =====
   $('user-chip').hidden = false;
   $('user-name').textContent = partenaire.raison_sociale || '—';
+  window.__PARTNER_RAISON_SOCIALE__ = partenaire.raison_sociale || '';
   $('user-role').textContent = partenaire.representant
     ? `${partenaire.representant}${partenaire.fonction ? ' · ' + partenaire.fonction : ''}`
     : '—';
@@ -531,6 +630,183 @@ function renderDashboard(data) {
     showError('Connexion impossible', e.message);
   }
 })();
+
+// =========================================================================
+//  MINUTE DE L'EMPLOI — Génération PDF avec logo
+// =========================================================================
+// URL du template PDF : on essaie d'abord raw GitHub, puis le worker si configuré
+const ME_TEMPLATE_URL = 'https://raw.githubusercontent.com/1994-spa/Spacer-s-Business-Club/main/public/minute_de_l_emploi_template.pdf';
+const LOGO_STORAGE_KEY = 'spacers_partner_logo';
+
+let ME_LOGO_DATA_URL = null;
+
+function openMinuteEmploiModal() {
+  // Restaurer le logo depuis localStorage
+  const saved = localStorage.getItem(LOGO_STORAGE_KEY);
+  if (saved) {
+    ME_LOGO_DATA_URL = saved;
+    showLogoPreview(saved);
+  } else {
+    ME_LOGO_DATA_URL = null;
+    resetLogoPreview();
+  }
+  $('me-status').textContent = '';
+  $('me-modal').hidden = false;
+}
+
+function closeMinuteEmploiModal() {
+  $('me-modal').hidden = true;
+}
+
+function showLogoPreview(dataUrl) {
+  $('me-logo-preview').innerHTML = `<img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  $('me-logo-remove').style.display = '';
+}
+
+function resetLogoPreview() {
+  $('me-logo-preview').innerHTML = '<span style="color:#5B6573;font-size:10px;">aucun</span>';
+  $('me-logo-remove').style.display = 'none';
+}
+
+function removeLogo() {
+  localStorage.removeItem(LOGO_STORAGE_KEY);
+  ME_LOGO_DATA_URL = null;
+  resetLogoPreview();
+  $('me-logo-input').value = '';
+}
+
+function onLogoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    $('me-status').textContent = '⚠ Logo trop volumineux (max 2 Mo).';
+    $('me-status').style.color = '#c62828';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    ME_LOGO_DATA_URL = e.target.result;
+    localStorage.setItem(LOGO_STORAGE_KEY, ME_LOGO_DATA_URL);
+    showLogoPreview(ME_LOGO_DATA_URL);
+    $('me-status').textContent = '✓ Logo enregistré localement.';
+    $('me-status').style.color = '#2e7d32';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function generateMinuteEmploi() {
+  const btn = $('me-dl-btn');
+  const status = $('me-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Génération en cours…';
+  status.textContent = '';
+
+  try {
+    // 1. Charger pdf-lib depuis CDN (si pas déjà fait)
+    if (!window.PDFLib) {
+      status.textContent = 'Chargement de la librairie PDF…';
+      await loadScript('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js');
+    }
+    if (!window.PDFLib) throw new Error('pdf-lib non chargé');
+
+    // 2. Fetch le template PDF
+    status.textContent = 'Téléchargement du modèle…';
+    const templateBytes = await fetch(ME_TEMPLATE_URL).then(r => {
+      if (!r.ok) throw new Error('Template introuvable (HTTP ' + r.status + ')');
+      return r.arrayBuffer();
+    });
+
+    // 3. Charger le PDF
+    const { PDFDocument } = window.PDFLib;
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    const page = pdfDoc.getPages()[0];
+
+    // 4. Si logo présent, l'embed et le dessiner
+    if (ME_LOGO_DATA_URL) {
+      status.textContent = 'Intégration du logo…';
+      const isPng = ME_LOGO_DATA_URL.startsWith('data:image/png');
+      const logoBytes = await fetch(ME_LOGO_DATA_URL).then(r => r.arrayBuffer());
+      const logoImage = isPng
+        ? await pdfDoc.embedPng(logoBytes)
+        : await pdfDoc.embedJpg(logoBytes);
+
+      // Coordonnées du slot logo dans le template (calculé d'après le script Python)
+      // Slot : x = LEFT + ENT_W + DATE_W + 10mm, y = y - 28 (taille 32mm * (PAGE_H - HEADER_H - 18 - 28))
+      // En points : 1mm = 2.83465 pts
+      // Slot dimensions : LOGO_W mm × 32 mm
+      // Position calculée : on aligne sur le slot du template
+      const mm = 2.83465;
+      const PAGE_H = page.getHeight();
+      const HEADER_H = 78 * mm;
+      const LEFT = 20 * mm;
+      const ENT_W = 78 * mm;
+      const DATE_W = 38 * mm;
+      const SECTION_W = page.getWidth() - 2 * (20 * mm);
+      const LOGO_W = SECTION_W - ENT_W - DATE_W - 10 * mm;
+      const y0 = PAGE_H - HEADER_H - 12 * mm;
+      const slotX = LEFT + ENT_W + DATE_W + 10 * mm;
+      const slotY = y0 - 28;
+      const slotW = LOGO_W;
+      const slotH = 32;
+
+      // Calculer dimensions du logo pour qu'il rentre dans le slot en gardant le ratio
+      const ratio = logoImage.width / logoImage.height;
+      let drawW = slotW - 6;
+      let drawH = drawW / ratio;
+      if (drawH > slotH - 6) {
+        drawH = slotH - 6;
+        drawW = drawH * ratio;
+      }
+      const drawX = slotX + (slotW - drawW) / 2;
+      const drawY = slotY + (slotH - drawH) / 2;
+
+      page.drawImage(logoImage, { x: drawX, y: drawY, width: drawW, height: drawH });
+    }
+
+    // 5. Pré-remplir le nom de l'entreprise si dispo
+    const form = pdfDoc.getForm();
+    const partnerName = $('hello-mark')?.textContent?.trim() || ''; // non utilisé ici en pratique
+    try {
+      const entrepriseField = form.getTextField('entreprise');
+      const raisonSociale = window.__PARTNER_RAISON_SOCIALE__ || '';
+      if (raisonSociale) entrepriseField.setText(raisonSociale);
+    } catch {}
+
+    // 6. Sauvegarder et déclencher download
+    status.textContent = 'Génération finale…';
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = (window.__PARTNER_RAISON_SOCIALE__ || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_');
+    a.download = `Minute_emploi_${safeName}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    status.textContent = '✅ Fiche téléchargée. Remplissez-la et renvoyez-la à spacersytb@gmail.com';
+    status.style.color = '#2e7d32';
+  } catch (e) {
+    console.error(e);
+    status.textContent = '❌ Erreur : ' + e.message;
+    status.style.color = '#c62828';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📥 Télécharger ma fiche';
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Échec chargement ' + src));
+    document.head.appendChild(s);
+  });
+}
 </script>
 
 </body>
