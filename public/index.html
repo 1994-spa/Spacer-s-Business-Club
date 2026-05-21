@@ -1030,28 +1030,49 @@ async function buildAndDownloadCubePdf(offre) {
   doc.setLineWidth(4);
   doc.line(100, titreEndY + 40, 300, titreEndY + 40);
 
-  // Chips infos
+  // Chips infos — label/value Helvetica-safe (plus éditorial, lisible à distance)
   let infoY = titreEndY + 90;
   const infoChips = [];
-  if (offre.type_contrat) infoChips.push({ icon: '◆', text: offre.type_contrat });
-  if (offre.lieu) infoChips.push({ icon: '⌖', text: offre.lieu });
-  if (offre.duree) infoChips.push({ icon: '⌚', text: offre.duree });
-  if (offre.salaire_indicatif) infoChips.push({ icon: '€', text: offre.salaire_indicatif });
+  if (offre.type_contrat) infoChips.push({ label: 'TYPE', value: offre.type_contrat });
+  if (offre.lieu) infoChips.push({ label: 'LIEU', value: offre.lieu });
+  if (offre.duree) infoChips.push({ label: 'DURÉE', value: offre.duree });
+  if (offre.salaire_indicatif) infoChips.push({ label: 'RÉMU', value: offre.salaire_indicatif });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(32);
   let chipX = 100;
   infoChips.forEach((chip) => {
-    const fullText = `${chip.icon}  ${chip.text}`;
-    const w = doc.getTextWidth(fullText);
-    if (chipX + w > W - 100) return;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(34);
+    const valueW = doc.getTextWidth(chip.value);
+    doc.setFontSize(11);
+    const labelW = doc.getTextWidth(chip.label);
+    const chipW = Math.max(valueW, labelW) + 48;
+
+    if (chipX + chipW > W - 100) return;
+
+    // Pill background navy bordure or
     doc.setFillColor(...COLORS.ink2);
     doc.setDrawColor(...COLORS.gold);
     doc.setLineWidth(1);
-    doc.roundedRect(chipX - 18, infoY - 36, w + 36, 56, 28, 28, 'FD');
+    doc.roundedRect(chipX - 24, infoY - 56, chipW, 102, 18, 18, 'FD');
+
+    // Label eyebrow
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...COLORS.muted);
+    doc.text(chip.label, chipX, infoY - 26, { charSpace: 3 });
+
+    // Filet doré sous label
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(1.5);
+    doc.line(chipX, infoY - 16, chipX + labelW + 10, infoY - 16);
+
+    // Value grand or doux
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(34);
     doc.setTextColor(...COLORS.goldSoft);
-    doc.text(fullText, chipX, infoY);
-    chipX += w + 60;
+    doc.text(chip.value, chipX, infoY + 26);
+
+    chipX += chipW + 22;
   });
 
   // Les +
