@@ -634,8 +634,8 @@ function renderDashboard(data) {
 // =========================================================================
 //  MINUTE DE L'EMPLOI — Génération PDF avec logo
 // =========================================================================
-// URL du template PDF : on essaie d'abord raw GitHub, puis le worker si configuré
-const ME_TEMPLATE_URL = 'https://raw.githubusercontent.com/1994-spa/Spacer-s-Business-Club/main/public/minute_de_l_emploi_template.pdf';
+// URL du template PDF — chemin relatif au worker Cloudflare (sert /public/)
+const ME_TEMPLATE_URL = '/minute_de_l_emploi_template.pdf';
 const LOGO_STORAGE_KEY = 'spacers_partner_logo';
 
 let ME_LOGO_DATA_URL = null;
