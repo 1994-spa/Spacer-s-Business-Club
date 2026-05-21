@@ -109,6 +109,18 @@ async function handleApi(request, env, path) {
     m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)$/);
     if (m) return await handleAdminPartnerDetail(m[1], m[2], env);
 
+    // ===== TICKIE — Partner mapping routes =====
+    let mt;
+    mt = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/create-tickie-customer$/);
+    if (mt && method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      return await handleCreateTickieCustomer(mt[1], mt[2], body, env);
+    }
+    mt = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/send-tickie-login$/);
+    if (mt && method === 'POST') return await handleSendTickieLogin(mt[1], mt[2], env);
+    mt = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/unlink-tickie$/);
+    if (mt && method === 'POST') return await handleUnlinkTickie(mt[1], mt[2], env);
+
     // ===== TICKIE (Vivenu) routes =====
     if (path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/)) {
       const tm = path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/);
@@ -134,6 +146,9 @@ async function handleApi(request, env, path) {
         'GET  /api/admin/partner/:token/:contractId',
         'POST /api/admin/prestation-livrer/:token/:prestationId',
         'POST /api/admin/pack-utiliser/:token/:packId',
+        'POST /api/admin/partner/:token/:contractId/create-tickie-customer',
+        'POST /api/admin/partner/:token/:contractId/send-tickie-login',
+        'POST /api/admin/partner/:token/:contractId/unlink-tickie',
         'GET  /api/admin/tickie/ping/:token',
         'GET  /api/admin/tickie/customers/:token',
         'GET  /api/admin/tickie/events/:token',
@@ -468,6 +483,7 @@ async function handleAdminPartnerDetail(token, contractId, env) {
       representant_email: p.representant_email || '',
       fonction: p.representant_fonction || '',
       niveau: p.niveau || '',
+      tickie_customer_id: p.tickie_customer_id || null,
     },
     contrat: {
       id: c.id,
@@ -786,4 +802,221 @@ async function handleTickieEvents(token, env) {
   } catch (e) {
     return jsonResponseNoCache({ error: e.message }, 500);
   }
+}
+
+// ============================================================================
+//  TICKIE — Sprint 2 : Mapping partenaires
+// ============================================================================
+
+// ----------- POST /api/admin/partner/:token/:contractId/create-tickie-customer -----------
+// Body attendu : { email, prenom, nom, telephone? }
+// Crée un customer Tickie pour ce partenaire et stocke le _id dans Supabase
+
+async function handleCreateTickieCustomer(token, contractId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  // Récup contrat + partenaire (via PostgREST embedding)
+  const contrats = await supabaseQuery(
+    'contrats',
+    `id=eq.${contractId}&select=id,saison,partenaire_id,partenaires(id,raison_sociale,niveau,tickie_customer_id)&limit=1`,
+    env
+  );
+  if (!contrats || contrats.length === 0) {
+    return jsonResponseNoCache({ error: 'Contrat introuvable' }, 404);
+  }
+  const contrat = contrats[0];
+  const partenaire = contrat.partenaires;
+  if (!partenaire) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
+
+  if (partenaire.tickie_customer_id) {
+    return jsonResponseNoCache({
+      error: 'Customer Tickie déjà lié à ce partenaire',
+      tickie_customer_id: partenaire.tickie_customer_id,
+      hint: 'Utilise "Délier" si tu veux re-créer',
+    }, 400);
+  }
+
+  // Validation body
+  const email = String(body.email || '').trim().toLowerCase();
+  const prenom = String(body.prenom || '').trim();
+  const nom = String(body.nom || '').trim();
+  const telephone = String(body.telephone || '').trim();
+
+  if (!email || !email.includes('@') || email.length < 5) {
+    return jsonResponseNoCache({ error: 'Email invalide', got: email }, 400);
+  }
+
+  // Création customer Tickie
+  const tickiePayload = {
+    primaryEmail: email,
+    company: partenaire.raison_sociale,
+    prename: prenom,
+    lastname: nom,
+    tags: ['PARTENAIRE_BC', `SAISON_${contrat.saison}`],
+    externalId: contrat.id,
+    verified: true,
+    meta: {
+      supabase_partenaire_id: partenaire.id,
+      saison: contrat.saison,
+      niveau: partenaire.niveau || '',
+    },
+  };
+  if (telephone) tickiePayload.phone = telephone;
+
+  let tickieCustomer;
+  try {
+    const base = env.TICKIE_BASE_URL || TICKIE_DEFAULT_BASE;
+    const res = await fetch(`${base}/customers`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.TICKIE_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(tickiePayload),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      return jsonResponseNoCache({
+        error: 'Tickie API error',
+        status: res.status,
+        detail: text.slice(0, 500),
+        payload_sent: tickiePayload,
+      }, 502);
+    }
+    tickieCustomer = text ? JSON.parse(text) : null;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Tickie network error', detail: e.message }, 502);
+  }
+
+  const tickieId = tickieCustomer && (tickieCustomer._id || tickieCustomer.id);
+  if (!tickieId) {
+    return jsonResponseNoCache({
+      error: 'Tickie did not return an _id',
+      raw: tickieCustomer,
+    }, 502);
+  }
+
+  // Update Supabase
+  try {
+    await supabasePatch_('partenaires', `id=eq.${partenaire.id}`, {
+      tickie_customer_id: tickieId,
+    }, env);
+  } catch (e) {
+    return jsonResponseNoCache({
+      error: 'Customer Tickie créé MAIS écriture Supabase échouée',
+      tickie_customer_id: tickieId,
+      detail: e.message,
+    }, 500);
+  }
+
+  // Audit
+  await logAudit_(admin.id, 'partenaire.create_tickie_customer', 'partenaires', partenaire.id, {
+    tickie_customer_id: tickieId,
+    email,
+    company: partenaire.raison_sociale,
+  }, env).catch(() => {});
+
+  return jsonResponseNoCache({
+    ok: true,
+    tickie_customer_id: tickieId,
+    email,
+    company: partenaire.raison_sociale,
+    next_step: 'Tu peux maintenant envoyer le login au partenaire',
+  });
+}
+
+// ----------- POST /api/admin/partner/:token/:contractId/send-tickie-login -----------
+// Active le compte Tickie (envoie email de connexion au partenaire)
+
+async function handleSendTickieLogin(token, contractId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const contrats = await supabaseQuery(
+    'contrats',
+    `id=eq.${contractId}&select=partenaire_id,partenaires(id,raison_sociale,tickie_customer_id)&limit=1`,
+    env
+  );
+  if (!contrats || contrats.length === 0) {
+    return jsonResponseNoCache({ error: 'Contrat introuvable' }, 404);
+  }
+  const partenaire = contrats[0].partenaires;
+  if (!partenaire || !partenaire.tickie_customer_id) {
+    return jsonResponseNoCache({
+      error: 'Pas de customer Tickie lié à ce partenaire',
+      hint: 'Crée-le d\'abord avec "Créer compte Tickie"',
+    }, 400);
+  }
+
+  try {
+    const base = env.TICKIE_BASE_URL || TICKIE_DEFAULT_BASE;
+    const res = await fetch(`${base}/customers/${partenaire.tickie_customer_id}/account`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.TICKIE_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ suppressEmail: false }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      return jsonResponseNoCache({
+        error: 'Tickie API error',
+        status: res.status,
+        detail: text.slice(0, 500),
+      }, 502);
+    }
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Tickie network error', detail: e.message }, 502);
+  }
+
+  await logAudit_(admin.id, 'partenaire.send_tickie_login', 'partenaires', partenaire.id, {
+    tickie_customer_id: partenaire.tickie_customer_id,
+  }, env).catch(() => {});
+
+  return jsonResponseNoCache({
+    ok: true,
+    message: 'Email de connexion envoyé au partenaire',
+    tickie_customer_id: partenaire.tickie_customer_id,
+  });
+}
+
+// ----------- POST /api/admin/partner/:token/:contractId/unlink-tickie -----------
+// Délie le partenaire de son customer Tickie (ne supprime PAS le customer Tickie)
+
+async function handleUnlinkTickie(token, contractId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const contrats = await supabaseQuery(
+    'contrats',
+    `id=eq.${contractId}&select=partenaire_id,partenaires(id,tickie_customer_id)&limit=1`,
+    env
+  );
+  if (!contrats || contrats.length === 0) {
+    return jsonResponseNoCache({ error: 'Contrat introuvable' }, 404);
+  }
+  const partenaire = contrats[0].partenaires;
+  if (!partenaire) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
+  const oldId = partenaire.tickie_customer_id;
+  if (!oldId) {
+    return jsonResponseNoCache({ error: 'Pas de customer Tickie à délier' }, 400);
+  }
+
+  await supabasePatch_('partenaires', `id=eq.${partenaire.id}`, {
+    tickie_customer_id: null,
+  }, env);
+
+  await logAudit_(admin.id, 'partenaire.unlink_tickie', 'partenaires', partenaire.id, {
+    tickie_customer_id: { from: oldId, to: null },
+  }, env).catch(() => {});
+
+  return jsonResponseNoCache({
+    ok: true,
+    unlinked: oldId,
+    note: 'Le customer Tickie n\'a PAS été supprimé côté Tickie. Le mapping est juste retiré.',
+  });
 }
