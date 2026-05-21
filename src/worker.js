@@ -75,6 +75,16 @@ async function handleApi(request, env, path) {
       m = path.match(/^\/api\/admin\/pack-utiliser\/([a-zA-Z0-9_-]{16,})\/(PAC-[0-9]+-[0-9]+)$/);
       if (m) return await handlePackUtiliser(m[1], m[2], body, env);
 
+      // Tickie partner mapping
+      m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/create-tickie-customer$/);
+      if (m) return await handleCreateTickieCustomer(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/send-tickie-login$/);
+      if (m) return await handleSendTickieLogin(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/unlink-tickie$/);
+      if (m) return await handleUnlinkTickie(m[1], m[2], env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -108,18 +118,6 @@ async function handleApi(request, env, path) {
     // Admin partner detail
     m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)$/);
     if (m) return await handleAdminPartnerDetail(m[1], m[2], env);
-
-    // ===== TICKIE — Partner mapping routes =====
-    let mt;
-    mt = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/create-tickie-customer$/);
-    if (mt && method === 'POST') {
-      const body = await request.json().catch(() => ({}));
-      return await handleCreateTickieCustomer(mt[1], mt[2], body, env);
-    }
-    mt = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/send-tickie-login$/);
-    if (mt && method === 'POST') return await handleSendTickieLogin(mt[1], mt[2], env);
-    mt = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/unlink-tickie$/);
-    if (mt && method === 'POST') return await handleUnlinkTickie(mt[1], mt[2], env);
 
     // ===== TICKIE (Vivenu) routes =====
     if (path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/)) {
