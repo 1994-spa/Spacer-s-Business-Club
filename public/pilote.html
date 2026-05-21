@@ -263,18 +263,21 @@
       <span class="sb-ico">◉</span>Partenaires
       <span class="sb-badge" id="sb-badge-partners">—</span>
     </a>
-    <a class="sb-link" onclick="showPage('soon')">
+    <a class="sb-link" onclick="showPublications('forum')">
       <span class="sb-ico">⌘</span>Forum
+      <span class="sb-badge" id="sb-badge-forum" style="display:none;"></span>
     </a>
-    <a class="sb-link" onclick="showPage('soon')">
+    <a class="sb-link" onclick="showPublications('proposition')">
       <span class="sb-ico">◈</span>Propositions business
+      <span class="sb-badge" id="sb-badge-proposition" style="display:none;"></span>
     </a>
     <a class="sb-link" onclick="showPage('annonces')">
       <span class="sb-ico">◐</span>Annonces emploi
       <span class="sb-badge" id="sb-badge-annonces" style="display:none;"></span>
     </a>
-    <a class="sb-link" onclick="showPage('soon')">
+    <a class="sb-link" onclick="showPublications('echange')">
       <span class="sb-ico">⌬</span>Échanges business
+      <span class="sb-badge" id="sb-badge-echange" style="display:none;"></span>
     </a>
     <a class="sb-link" onclick="showPage('soon')">
       <span class="sb-ico">◇</span>Événements
@@ -628,6 +631,41 @@
     </div>
   </section>
 
+  <!-- ============ PAGE PUBLICATIONS (Forum / Propositions / Échanges) ============ -->
+  <section class="page" id="page-publications" style="display:none;">
+    <div class="topbar">
+      <div>
+        <div style="font-family:var(--font-display);font-weight:600;font-size:22px;" id="pub-page-title">Publications</div>
+        <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;" id="pub-page-subtitle">—</div>
+      </div>
+      <div style="flex:1;"></div>
+      <button class="btn primary" onclick="openPubModal()">+ Nouvelle publication</button>
+    </div>
+    <div class="content">
+
+      <!-- Filtres -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn ghost sm pub-filter active" data-filter="all" onclick="loadPublications('all')">Toutes <span id="pub-cnt-all" style="opacity:.6;">—</span></button>
+          <button class="btn ghost sm pub-filter" data-filter="en_attente" onclick="loadPublications('en_attente')">⏱ En attente <span id="pub-cnt-en_attente" style="background:var(--gold);color:white;border-radius:10px;padding:2px 8px;font-size:11px;margin-left:4px;">—</span></button>
+          <button class="btn ghost sm pub-filter" data-filter="publie" onclick="loadPublications('publie')">✓ Publiées <span id="pub-cnt-publie" style="opacity:.6;">—</span></button>
+          <button class="btn ghost sm pub-filter" data-filter="refuse" onclick="loadPublications('refuse')">✕ Refusées <span id="pub-cnt-refuse" style="opacity:.6;">—</span></button>
+          <button class="btn ghost sm pub-filter" data-filter="archive" onclick="loadPublications('archive')">Archives <span id="pub-cnt-archive" style="opacity:.6;">—</span></button>
+        </div>
+      </div>
+
+      <!-- Liste -->
+      <div class="panel">
+        <div style="padding:18px;">
+          <div id="pub-list" style="min-height:200px;">
+            <div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ============ PAGE PLACEHOLDER ============ -->
   <section class="page" id="page-soon">
     <div class="content">
@@ -641,6 +679,61 @@
   </section>
 
 </main>
+
+<!-- ============ MODALE PUBLICATION (forum / proposition / echange) ============ -->
+<div id="pub-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="background:var(--bg);border-radius:14px;max-width:680px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
+    <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;" id="pub-modal-title">Nouvelle publication</div>
+    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:20px;" id="pub-modal-sub">—</div>
+
+    <div style="display:grid;gap:14px;">
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Partenaire émetteur
+        <select id="pub-input-contrat" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
+          <option value="">— Aucun (publié par l'admin) —</option>
+        </select>
+      </label>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Titre *
+        <input id="pub-input-titre" type="text" placeholder="—" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Description
+        <textarea id="pub-input-description" rows="5" placeholder="—" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+      </label>
+
+      <!-- Champs spécifiques selon type -->
+      <div id="pub-specific-fields"></div>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Catégorie (optionnel)
+        <input id="pub-input-categorie" type="text" placeholder="ex: sport, social, urgent…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+
+      <div style="border-top:1px solid var(--line);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--ink-muted);">Contact pour réponses (optionnel)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Nom
+            <input id="pub-input-contact-nom" type="text" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Email
+            <input id="pub-input-contact-email" type="email" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+        </div>
+      </div>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:flex;align-items:center;gap:8px;background:#f3f6fa;padding:10px 14px;border-radius:8px;">
+        <input id="pub-input-publish-now" type="checkbox" style="width:16px;height:16px;">
+        Publier immédiatement (sans passer par "en attente")
+      </label>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+      <button class="btn ghost" onclick="closePubModal()">Annuler</button>
+      <button class="btn primary" id="pub-modal-submit" onclick="submitPublication()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODALE REFUS PUB (réutilise reject-modal pour les 2 contextes) ============ -->
 
 <!-- ============ MODALE OFFRE EMPLOI (créer/éditer) ============ -->
 <div id="offre-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
@@ -1578,6 +1671,386 @@
       if (json.error) { toast(json.error, 'error'); return; }
       toast('✅ Annonce archivée', 'success');
       loadOffres(OFFRE_CURRENT_FILTER);
+    } catch (e) { toast('Erreur réseau', 'error'); }
+  }
+
+  // =========================================================================
+  //  PUBLICATIONS (Forum / Propositions / Échanges)
+  // =========================================================================
+  let PUB_CURRENT_TYPE = 'forum';   // forum | proposition | echange
+  let PUB_CURRENT_FILTER = 'all';
+  let PUB_EDITING_ID = null;
+  let PUB_CACHE = [];
+
+  const PUB_LABELS = {
+    forum:       { titre: 'Forum',                sub: 'Discussions entre partenaires (sport, social, divers)', placeholder_titre: 'ex: Qui est dispo pour un padel jeudi soir ?' },
+    proposition: { titre: 'Propositions business',sub: 'Services et produits proposés par les partenaires aux autres', placeholder_titre: 'ex: Cartes carburant pro avec 10% de remise' },
+    echange:     { titre: 'Échanges business',    sub: 'Recherche de prestataires entre partenaires', placeholder_titre: 'ex: Je cherche un plombier pour mon entreprise' },
+  };
+
+  function showPublications(type) {
+    PUB_CURRENT_TYPE = type;
+    const label = PUB_LABELS[type] || PUB_LABELS.forum;
+
+    // Activer la page
+    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+    const target = $('page-publications');
+    if (target) { target.classList.add('active'); target.style.display = ''; }
+    $('pub-page-title').textContent = label.titre;
+    $('pub-page-subtitle').textContent = label.sub;
+
+    // Breadcrumb
+    const bc = $('breadcrumb-current');
+    if (bc) bc.innerHTML = '<b>' + label.titre + '</b>';
+
+    // Active sidebar link
+    document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+    const sb = document.querySelector(`[onclick="showPublications('${type}')"]`);
+    if (sb) sb.classList.add('active');
+
+    // Reset filter
+    PUB_CURRENT_FILTER = 'all';
+    loadPublications('all');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function loadPublications(filter) {
+    PUB_CURRENT_FILTER = filter;
+    document.querySelectorAll('.pub-filter').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+    $('pub-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>';
+
+    const params = new URLSearchParams();
+    params.set('type', PUB_CURRENT_TYPE);
+    if (filter !== 'all') params.set('statut', filter);
+    const url = `/api/admin/publications/${ADMIN_TOKEN}?${params.toString()}`;
+
+    try {
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.error) {
+        $('pub-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur : ${json.error}</div>`;
+        return;
+      }
+      PUB_CACHE = json.publications || [];
+      renderPublications(json.publications, json.stats);
+    } catch (e) {
+      $('pub-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur réseau : ${e.message}</div>`;
+    }
+  }
+
+  function renderPublications(pubs, statsByType) {
+    // Stats du type courant
+    const stats = (statsByType && statsByType[PUB_CURRENT_TYPE]) || { en_attente: 0, publie: 0, refuse: 0, archive: 0, total: 0 };
+    $('pub-cnt-all').textContent = stats.total || 0;
+    ['en_attente', 'publie', 'refuse', 'archive'].forEach(s => {
+      const el = $('pub-cnt-' + s);
+      if (el) el.textContent = stats[s] || 0;
+    });
+
+    // Badges sidebar (count en_attente par type)
+    if (statsByType) {
+      ['forum', 'proposition', 'echange'].forEach(t => {
+        const wait = (statsByType[t] || {}).en_attente || 0;
+        const el = $('sb-badge-' + t);
+        if (el) {
+          if (wait > 0) {
+            el.style.display = 'inline-block';
+            el.textContent = wait;
+            el.style.background = 'var(--gold)';
+            el.style.color = 'white';
+          } else el.style.display = 'none';
+        }
+      });
+    }
+
+    if (!pubs || pubs.length === 0) {
+      $('pub-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Aucune publication dans cette catégorie</div>';
+      return;
+    }
+
+    const statutColors = {
+      en_attente: { bg: '#fff8e1', color: '#a36b00', label: '⏱ En attente' },
+      publie:     { bg: '#e8f5e9', color: '#2e7d32', label: '✓ Publiée' },
+      refuse:     { bg: '#ffebee', color: '#c62828', label: '✕ Refusée' },
+      archive:    { bg: '#f3f6fa', color: '#5b6573', label: 'Archivée' },
+      expire:     { bg: '#f3f6fa', color: '#5b6573', label: 'Expirée' },
+    };
+
+    const html = `<table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--line);">
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Titre / Émetteur</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Catégorie</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Statut</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${pubs.map(p => {
+          const st = statutColors[p.statut] || statutColors.en_attente;
+          const actions = [];
+          if (p.statut === 'en_attente') {
+            actions.push(`<button class="btn primary sm" style="background:var(--green);" onclick="publishPub('${p.id}')">✓ Publier</button>`);
+            actions.push(`<button class="btn ghost sm" style="color:var(--red);" onclick="openRejectPubModal('${p.id}')">✕ Refuser</button>`);
+          }
+          actions.push(`<button class="btn ghost sm" onclick="editPub('${p.id}')">✎ Éditer</button>`);
+          if (p.statut !== 'archive') actions.push(`<button class="btn ghost sm" onclick="archivePub('${p.id}')" style="color:var(--ink-muted);">🗑</button>`);
+          const truncDesc = (p.description || '').slice(0, 100);
+          return `
+            <tr style="border-bottom:1px solid var(--line);">
+              <td style="padding:14px 12px;">
+                <div style="font-weight:600;font-size:14px;">${escapeHtml(p.titre)}</div>
+                <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;">${escapeHtml(p.partenaire)}</div>
+                ${truncDesc ? `<div style="font-size:12px;color:var(--ink-muted);margin-top:4px;">${escapeHtml(truncDesc)}${p.description.length > 100 ? '…' : ''}</div>` : ''}
+              </td>
+              <td style="padding:14px 12px;font-size:13px;">${escapeHtml(p.categorie || '—')}</td>
+              <td style="padding:14px 12px;"><span style="background:${st.bg};color:${st.color};padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;">${st.label}</span></td>
+              <td style="padding:14px 12px;text-align:right;white-space:nowrap;"><div style="display:inline-flex;gap:6px;">${actions.join('')}</div></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>`;
+    $('pub-list').innerHTML = html;
+  }
+
+  async function openPubModal(pubId) {
+    PUB_EDITING_ID = pubId || null;
+    const label = PUB_LABELS[PUB_CURRENT_TYPE];
+    $('pub-modal-title').textContent = pubId ? `Modifier — ${label.titre}` : `Nouvelle publication — ${label.titre}`;
+    $('pub-modal-sub').textContent = label.sub;
+    $('pub-modal-submit').textContent = pubId ? 'Enregistrer' : 'Créer';
+    $('pub-input-titre').placeholder = label.placeholder_titre;
+
+    // Préchargement partenaires
+    if (!PARTNERS_CACHE) await loadPartners();
+    const sel = $('pub-input-contrat');
+    sel.innerHTML = '<option value="">— Aucun (publié par l\'admin) —</option>';
+    const partners = (PARTNERS_CACHE && PARTNERS_CACHE.partners) || [];
+    partners.forEach(p => {
+      sel.innerHTML += `<option value="${p.contrat_id}">${escapeHtml(p.raison_sociale)}</option>`;
+    });
+
+    // Champs spécifiques par type
+    $('pub-specific-fields').innerHTML = renderPubSpecificFields(PUB_CURRENT_TYPE, {});
+
+    if (pubId) {
+      // Fetch détail
+      const detail = await fetchPubDetail(pubId);
+      if (!detail) return;
+      $('pub-input-contrat').value = detail.contrat_id || '';
+      $('pub-input-titre').value = detail.titre || '';
+      $('pub-input-description').value = detail.description || '';
+      $('pub-input-categorie').value = detail.categorie || '';
+      $('pub-input-contact-nom').value = detail.contact_nom || '';
+      $('pub-input-contact-email').value = detail.contact_email || '';
+      $('pub-input-publish-now').checked = false;
+      $('pub-input-publish-now').parentElement.style.display = 'none';
+      $('pub-specific-fields').innerHTML = renderPubSpecificFields(detail.type || PUB_CURRENT_TYPE, detail.data || {});
+    } else {
+      ['titre','description','categorie','contact-nom','contact-email'].forEach(k => {
+        const el = $('pub-input-' + k);
+        if (el) el.value = '';
+      });
+      $('pub-input-publish-now').checked = false;
+      $('pub-input-publish-now').parentElement.style.display = 'flex';
+    }
+
+    $('pub-modal').style.display = 'flex';
+  }
+
+  function renderPubSpecificFields(type, data) {
+    const d = data || {};
+    if (type === 'forum') {
+      return `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Sport / Activité
+            <input id="pub-data-sport" type="text" value="${escapeHtml(d.sport || '')}" placeholder="padel, ski, footing…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Date / créneau
+            <input id="pub-data-quand" type="text" value="${escapeHtml(d.quand || '')}" placeholder="jeudi 18h" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+        </div>
+      `;
+    }
+    if (type === 'proposition') {
+      return `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Type d'offre
+            <input id="pub-data-offre_type" type="text" value="${escapeHtml(d.offre_type || '')}" placeholder="produit / service" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Remise / condition
+            <input id="pub-data-remise" type="text" value="${escapeHtml(d.remise || '')}" placeholder="-10% partenaires Spacers" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+        </div>
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:block;margin-top:10px;">Validité de l'offre
+          <input id="pub-data-validite" type="text" value="${escapeHtml(d.validite || '')}" placeholder="jusqu'au 31/12/2026" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:block;margin-top:10px;">URL externe
+          <input id="pub-data-url" type="url" value="${escapeHtml(d.url || '')}" placeholder="https://…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+      `;
+    }
+    if (type === 'echange') {
+      return `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Type de prestation recherchée
+            <input id="pub-data-prestation" type="text" value="${escapeHtml(d.prestation || '')}" placeholder="plomberie, électricité…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Urgence
+            <select id="pub-data-urgence" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
+              <option value="">—</option>
+              <option value="urgent" ${d.urgence==='urgent'?'selected':''}>Urgent</option>
+              <option value="moyen" ${d.urgence==='moyen'?'selected':''}>Sous quelques semaines</option>
+              <option value="souple" ${d.urgence==='souple'?'selected':''}>Pas pressé</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Lieu du chantier
+            <input id="pub-data-lieu" type="text" value="${escapeHtml(d.lieu || '')}" placeholder="Toulouse 31000" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Budget indicatif
+            <input id="pub-data-budget" type="text" value="${escapeHtml(d.budget || '')}" placeholder="1500€ HT" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+        </div>
+      `;
+    }
+    return '';
+  }
+
+  function collectPubSpecificData(type) {
+    const d = {};
+    if (type === 'forum') {
+      const s = $('pub-data-sport'); if (s) d.sport = s.value.trim();
+      const q = $('pub-data-quand'); if (q) d.quand = q.value.trim();
+    } else if (type === 'proposition') {
+      ['offre_type','remise','validite','url'].forEach(k => {
+        const el = $('pub-data-' + k);
+        if (el) d[k] = el.value.trim();
+      });
+    } else if (type === 'echange') {
+      ['prestation','urgence','lieu','budget'].forEach(k => {
+        const el = $('pub-data-' + k);
+        if (el) d[k] = el.value.trim();
+      });
+    }
+    // Nettoyer les vides
+    Object.keys(d).forEach(k => { if (!d[k]) delete d[k]; });
+    return d;
+  }
+
+  function closePubModal() { $('pub-modal').style.display = 'none'; PUB_EDITING_ID = null; }
+
+  async function fetchPubDetail(pubId) {
+    try {
+      const res = await fetch(`/api/admin/publication/${ADMIN_TOKEN}/${pubId}`);
+      const json = await res.json();
+      return json.publication;
+    } catch (e) { toast('Erreur chargement', 'error'); return null; }
+  }
+
+  async function submitPublication() {
+    const titre = $('pub-input-titre').value.trim();
+    if (!titre) { toast('Titre obligatoire', 'error'); return; }
+
+    const body = {
+      type: PUB_CURRENT_TYPE,
+      contrat_id: $('pub-input-contrat').value || null,
+      titre,
+      description: $('pub-input-description').value.trim() || null,
+      categorie: $('pub-input-categorie').value.trim() || null,
+      data: collectPubSpecificData(PUB_CURRENT_TYPE),
+      contact_nom: $('pub-input-contact-nom').value.trim() || null,
+      contact_email: $('pub-input-contact-email').value.trim() || null,
+    };
+
+    const btn = $('pub-modal-submit');
+    btn.disabled = true;
+    btn.textContent = PUB_EDITING_ID ? 'Enregistrement…' : 'Création…';
+
+    try {
+      let url, payload;
+      if (PUB_EDITING_ID) {
+        url = `/api/admin/publications/${ADMIN_TOKEN}/${PUB_EDITING_ID}/update`;
+        payload = body;
+      } else {
+        url = `/api/admin/publications/${ADMIN_TOKEN}/create`;
+        payload = { ...body, publish_now: $('pub-input-publish-now').checked };
+      }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        toast(json.error || 'Erreur', 'error');
+        btn.disabled = false;
+        btn.textContent = PUB_EDITING_ID ? 'Enregistrer' : 'Créer';
+        return;
+      }
+      toast(PUB_EDITING_ID ? '✅ Publication mise à jour' : '✅ Publication créée', 'success');
+      closePubModal();
+      loadPublications(PUB_CURRENT_FILTER);
+    } catch (e) {
+      toast('Erreur réseau', 'error');
+      btn.disabled = false;
+      btn.textContent = PUB_EDITING_ID ? 'Enregistrer' : 'Créer';
+    }
+  }
+
+  function editPub(id) { openPubModal(id); }
+
+  async function publishPub(id) {
+    if (!confirm('Publier cette publication ?')) return;
+    try {
+      const res = await fetch(`/api/admin/publications/${ADMIN_TOKEN}/${id}/publish`, { method: 'POST' });
+      const json = await res.json();
+      if (json.error) { toast(json.error, 'error'); return; }
+      toast('✅ Publiée', 'success');
+      loadPublications(PUB_CURRENT_FILTER);
+    } catch (e) { toast('Erreur réseau', 'error'); }
+  }
+
+  let REJECT_PUB_ID = null;
+  function openRejectPubModal(id) {
+    REJECT_PUB_ID = id;
+    $('reject-input-raison').value = '';
+    // Réutilise la modale reject mais on adapte le bouton OK
+    const btn = $('reject-modal-submit');
+    btn.onclick = confirmRejectPub;
+    $('reject-modal').style.display = 'flex';
+  }
+
+  async function confirmRejectPub() {
+    if (!REJECT_PUB_ID) return;
+    const raison = $('reject-input-raison').value.trim();
+    try {
+      const res = await fetch(`/api/admin/publications/${ADMIN_TOKEN}/${REJECT_PUB_ID}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raison }),
+      });
+      const json = await res.json();
+      if (json.error) { toast(json.error, 'error'); return; }
+      toast('✅ Refusée', 'success');
+      closeRejectModal();
+      // Restore default onclick (offre)
+      $('reject-modal-submit').onclick = confirmReject;
+      loadPublications(PUB_CURRENT_FILTER);
+    } catch (e) { toast('Erreur réseau', 'error'); }
+  }
+
+  async function archivePub(id) {
+    if (!confirm('Archiver ?')) return;
+    try {
+      const res = await fetch(`/api/admin/publications/${ADMIN_TOKEN}/${id}/archive`, { method: 'POST' });
+      const json = await res.json();
+      if (json.error) { toast(json.error, 'error'); return; }
+      toast('✅ Archivée', 'success');
+      loadPublications(PUB_CURRENT_FILTER);
     } catch (e) { toast('Erreur réseau', 'error'); }
   }
 
