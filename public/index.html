@@ -11,15 +11,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --bg: #FAF7F2;
     --bg-soft: #F1ECE2;
     --ink: #0A1628;
+    --ink-2: #11203a;
     --ink-soft: #4A5568;
     --ink-muted: #8A8478;
     --gold: #C8932B;
     --gold-soft: #E8C977;
+    --gold-tint: #FAF3DF;
     --silver: #9CA3AF;
     --bronze: #A56F3E;
     --red: #B23A48;
@@ -145,23 +148,50 @@
   .vp-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--gold); color: white; display: grid; place-items: center; font-size: 20px; font-weight: 600; margin-bottom: 14px; }
   .vp-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-bottom: 4px; color: var(--ink); }
   .vp-sub { color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
-  .mp-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; }
-  .mp-item-content { flex: 1; }
-  .mp-item-title { font-weight: 600; font-size: 14px; color: var(--ink); }
-  .mp-item-meta { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
-  .mp-badge { padding: 3px 10px; border-radius: 11px; font-size: 11px; font-weight: 600; }
-  .mp-badge-attente { background: #fff8e1; color: #a36b00; }
-  .mp-badge-publie { background: #e8f5e9; color: #2e7d32; }
-  .mp-badge-refuse { background: #ffebee; color: #c62828; }
-  .mp-badge-archive { background: #f3f6fa; color: #5b6573; }
+
+  /* MES PUBLICATIONS (liste des annonces du partenaire) */
+  .mp-header { display: flex; align-items: center; justify-content: space-between; margin: 28px 0 12px; gap: 16px; flex-wrap: wrap; }
+  .mp-header .mp-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
+  .mp-header .mp-title em { font-style: italic; color: var(--gold); }
+  .mp-header .mp-count { font-size: 11px; color: var(--ink-muted); letter-spacing: .12em; text-transform: uppercase; font-weight: 600; }
+  .mp-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; transition: border-color .15s, box-shadow .15s; }
+  .mp-item:hover { border-color: var(--gold-soft); box-shadow: var(--shadow-sm); }
+  .mp-item.attente { border-left: 3px solid var(--orange); }
+  .mp-item.publie { border-left: 3px solid var(--green); }
+  .mp-item.refuse { border-left: 3px solid var(--red); }
+  .mp-item.archive { border-left: 3px solid var(--ink-muted); opacity: .75; }
+  .mp-item-content { flex: 1; min-width: 0; }
+  .mp-item-title { font-weight: 600; font-size: 14px; color: var(--ink); line-height: 1.3; }
+  .mp-item-meta { font-size: 11px; color: var(--ink-muted); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .mp-item-refus { font-size: 11px; color: var(--red); margin-top: 6px; font-style: italic; line-height: 1.5; background: rgba(178,58,72,.05); padding: 6px 10px; border-radius: 6px; }
+  .mp-badge { padding: 4px 11px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .mp-badge:before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .mp-badge-attente { background: #FDF1E8; color: #A66B17; }
+  .mp-badge-publie  { background: #E5F4EC; color: var(--green); }
+  .mp-badge-refuse  { background: #FCEDEF; color: var(--red); }
+  .mp-badge-archive { background: var(--bg-soft); color: var(--ink-muted); }
+  .mp-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .mp-empty { background: var(--card); border: 1px dashed var(--line); border-radius: 12px; padding: 28px 20px; text-align: center; color: var(--ink-muted); font-size: 13px; }
+  .mp-empty b { display: block; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+
   @media (max-width: 700px) { .contact-card { grid-template-columns: 1fr; gap: 14px; } .contact-card .actions { display: flex; gap: 8px; } }
   .contact-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: white; font-weight: 700; font-size: 24px; display: grid; place-items: center; font-family: 'Fraunces', serif; }
   .contact-info b { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; display: block; }
   .contact-info small { color: var(--ink-muted); font-size: 13px; }
-  .btn { padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .2s; }
+  .btn { padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
   .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
   .btn.primary:hover { background: var(--gold); border-color: var(--gold); }
+  .btn.gold { background: var(--gold); color: white; border-color: var(--gold); }
+  .btn.gold:hover { background: var(--ink); border-color: var(--ink); }
+  .btn.sm { padding: 6px 12px; font-size: 11px; }
+
+  /* MINUTE DE L'EMPLOI — Form inputs */
+  .me-label { display: block; font-size: 11px; color: #A98A4D; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .me-input { display: block; width: 100%; box-sizing: border-box; margin-top: 5px; padding: 10px 12px; border: 1px solid #E8E2D4; border-radius: 8px; font-size: 14px; font-family: inherit; background: white; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  .me-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,147,43,.12); }
+  textarea.me-input { resize: vertical; min-height: 70px; }
 
   /* LOADING */
   .loading { padding: 80px 24px; text-align: center; }
@@ -181,12 +211,18 @@
   .bottom-nav button.active { background: var(--gold); color: white; }
   .bottom-nav button:hover:not(.active) { color: white; }
 
-  /* MODAL "Bientôt" */
+  /* MODAL */
   .modal { position: fixed; inset: 0; background: rgba(10,22,40,.55); display: grid; place-items: center; z-index: 200; padding: 20px; backdrop-filter: blur(4px); animation: fadeIn .25s ease; }
   .modal-card { background: var(--card); border-radius: var(--radius-lg); padding: 32px 28px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(10,22,40,.3); }
   .modal-eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
   .modal-card h3 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; margin-bottom: 12px; letter-spacing: -.02em; }
   .modal-card p { color: var(--ink-soft); font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(120px); background: var(--ink); color: white; padding: 12px 22px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: 0 12px 36px rgba(10,22,40,.3); transition: transform .3s ease; z-index: 300; max-width: 90%; text-align: center; pointer-events: none; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
 
   /* FADE IN */
   .fade-in { animation: fadeIn .5s ease both; }
@@ -295,7 +331,7 @@
       <div class="vp-card" onclick="openMinuteEmploiModal()">
         <div class="vp-icon">◐</div>
         <div class="vp-title">Minute de l'emploi</div>
-        <div class="vp-sub">Recruter via le réseau bénévoles — annonce PDF diffusée au match</div>
+        <div class="vp-sub">Recruter via le réseau bénévoles — annonce diffusée au cube vidéo en interset</div>
       </div>
       <div class="vp-card" onclick="showSoon('Demande de service','Bientôt — cherchez un prestataire (plombier, électricien…) parmi les partenaires.')">
         <div class="vp-icon">⌬</div>
@@ -304,6 +340,7 @@
       </div>
     </div>
 
+    <!-- LISTE DES ANNONCES DU PARTENAIRE -->
     <div id="mes-publications" style="margin-top:24px;"></div>
   </section>
 
@@ -345,99 +382,150 @@
   </div>
 </div>
 
-<!-- MODAL Minute de l'emploi -->
+<!-- MODAL Minute de l'emploi (formulaire inline) -->
 <div id="me-modal" class="modal" hidden onclick="if(event.target.id==='me-modal')closeMinuteEmploiModal()">
-  <div class="modal-card" style="max-width:520px;text-align:left;">
-    <div class="modal-eyebrow" style="text-align:center;">📥 PDF À TÉLÉCHARGER</div>
+  <div class="modal-card" style="max-width:640px;text-align:left;max-height:90vh;overflow-y:auto;">
+    <div class="modal-eyebrow" style="text-align:center;">📥 ANNONCE EMPLOI</div>
     <h3 class="display" style="text-align:center;">Minute de l'emploi</h3>
-    <p style="text-align:center;">Fiche PDF aux couleurs Spacers — vous remplissez les champs, nous diffusons l'annonce pendant les matchs.</p>
+    <p style="text-align:center;font-size:13px;">Remplissez votre annonce ci-dessous. Après validation, elle sera diffusée sur le cube vidéo en interset et publiée auprès du réseau bénévoles.</p>
 
-    <!-- Étape 1 : Upload logo -->
-    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:18px;margin:18px 0;">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div style="background:#C9A864;color:white;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:13px;">1</div>
-        <div><b style="font-size:14px;">Votre logo</b><br><small style="color:#5B6573;">Format PNG ou JPG, fond transparent recommandé</small></div>
-      </div>
-      <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
-        <div id="me-logo-preview" style="width:64px;height:64px;border:2px dashed #C9A864;border-radius:8px;display:grid;place-items:center;background:white;overflow:hidden;">
+    <!-- LOGO -->
+    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:16px;margin:18px 0;">
+      <div style="font-size:11px;color:#A98A4D;font-weight:bold;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Votre logo (PNG ou JPG, ≤ 2 Mo)</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div id="me-logo-preview" style="width:56px;height:56px;border:2px dashed #C9A864;border-radius:8px;display:grid;place-items:center;background:white;overflow:hidden;flex-shrink:0;">
           <span style="color:#5B6573;font-size:10px;">aucun</span>
         </div>
-        <label class="btn" style="cursor:pointer;margin-bottom:0;">
+        <label class="btn" style="cursor:pointer;margin-bottom:0;font-size:13px;">
           <input type="file" id="me-logo-input" accept="image/png,image/jpeg" style="display:none;" onchange="onLogoSelected(event)">
           Choisir un logo
         </label>
-        <button class="btn" id="me-logo-remove" style="display:none;" onclick="removeLogo()">Retirer</button>
+        <button class="btn" id="me-logo-remove" style="display:none;font-size:13px;" onclick="removeLogo()">Retirer</button>
       </div>
     </div>
 
-    <!-- Étape 2 : Téléchargement -->
-    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:18px;margin-bottom:18px;">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div style="background:#C9A864;color:white;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:13px;">2</div>
-        <div><b style="font-size:14px;">Téléchargez votre fiche personnalisée</b><br><small style="color:#5B6573;">PDF interactif aux couleurs Spacers, à remplir dans n'importe quel viewer PDF</small></div>
+    <!-- FORMULAIRE -->
+    <div style="display:grid;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label class="me-label">Date / match
+          <input id="me-input-date_match" type="text" placeholder="14/03/2026" class="me-input">
+        </label>
+        <label class="me-label">Type de contrat
+          <select id="me-input-contrat" class="me-input">
+            <option value="">—</option>
+            <option value="CDI">CDI</option>
+            <option value="CDD">CDD</option>
+            <option value="Stage">Stage</option>
+            <option value="Alternance">Alternance</option>
+            <option value="Apprentissage">Apprentissage</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Intérim">Intérim</option>
+          </select>
+        </label>
       </div>
-      <button class="btn primary" id="me-dl-btn" onclick="generateMinuteEmploi()" style="width:100%;margin-top:14px;">
-        📥 Télécharger ma fiche
-      </button>
+
+      <label class="me-label">Poste recherché *
+        <input id="me-input-poste" type="text" placeholder="ex: Vendeur(se) d'articles de sport" class="me-input">
+      </label>
+
+      <label class="me-label">Prérequis & profil recherché
+        <textarea id="me-input-prerequis" rows="3" placeholder="ex: Très forte appétence pour le sport, expérience en magasin appréciée…" class="me-input"></textarea>
+      </label>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label class="me-label">Lieu(x) de travail
+          <input id="me-input-lieux" type="text" placeholder="Toulouse" class="me-input">
+        </label>
+        <label class="me-label">Heures / semaine
+          <input id="me-input-heures" type="text" placeholder="35h" class="me-input">
+        </label>
+      </div>
+
+      <label class="me-label">Salaire indicatif
+        <input id="me-input-salaire" type="text" placeholder="ex: SMIC horaire, 30k€/an, à négocier" class="me-input">
+      </label>
+
+      <label class="me-label">Les + de l'offre
+        <textarea id="me-input-les_plus" rows="2" placeholder="ex: Planning modulable, mutuelle, ambiance familiale…" class="me-input"></textarea>
+      </label>
+
+      <label class="me-label">Email pour candidatures *
+        <input id="me-input-email" type="email" placeholder="rh@entreprise.fr" class="me-input">
+      </label>
     </div>
 
-    <!-- Étape 3 : Renvoi -->
-    <div style="background:#FAF7EF;border:1px solid #E8E2D4;border-radius:14px;padding:18px;margin-bottom:18px;">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div style="background:#C9A864;color:white;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:13px;">3</div>
-        <div><b style="font-size:14px;">Une fois rempli, renvoyez-le</b><br><small style="color:#5B6573;">À <b>spacersytb@gmail.com</b> — nous validons puis diffusons</small></div>
-      </div>
+    <button class="btn primary" id="me-dl-btn" onclick="submitMinuteEmploi()" style="width:100%;margin-top:18px;justify-content:center;">
+      ✉ Envoyer mon annonce
+    </button>
+
+    <div id="me-status" style="font-size:13px;text-align:center;color:#5B6573;min-height:20px;margin-top:10px;"></div>
+
+    <div style="background:#FAF7EF;border-left:3px solid #C9A864;padding:12px 14px;margin-top:14px;border-radius:6px;">
+      <small style="color:#5B6573;font-size:12px;">📺 Après validation par l'équipe Spacers, votre annonce est diffusée sur le <b style="color:#0A1628;">cube vidéo en interset</b> et publiée auprès du <b style="color:#0A1628;">réseau bénévoles</b>.</small>
     </div>
 
-    <div id="me-status" style="font-size:13px;text-align:center;color:#5B6573;min-height:20px;margin-bottom:10px;"></div>
-
-    <button class="btn" onclick="closeMinuteEmploiModal()" style="width:100%;">Fermer</button>
+    <button class="btn" onclick="closeMinuteEmploiModal()" style="width:100%;margin-top:14px;justify-content:center;">Fermer</button>
   </div>
 </div>
 
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
 <script>
 // =========================================================================
-//  Spacer's Business Club — PWA bootstrap
-//  Au chargement : lit ?siren=... → fetch /api/partner/:siren → rend le DOM
+//  Spacer's Business Club — PWA partenaire V6 (inline form + mes annonces)
 // =========================================================================
 
 const $ = (id) => document.getElementById(id);
-
 const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
+// Globals
+let MAGIC_TOKEN = null;
+let MES_OFFRES = [];
+
+// =========================================================================
+//  HELPERS
+// =========================================================================
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
 function formatDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (isNaN(d)) return '—';
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
-
+function formatRelative(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diffH = Math.floor((Date.now() - d) / 3600000);
+  if (diffH < 1) return 'à l\'instant';
+  if (diffH < 24) return `il y a ${diffH} h`;
+  const diffJ = Math.floor(diffH / 24);
+  if (diffJ < 7) return `il y a ${diffJ} j`;
+  return formatDate(iso);
+}
 function daysBetween(isoEnd) {
   if (!isoEnd) return null;
   const end = new Date(isoEnd);
   const now = new Date();
   return Math.floor((end - now) / 86400000);
 }
-
 function formatEUR(n) {
   if (!n && n !== 0) return '—';
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 }
-
 function firstName(fullName) {
   if (!fullName) return 'partenaire';
-  // "Céline TALON" → "Céline"  |  "Marc-Antoine DUBOIS" → "Marc-Antoine"
-  const parts = fullName.trim().split(/\s+/);
-  return parts[0];
+  return fullName.trim().split(/\s+/)[0];
 }
-
 function initials(fullName) {
   if (!fullName) return '—';
   const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
 }
-
 function showError(msg, detail) {
   $('loading').hidden = true;
   $('dashboard').hidden = true;
@@ -446,27 +534,30 @@ function showError(msg, detail) {
   if (detail) $('error-detail').textContent = detail;
 }
 
+// Toast
+let _toastTimeout = null;
+function showToast(msg, type='success') {
+  const el = $('toast');
+  clearTimeout(_toastTimeout);
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  _toastTimeout = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
 // =========================================================================
-//  Helpers UI : modal "Bientôt" + navigation
+//  MODALES UTILITAIRES
 // =========================================================================
 let CURRENT_CONTRAT_LIEN = '';
-
-function showSoon(title, text) {
-  $('modal-title').textContent = title;
-  $('modal-text').textContent = text;
-  $('modal').hidden = false;
-}
-function closeSoon() {
-  $('modal').hidden = true;
-}
+function showSoon(title, text) { $('modal-title').textContent = title; $('modal-text').textContent = text; $('modal').hidden = false; }
+function closeSoon() { $('modal').hidden = true; }
 function ouvrirContrat() {
-  if (CURRENT_CONTRAT_LIEN) {
-    window.open(CURRENT_CONTRAT_LIEN, '_blank');
-  } else {
-    showSoon('Mon contrat', 'Le lien vers ton contrat sera disponible une fois que tu seras identifié(e).');
-  }
+  if (CURRENT_CONTRAT_LIEN) window.open(CURRENT_CONTRAT_LIEN, '_blank');
+  else showSoon('Mon contrat', 'Le lien vers ton contrat sera disponible une fois identifié(e).');
 }
 
+// =========================================================================
+//  RENDU DASHBOARD (hero + contrat + prestations + pack + alertes)
+// =========================================================================
 function renderDashboard(data) {
   const { partenaire, contrat, prestations, pack_places, alertes } = data;
 
@@ -474,6 +565,7 @@ function renderDashboard(data) {
   $('user-chip').hidden = false;
   $('user-name').textContent = partenaire.raison_sociale || '—';
   window.__PARTNER_RAISON_SOCIALE__ = partenaire.raison_sociale || '';
+  window.__PARTNER_REPRESENTANT__ = partenaire.representant || '';
   $('user-role').textContent = partenaire.representant
     ? `${partenaire.representant}${partenaire.fonction ? ' · ' + partenaire.fonction : ''}`
     : '—';
@@ -482,20 +574,14 @@ function renderDashboard(data) {
   // ===== HERO =====
   $('greeting-firstname').textContent = firstName(partenaire.representant);
   $('saison-label').textContent = `Saison ${contrat.saison || '—'}`;
-  $('stat-contract').textContent = `Contrat ${contrat.statut.toLowerCase()}`;
+  $('stat-contract').textContent = `Contrat ${(contrat.statut || '').toLowerCase()}`;
 
   const jours = daysBetween(contrat.date_fin);
   if (jours !== null) {
     const stat = $('stat-echeance');
-    if (jours < 0) {
-      stat.textContent = `Contrat expiré depuis ${Math.abs(jours)} j`;
-      stat.classList.add('warn');
-    } else if (jours < 60) {
-      stat.textContent = `Renouvellement dans ${jours} j`;
-      stat.classList.add('warn');
-    } else {
-      stat.textContent = `${jours} j avant échéance`;
-    }
+    if (jours < 0) { stat.textContent = `Contrat expiré depuis ${Math.abs(jours)} j`; stat.classList.add('warn'); }
+    else if (jours < 60) { stat.textContent = `Renouvellement dans ${jours} j`; stat.classList.add('warn'); }
+    else stat.textContent = `${jours} j avant échéance`;
   }
 
   // ===== CARTE CONTRAT =====
@@ -517,13 +603,12 @@ function renderDashboard(data) {
                         : p.statut && p.statut.includes('cours') ? 'en-cours' : 'a-livrer';
       return `
         <article class="prest">
-          <div class="code">${p.code}</div>
-          <div class="designation">${p.designation || p.code}</div>
+          <div class="code">${escapeHtml(p.code)}</div>
+          <div class="designation">${escapeHtml(p.designation || p.code)}</div>
           <div class="progress"><div style="width: ${pct}%"></div></div>
           <div class="progress-meta"><span>${p.nb_livre}/${p.nb_total} livré(s)</span><span>${pct}%</span></div>
-          <span class="statut ${statutClass}">${p.statut || 'À livrer'}</span>
-        </article>
-      `;
+          <span class="statut ${statutClass}">${escapeHtml(p.statut || 'À livrer')}</span>
+        </article>`;
     }).join('');
   }
 
@@ -534,7 +619,7 @@ function renderDashboard(data) {
     const pct = pack_places.alloues > 0 ? Math.round((pack_places.utilises / pack_places.alloues) * 100) : 0;
     packCard.innerHTML = `
       <div>
-        <div class="pack-label">${pack_places.libelle || 'Pack VIP'}</div>
+        <div class="pack-label">${escapeHtml(pack_places.libelle || 'Pack VIP')}</div>
         <div class="pack-title">${pack_places.alloues} places allouées</div>
         <div class="pack-bar"><div style="width: ${pct}%"></div></div>
         <div class="pack-stats">
@@ -546,8 +631,7 @@ function renderDashboard(data) {
       <div class="pack-counter">
         <b>${pack_places.restants}</b>
         <small>Places dispo</small>
-      </div>
-    `;
+      </div>`;
   } else {
     packSection.style.display = 'none';
   }
@@ -564,11 +648,10 @@ function renderDashboard(data) {
         <div class="alerte ${a.priorite}">
           <div class="a-icon">${icon}</div>
           <div class="a-content">
-            <div class="a-type">${a.type}</div>
-            <div class="a-msg">${a.message}</div>
+            <div class="a-type">${escapeHtml(a.type)}</div>
+            <div class="a-msg">${escapeHtml(a.message)}</div>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
@@ -583,35 +666,28 @@ function renderDashboard(data) {
   // ===== AFFICHAGE =====
   $('loading').hidden = true;
   $('dashboard').hidden = false;
+
+  // ===== LISTE DES ANNONCES DU PARTENAIRE =====
+  loadMesPublications();
 }
 
 // =========================================================================
-//  Bootstrap — résolution de l'identité partenaire
-//
-//  Ordre de priorité :
-//    1. ?t=TOKEN   → magic token (PROD, recommandé)
-//    2. ?siren=XXX → SIREN direct (DEV / debug uniquement)
-//    3. Pas de paramètre → écran "Accès requis"
+//  Bootstrap
 // =========================================================================
 (async () => {
   const params = new URLSearchParams(location.search);
-  const magicToken = params.get('t');
+  MAGIC_TOKEN = params.get('t');
   const siren = params.get('siren');
 
-  let apiUrl;
-  let identityLabel;
-
-  if (magicToken) {
-    apiUrl = `/api/partner-by-token/${encodeURIComponent(magicToken)}`;
+  let apiUrl, identityLabel;
+  if (MAGIC_TOKEN) {
+    apiUrl = `/api/partner-by-token/${encodeURIComponent(MAGIC_TOKEN)}`;
     identityLabel = 'token';
   } else if (siren) {
     apiUrl = `/api/partner/${encodeURIComponent(siren)}`;
     identityLabel = `SIREN ${siren}`;
   } else {
-    showError(
-      'Accès requis',
-      'Aucun token d\'accès fourni. Utilisez le lien personnel envoyé par email.'
-    );
+    showError('Accès requis', 'Aucun token d\'accès fourni. Utilisez le lien personnel envoyé par email.');
     return;
   }
 
@@ -619,10 +695,7 @@ function renderDashboard(data) {
     const r = await fetch(apiUrl);
     const data = await r.json();
     if (!r.ok || data.error) {
-      showError(
-        data.error || `Erreur ${r.status}`,
-        data.detail || `Identité : ${identityLabel}`
-      );
+      showError(data.error || `Erreur ${r.status}`, data.detail || `Identité : ${identityLabel}`);
       return;
     }
     renderDashboard(data);
@@ -632,49 +705,40 @@ function renderDashboard(data) {
 })();
 
 // =========================================================================
-//  MINUTE DE L'EMPLOI — Génération PDF avec logo
+//  MINUTE DE L'EMPLOI — Modale (logo + formulaire inline)
 // =========================================================================
-// URL du template PDF — chemin relatif au worker Cloudflare (sert /public/)
-const ME_TEMPLATE_URL = '/minute_de_l_emploi_template.pdf';
 const LOGO_STORAGE_KEY = 'spacers_partner_logo';
-
+const DRAFT_STORAGE_KEY = 'spacers_minute_emploi_draft';
 let ME_LOGO_DATA_URL = null;
 
 function openMinuteEmploiModal() {
-  // Restaurer le logo depuis localStorage
+  // Restaurer logo
   const saved = localStorage.getItem(LOGO_STORAGE_KEY);
-  if (saved) {
-    ME_LOGO_DATA_URL = saved;
-    showLogoPreview(saved);
-  } else {
-    ME_LOGO_DATA_URL = null;
-    resetLogoPreview();
-  }
+  if (saved) { ME_LOGO_DATA_URL = saved; showLogoPreview(saved); }
+  else { ME_LOGO_DATA_URL = null; resetLogoPreview(); }
+
+  // Restaurer draft (email, lieu, type contrat)
+  loadMinuteEmploiDraft();
+
   $('me-status').textContent = '';
   $('me-modal').hidden = false;
 }
-
-function closeMinuteEmploiModal() {
-  $('me-modal').hidden = true;
-}
+function closeMinuteEmploiModal() { $('me-modal').hidden = true; }
 
 function showLogoPreview(dataUrl) {
   $('me-logo-preview').innerHTML = `<img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
   $('me-logo-remove').style.display = '';
 }
-
 function resetLogoPreview() {
   $('me-logo-preview').innerHTML = '<span style="color:#5B6573;font-size:10px;">aucun</span>';
   $('me-logo-remove').style.display = 'none';
 }
-
 function removeLogo() {
   localStorage.removeItem(LOGO_STORAGE_KEY);
   ME_LOGO_DATA_URL = null;
   resetLogoPreview();
   $('me-logo-input').value = '';
 }
-
 function onLogoSelected(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -694,118 +758,360 @@ function onLogoSelected(event) {
   reader.readAsDataURL(file);
 }
 
-async function generateMinuteEmploi() {
+async function submitMinuteEmploi() {
   const btn = $('me-dl-btn');
   const status = $('me-status');
+
+  const poste = $('me-input-poste').value.trim();
+  const email = $('me-input-email').value.trim();
+  if (!poste) { status.textContent = '⚠ Le poste est obligatoire.'; status.style.color = '#c62828'; $('me-input-poste').focus(); return; }
+  if (!email || !email.includes('@')) { status.textContent = '⚠ Email de candidatures invalide.'; status.style.color = '#c62828'; $('me-input-email').focus(); return; }
+
   btn.disabled = true;
-  btn.textContent = '⏳ Génération en cours…';
+  btn.innerHTML = '⏳ Envoi en cours…';
   status.textContent = '';
 
+  if (!MAGIC_TOKEN) {
+    status.textContent = '❌ Token partenaire introuvable. Reconnecte-toi via le lien envoyé par email.';
+    status.style.color = '#c62828';
+    btn.disabled = false;
+    btn.innerHTML = '✉ Envoyer mon annonce';
+    return;
+  }
+
+  const payload = {
+    titre: poste,
+    type_contrat: $('me-input-contrat').value || null,
+    lieu: $('me-input-lieux').value.trim() || null,
+    duree: $('me-input-heures').value.trim() || null,
+    salaire_indicatif: $('me-input-salaire').value.trim() || null,
+    description: $('me-input-prerequis').value.trim() || null,
+    contact_email: email,
+    contact_nom: window.__PARTNER_REPRESENTANT__ || null,
+    metadata: {
+      date_match: $('me-input-date_match').value.trim() || null,
+      les_plus: $('me-input-les_plus').value.trim() || null,
+      logo_b64: ME_LOGO_DATA_URL || null,
+      source: 'pwa-partenaire-minute-emploi',
+    },
+  };
+
   try {
-    // 1. Charger pdf-lib depuis CDN (si pas déjà fait)
-    if (!window.PDFLib) {
-      status.textContent = 'Chargement de la librairie PDF…';
-      await loadScript('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js');
-    }
-    if (!window.PDFLib) throw new Error('pdf-lib non chargé');
-
-    // 2. Fetch le template PDF
-    status.textContent = 'Téléchargement du modèle…';
-    const templateBytes = await fetch(ME_TEMPLATE_URL).then(r => {
-      if (!r.ok) throw new Error('Template introuvable (HTTP ' + r.status + ')');
-      return r.arrayBuffer();
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/offres-emploi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || `Erreur ${res.status}`);
 
-    // 3. Charger le PDF
-    const { PDFDocument } = window.PDFLib;
-    const pdfDoc = await PDFDocument.load(templateBytes);
-    const page = pdfDoc.getPages()[0];
-
-    // 4. Si logo présent, l'embed et le dessiner
-    if (ME_LOGO_DATA_URL) {
-      status.textContent = 'Intégration du logo…';
-      const isPng = ME_LOGO_DATA_URL.startsWith('data:image/png');
-      const logoBytes = await fetch(ME_LOGO_DATA_URL).then(r => r.arrayBuffer());
-      const logoImage = isPng
-        ? await pdfDoc.embedPng(logoBytes)
-        : await pdfDoc.embedJpg(logoBytes);
-
-      // Coordonnées du slot logo dans le template (calculé d'après le script Python)
-      // Slot : x = LEFT + ENT_W + DATE_W + 10mm, y = y - 28 (taille 32mm * (PAGE_H - HEADER_H - 18 - 28))
-      // En points : 1mm = 2.83465 pts
-      // Slot dimensions : LOGO_W mm × 32 mm
-      // Position calculée : on aligne sur le slot du template
-      const mm = 2.83465;
-      const PAGE_H = page.getHeight();
-      const HEADER_H = 78 * mm;
-      const LEFT = 20 * mm;
-      const ENT_W = 78 * mm;
-      const DATE_W = 38 * mm;
-      const SECTION_W = page.getWidth() - 2 * (20 * mm);
-      const LOGO_W = SECTION_W - ENT_W - DATE_W - 10 * mm;
-      const y0 = PAGE_H - HEADER_H - 12 * mm;
-      const slotX = LEFT + ENT_W + DATE_W + 10 * mm;
-      const slotY = y0 - 28;
-      const slotW = LOGO_W;
-      const slotH = 32;
-
-      // Calculer dimensions du logo pour qu'il rentre dans le slot en gardant le ratio
-      const ratio = logoImage.width / logoImage.height;
-      let drawW = slotW - 6;
-      let drawH = drawW / ratio;
-      if (drawH > slotH - 6) {
-        drawH = slotH - 6;
-        drawW = drawH * ratio;
-      }
-      const drawX = slotX + (slotW - drawW) / 2;
-      const drawY = slotY + (slotH - drawH) / 2;
-
-      page.drawImage(logoImage, { x: drawX, y: drawY, width: drawW, height: drawH });
-    }
-
-    // 5. Pré-remplir le nom de l'entreprise si dispo
-    const form = pdfDoc.getForm();
-    const partnerName = $('hello-mark')?.textContent?.trim() || ''; // non utilisé ici en pratique
-    try {
-      const entrepriseField = form.getTextField('entreprise');
-      const raisonSociale = window.__PARTNER_RAISON_SOCIALE__ || '';
-      if (raisonSociale) entrepriseField.setText(raisonSociale);
-    } catch {}
-
-    // 6. Sauvegarder et déclencher download
-    status.textContent = 'Génération finale…';
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const safeName = (window.__PARTNER_RAISON_SOCIALE__ || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_');
-    a.download = `Minute_emploi_${safeName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    status.textContent = '✅ Fiche téléchargée. Remplissez-la et renvoyez-la à spacersytb@gmail.com';
+    saveMinuteEmploiDraft();
+    status.innerHTML = '✅ <b>Annonce envoyée</b> — l\'équipe Spacers la valide puis la diffuse.';
     status.style.color = '#2e7d32';
+    btn.innerHTML = '✓ Envoyée';
+    showToast('Annonce envoyée — en attente de validation', 'success');
+
+    // Refresh la liste des annonces du partenaire en background
+    setTimeout(() => loadMesPublications(), 500);
+
+    setTimeout(() => {
+      clearMinuteEmploiForm();
+      closeMinuteEmploiModal();
+      btn.disabled = false;
+      btn.innerHTML = '✉ Envoyer mon annonce';
+    }, 2200);
   } catch (e) {
     console.error(e);
     status.textContent = '❌ Erreur : ' + e.message;
     status.style.color = '#c62828';
-  } finally {
     btn.disabled = false;
-    btn.textContent = '📥 Télécharger ma fiche';
+    btn.innerHTML = '✉ Envoyer mon annonce';
   }
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Échec chargement ' + src));
-    document.head.appendChild(s);
+function saveMinuteEmploiDraft() {
+  const draft = {
+    contrat: $('me-input-contrat').value,
+    lieu: $('me-input-lieux').value,
+    contact_email: $('me-input-email').value,
+  };
+  try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch {}
+}
+function loadMinuteEmploiDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (draft.contrat) $('me-input-contrat').value = draft.contrat;
+    if (draft.lieu) $('me-input-lieux').value = draft.lieu;
+    if (draft.contact_email) $('me-input-email').value = draft.contact_email;
+  } catch {}
+}
+function clearMinuteEmploiForm() {
+  ['date_match', 'poste', 'prerequis', 'lieux', 'heures', 'salaire', 'les_plus'].forEach(k => {
+    const el = $('me-input-' + k);
+    if (el) el.value = '';
   });
+  // Email, contrat (type) et logo conservés volontairement pour faciliter les re-soumissions
+}
+
+// =========================================================================
+//  MES ANNONCES — Liste des offres soumises par le partenaire
+// =========================================================================
+async function loadMesPublications() {
+  if (!MAGIC_TOKEN) return;
+  const wrap = $('mes-publications');
+  if (!wrap) return;
+
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/offres-emploi`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    MES_OFFRES = data.offres || [];
+    renderMesPublications(MES_OFFRES);
+  } catch (e) {
+    console.warn('loadMesPublications error:', e.message);
+    wrap.innerHTML = '';
+  }
+}
+
+function renderMesPublications(offres) {
+  const wrap = $('mes-publications');
+  if (!wrap) return;
+
+  if (!offres || offres.length === 0) {
+    // Pas d'historique — on ne montre rien (l'utilisateur n'a jamais soumis)
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const items = offres.map(o => {
+    const statutClass = o.statut || 'attente';
+    const statutLabel = {
+      en_attente: 'En attente',
+      publie: 'Publiée',
+      refuse: 'Refusée',
+      archive: 'Archivée',
+      expire: 'Expirée',
+      pourvue: 'Pourvue',
+    }[o.statut] || o.statut;
+
+    const meta = [];
+    if (o.type_contrat) meta.push(escapeHtml(o.type_contrat));
+    if (o.lieu) meta.push('📍 ' + escapeHtml(o.lieu));
+    meta.push(formatRelative(o.date_publication || o.created_at));
+
+    const refusBlock = (o.statut === 'refuse' && o.raison_refus)
+      ? `<div class="mp-item-refus">Motif : ${escapeHtml(o.raison_refus)}</div>`
+      : '';
+
+    const downloadBtn = (o.statut === 'publie')
+      ? `<button class="btn sm gold" onclick="downloadCubePdf('${o.id}')">📄 PDF cube</button>`
+      : '';
+
+    return `
+      <div class="mp-item ${statutClass}">
+        <div class="mp-item-content">
+          <div class="mp-item-title">${escapeHtml(o.titre)}</div>
+          <div class="mp-item-meta">${meta.join(' · ')}</div>
+          ${refusBlock}
+        </div>
+        <span class="mp-badge mp-badge-${statutClass}">${statutLabel}</span>
+        <div class="mp-actions">${downloadBtn}</div>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="mp-header">
+      <div class="mp-title">Mes <em>annonces emploi</em></div>
+      <div class="mp-count">${offres.length} annonce${offres.length > 1 ? 's' : ''}</div>
+    </div>
+    ${items}`;
+}
+
+// =========================================================================
+//  PDF CUBE VIDÉO — Régénération côté partenaire (souvenir / impression)
+//  Mêmes paramètres que le pilote admin pour cohérence visuelle.
+// =========================================================================
+async function downloadCubePdf(offreId) {
+  const offre = MES_OFFRES.find(o => o.id === offreId);
+  if (!offre) { showToast('Annonce introuvable', 'error'); return; }
+  if (!window.jspdf) { showToast('Librairie PDF non chargée', 'error'); return; }
+
+  try {
+    showToast('Génération du PDF…', 'success');
+    await buildAndDownloadCubePdf(offre);
+    showToast('✓ PDF téléchargé', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function buildAndDownloadCubePdf(offre) {
+  const { jsPDF } = window.jspdf;
+  const W = 1920, H = 1080;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] });
+
+  const COLORS = {
+    ink:      [10, 22, 40],
+    ink2:     [17, 32, 58],
+    gold:     [200, 147, 43],
+    goldSoft: [232, 201, 119],
+    cream:    [250, 247, 242],
+    white:    [255, 255, 255],
+    muted:    [200, 195, 180],
+  };
+
+  // Fond navy + halo doré
+  doc.setFillColor(...COLORS.ink);
+  doc.rect(0, 0, W, H, 'F');
+  for (let i = 0; i < 12; i++) {
+    const alpha = 0.025 - i * 0.0018;
+    if (alpha <= 0) break;
+    doc.setFillColor(200, 147, 43);
+    doc.setGState(new doc.GState({ opacity: alpha }));
+    doc.circle(W - 120, 100 + i * 18, 350 + i * 60, 'F');
+  }
+  doc.setGState(new doc.GState({ opacity: 1 }));
+
+  // Eyebrow
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...COLORS.goldSoft);
+  doc.text('MINUTE EMPLOI · DIFFUSION INTERSET', 100, 110, { charSpace: 4 });
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(2);
+  doc.line(100, 130, 240, 130);
+
+  // Logo Spacers carré
+  drawSpacersLogo(doc, 100, 160, 90, COLORS);
+
+  // Logo partenaire
+  const meta = offre.metadata || {};
+  if (meta.logo_b64) {
+    try {
+      const fmt = meta.logo_b64.startsWith('data:image/png') ? 'PNG' :
+                  meta.logo_b64.startsWith('data:image/jpeg') ? 'JPEG' :
+                  meta.logo_b64.startsWith('data:image/jpg') ? 'JPEG' : null;
+      if (fmt) {
+        const logoBoxW = 280, logoBoxH = 180;
+        const logoX = W - 100 - logoBoxW;
+        const logoY = 160;
+        doc.setFillColor(...COLORS.white);
+        doc.roundedRect(logoX, logoY, logoBoxW, logoBoxH, 12, 12, 'F');
+        doc.addImage(meta.logo_b64, fmt, logoX + 20, logoY + 20, logoBoxW - 40, logoBoxH - 40, undefined, 'FAST');
+      }
+    } catch (e) { console.warn('Logo partenaire non rendu :', e.message); }
+  }
+
+  // Raison sociale (depuis cache global posé au render)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  doc.setTextColor(...COLORS.muted);
+  const partenaireName = (window.__PARTNER_RAISON_SOCIALE__ || '').toUpperCase();
+  doc.text(partenaireName.slice(0, 50), 100, 290);
+
+  // Titre
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.white);
+  const titre = offre.titre || 'Annonce';
+  const titreLines = doc.splitTextToSize(titre, W - 200);
+  const titreSize = titreLines.length > 2 ? 80 : titreLines.length > 1 ? 100 : 120;
+  doc.setFontSize(titreSize);
+  let titreY = 400;
+  titreLines.slice(0, 3).forEach((line, i) => {
+    doc.text(line, 100, titreY + i * (titreSize * 1.05));
+  });
+  const titreEndY = titreY + (Math.min(titreLines.length, 3) - 1) * (titreSize * 1.05);
+
+  // Filet doré
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(4);
+  doc.line(100, titreEndY + 40, 300, titreEndY + 40);
+
+  // Chips infos
+  let infoY = titreEndY + 90;
+  const infoChips = [];
+  if (offre.type_contrat) infoChips.push({ icon: '◆', text: offre.type_contrat });
+  if (offre.lieu) infoChips.push({ icon: '⌖', text: offre.lieu });
+  if (offre.duree) infoChips.push({ icon: '⌚', text: offre.duree });
+  if (offre.salaire_indicatif) infoChips.push({ icon: '€', text: offre.salaire_indicatif });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(32);
+  let chipX = 100;
+  infoChips.forEach((chip) => {
+    const fullText = `${chip.icon}  ${chip.text}`;
+    const w = doc.getTextWidth(fullText);
+    if (chipX + w > W - 100) return;
+    doc.setFillColor(...COLORS.ink2);
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(1);
+    doc.roundedRect(chipX - 18, infoY - 36, w + 36, 56, 28, 28, 'FD');
+    doc.setTextColor(...COLORS.goldSoft);
+    doc.text(fullText, chipX, infoY);
+    chipX += w + 60;
+  });
+
+  // Les +
+  if (meta.les_plus) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(24);
+    doc.setTextColor(...COLORS.cream);
+    const plusLines = doc.splitTextToSize('« ' + meta.les_plus + ' »', W - 200);
+    let py = infoY + 110;
+    plusLines.slice(0, 3).forEach((line, i) => {
+      doc.text(line, 100, py + i * 36);
+    });
+  }
+
+  // Footer
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(2);
+  doc.line(100, H - 180, W - 100, H - 180);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...COLORS.goldSoft);
+  doc.text('POSTULER', 100, H - 130, { charSpace: 3 });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(38);
+  doc.setTextColor(...COLORS.white);
+  const contact = offre.contact_email || offre.url_externe || offre.contact_telephone || '—';
+  doc.text(contact, 100, H - 75);
+
+  if (meta.date_match) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...COLORS.muted);
+    const dmText = 'DIFFUSION · ' + meta.date_match;
+    const dmW = doc.getTextWidth(dmText);
+    doc.text(dmText, W - 100 - dmW, H - 90, { charSpace: 2 });
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(14);
+  doc.setTextColor(...COLORS.muted);
+  const footerText = 'Spacer\'s Toulouse Volley · Business Club';
+  const footerW = doc.getTextWidth(footerText);
+  doc.text(footerText, W - 100 - footerW, H - 60);
+
+  const safeName = (offre.titre || 'annonce').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 50);
+  const safePartner = (window.__PARTNER_RAISON_SOCIALE__ || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 30);
+  doc.save(`cube_${safePartner}_${safeName}.pdf`);
+}
+
+function drawSpacersLogo(doc, x, y, size, COLORS) {
+  doc.setFillColor(...COLORS.gold);
+  doc.roundedRect(x, y, size, size, 14, 14, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(size * 0.7);
+  doc.setTextColor(...COLORS.ink);
+  const text = 'S';
+  const tw = doc.getTextWidth(text);
+  doc.text(text, x + (size - tw) / 2, y + size * 0.72);
 }
 </script>
 
