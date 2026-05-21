@@ -117,6 +117,13 @@ async function handleApi(request, env, path) {
       m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
       if (m) return await handleAdminPublicationArchive(m[1], m[2], env);
 
+      // Partenaire — Publications & Annonces emploi (proposition)
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publications$/);
+      if (m) return await handlePartnerPublicationCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
+      if (m) return await handlePartnerOffreCreate(m[1], body || {}, env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -166,6 +173,27 @@ async function handleApi(request, env, path) {
     // Admin publication — détail
     m = path.match(/^\/api\/admin\/publication\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
     if (m) return await handleAdminPublicationDetail(m[1], m[2], env);
+
+    // Partner — ses publications & annonces emploi
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publications$/);
+    if (m) return await handlePartnerPublicationsList(m[1], url.searchParams, env);
+
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
+    if (m) return await handlePartnerOffresList(m[1], env);
+
+    // ===== Assets statiques (PDF Minute de l'emploi en fallback) =====
+    if (path === '/assets/minute-emploi-template.pdf' || path === '/minute_de_l_emploi_template.pdf') {
+      const binary = Uint8Array.from(atob(MINUTE_EMPLOI_TEMPLATE_B64), c => c.charCodeAt(0));
+      return new Response(binary, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'inline; filename="minute_de_l_emploi_template.pdf"',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
 
     // ===== TICKIE (Vivenu) routes =====
     if (path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/)) {
@@ -1583,4 +1611,157 @@ async function handleAdminPublicationArchive(token, pubId, env) {
   await logAudit_(admin.id, 'publication.archive', 'publications', pubId, {}, env).catch(() => {});
 
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
+}
+
+// ============================================================================
+//  PARTNER — Phase B : Proposer publications et annonces emploi
+// ============================================================================
+
+// Auth helper : identifie le partenaire via le magic_token du contrat
+async function authPartner_(token, env) {
+  const rows = await supabaseQuery(
+    'contrats',
+    `magic_token=eq.${token}&select=id,partenaire_id,saison,partenaires(id,raison_sociale,representant)&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) return null;
+  return {
+    contrat_id: rows[0].id,
+    partenaire_id: rows[0].partenaire_id,
+    saison: rows[0].saison,
+    raison_sociale: rows[0].partenaires?.raison_sociale || '',
+    representant: rows[0].partenaires?.representant || '',
+  };
+}
+
+// ----------- GET /api/partner/:token/publications?type=X -----------
+async function handlePartnerPublicationsList(token, queryParams, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const typeFilter = queryParams.get('type');
+  let filters = [`contrat_id=eq.${partner.contrat_id}`];
+  if (typeFilter && PUB_TYPES.includes(typeFilter)) filters.push(`type=eq.${typeFilter}`);
+  filters.push('select=id,type,titre,description,categorie,data,statut,raison_refus,date_publication,date_expiration,vues_count,reponses_count,created_at');
+  filters.push('order=created_at.desc');
+  filters.push('limit=100');
+
+  const rows = await supabaseQuery('publications', filters.join('&'), env);
+
+  return jsonResponseNoCache({
+    contrat_id: partner.contrat_id,
+    publications: rows || [],
+    meta: { version: 'V4.7-partner', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- POST /api/partner/:token/publications -----------
+// Body : { type, titre, description, categorie, data, contact_nom, contact_email, contact_telephone }
+async function handlePartnerPublicationCreate(token, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const type = String(body.type || '').trim();
+  if (!PUB_TYPES.includes(type)) {
+    return jsonResponseNoCache({ error: 'type invalide', expected: PUB_TYPES }, 400);
+  }
+  const titre = String(body.titre || '').trim();
+  if (!titre) return jsonResponseNoCache({ error: 'Titre obligatoire' }, 400);
+
+  const defaultDays = type === 'proposition' ? 180 : 90;
+  const dateExpiration = new Date(Date.now() + defaultDays * 86400 * 1000).toISOString();
+
+  const insertData = {
+    type,
+    contrat_id: partner.contrat_id,
+    partenaire_id: partner.partenaire_id,
+    titre,
+    description: body.description || null,
+    categorie: body.categorie || null,
+    data: body.data || {},
+    contact_nom: body.contact_nom || partner.representant || null,
+    contact_email: body.contact_email || null,
+    contact_telephone: body.contact_telephone || null,
+    statut: 'en_attente',                    // toujours en attente quand créé par partenaire
+    date_expiration: dateExpiration,
+    created_by: 'partenaire',
+  };
+
+  let created;
+  try {
+    const arr = await supabaseInsert_('publications', insertData, env);
+    created = Array.isArray(arr) ? arr[0] : arr;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500);
+  }
+
+  return jsonResponseNoCache({
+    ok: true,
+    publication: created,
+    message: 'Publication créée. Elle est en cours de validation par l\'équipe Spacers.',
+  });
+}
+
+// ----------- GET /api/partner/:token/offres-emploi -----------
+async function handlePartnerOffresList(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const filter = `contrat_id=eq.${partner.contrat_id}&select=*&order=created_at.desc&limit=100`;
+  const rows = await supabaseQuery('offres_emploi', filter, env);
+
+  return jsonResponseNoCache({
+    contrat_id: partner.contrat_id,
+    offres: rows || [],
+    meta: { version: 'V4.7-partner', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- POST /api/partner/:token/offres-emploi -----------
+async function handlePartnerOffreCreate(token, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const titre = String(body.titre || '').trim();
+  if (!titre) return jsonResponseNoCache({ error: 'Titre obligatoire' }, 400);
+
+  const contact_email = String(body.contact_email || '').trim();
+  if (!contact_email || !contact_email.includes('@')) {
+    return jsonResponseNoCache({ error: 'Email contact obligatoire' }, 400);
+  }
+
+  const expirationDays = 60;
+  const dateExpiration = new Date(Date.now() + expirationDays * 86400 * 1000).toISOString();
+
+  const insertData = {
+    contrat_id: partner.contrat_id,
+    titre,
+    description: body.description || null,
+    type_contrat: body.type_contrat || null,
+    lieu: body.lieu || null,
+    salaire_indicatif: body.salaire_indicatif || null,
+    duree: body.duree || null,
+    experience_requise: body.experience_requise || null,
+    url_externe: body.url_externe || null,
+    contact_nom: body.contact_nom || partner.representant || null,
+    contact_email,
+    contact_telephone: body.contact_telephone || null,
+    statut: 'en_attente',                    // toujours en attente
+    date_expiration: dateExpiration,
+    created_by: 'partenaire',
+  };
+
+  let created;
+  try {
+    const arr = await supabaseInsert_('offres_emploi', insertData, env);
+    created = Array.isArray(arr) ? arr[0] : arr;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500);
+  }
+
+  return jsonResponseNoCache({
+    ok: true,
+    offre: created,
+    message: 'Annonce créée. Elle est en cours de validation par l\'équipe Spacers.',
+  });
 }
