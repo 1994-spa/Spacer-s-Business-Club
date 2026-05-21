@@ -85,6 +85,38 @@ async function handleApi(request, env, path) {
       m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)\/unlink-tickie$/);
       if (m) return await handleUnlinkTickie(m[1], m[2], env);
 
+      // Offres emploi — admin CRUD + modération
+      m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/create$/);
+      if (m) return await handleAdminOffreCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminOffreUpdate(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/publish$/);
+      if (m) return await handleAdminOffrePublish(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/reject$/);
+      if (m) return await handleAdminOffreReject(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
+      if (m) return await handleAdminOffreArchive(m[1], m[2], env);
+
+      // Publications (forum / proposition / echange) — admin CRUD + modération
+      m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/create$/);
+      if (m) return await handleAdminPublicationCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminPublicationUpdate(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/publish$/);
+      if (m) return await handleAdminPublicationPublish(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/reject$/);
+      if (m) return await handleAdminPublicationReject(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
+      if (m) return await handleAdminPublicationArchive(m[1], m[2], env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -119,6 +151,22 @@ async function handleApi(request, env, path) {
     m = path.match(/^\/api\/admin\/partner\/([a-zA-Z0-9_-]{16,})\/(CON-[0-9]+-[0-9]+)$/);
     if (m) return await handleAdminPartnerDetail(m[1], m[2], env);
 
+    // Admin offres — liste (filtre par statut via ?statut=)
+    m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminOffresList(m[1], url.searchParams, env);
+
+    // Admin offre — détail
+    m = path.match(/^\/api\/admin\/offre\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
+    if (m) return await handleAdminOffreDetail(m[1], m[2], env);
+
+    // Admin publications — liste (filtre par type + statut via query)
+    m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminPublicationsList(m[1], url.searchParams, env);
+
+    // Admin publication — détail
+    m = path.match(/^\/api\/admin\/publication\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
+    if (m) return await handleAdminPublicationDetail(m[1], m[2], env);
+
     // ===== TICKIE (Vivenu) routes =====
     if (path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/)) {
       const tm = path.match(/^\/api\/admin\/tickie\/ping\/([a-zA-Z0-9_-]{16,})$/);
@@ -147,6 +195,20 @@ async function handleApi(request, env, path) {
         'POST /api/admin/partner/:token/:contractId/create-tickie-customer',
         'POST /api/admin/partner/:token/:contractId/send-tickie-login',
         'POST /api/admin/partner/:token/:contractId/unlink-tickie',
+        'GET  /api/admin/offres/:token',
+        'GET  /api/admin/offre/:token/:offreId',
+        'POST /api/admin/offres/:token/create',
+        'POST /api/admin/offres/:token/:offreId/update',
+        'POST /api/admin/offres/:token/:offreId/publish',
+        'POST /api/admin/offres/:token/:offreId/reject',
+        'POST /api/admin/offres/:token/:offreId/archive',
+        'GET  /api/admin/publications/:token?type=X&statut=Y',
+        'GET  /api/admin/publication/:token/:id',
+        'POST /api/admin/publications/:token/create',
+        'POST /api/admin/publications/:token/:id/update',
+        'POST /api/admin/publications/:token/:id/publish',
+        'POST /api/admin/publications/:token/:id/reject',
+        'POST /api/admin/publications/:token/:id/archive',
         'GET  /api/admin/tickie/ping/:token',
         'GET  /api/admin/tickie/customers/:token',
         'GET  /api/admin/tickie/events/:token',
@@ -1020,4 +1082,505 @@ async function handleUnlinkTickie(token, contractId, env) {
     unlinked: oldId,
     note: 'Le customer Tickie n\'a PAS été supprimé côté Tickie. Le mapping est juste retiré.',
   });
+}
+
+// ============================================================================
+//  OFFRES D'EMPLOI — Sprint Annonces Phase A : Admin CRUD + modération
+// ============================================================================
+
+const OFFRE_STATUTS = ['en_attente', 'publie', 'refuse', 'expire', 'pourvue', 'archive'];
+
+// ----------- GET /api/admin/offres/:token?statut=... -----------
+async function handleAdminOffresList(token, queryParams, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const statutFilter = queryParams.get('statut'); // optionnel
+  let filter = 'select=*,contrats(id,partenaires(raison_sociale))&order=created_at.desc&limit=200';
+  if (statutFilter && OFFRE_STATUTS.includes(statutFilter)) {
+    filter = `statut=eq.${statutFilter}&` + filter;
+  }
+  const rows = await supabaseQuery('offres_emploi', filter, env);
+
+  const offres = (rows || []).map(o => ({
+    id: o.id,
+    contrat_id: o.contrat_id,
+    partenaire: o.contrats?.partenaires?.raison_sociale || '—',
+    titre: o.titre,
+    type_contrat: o.type_contrat || '',
+    lieu: o.lieu || '',
+    salaire_indicatif: o.salaire_indicatif || '',
+    statut: o.statut,
+    date_publication: o.date_publication,
+    date_expiration: o.date_expiration,
+    vues_count: o.vues_count || 0,
+    candidatures_count: o.candidatures_count || 0,
+    created_at: o.created_at,
+    created_by: o.created_by || '',
+  }));
+
+  // Stats par statut (pour les onglets/badges)
+  const stats = { en_attente: 0, publie: 0, refuse: 0, archive: 0, expire: 0, pourvue: 0, total: 0 };
+  // Si filtre actif, on doit aussi récupérer le count global. Pour simplifier, on fait un 2e query sans filtre.
+  if (statutFilter) {
+    const allRows = await supabaseQuery('offres_emploi', 'select=statut', env);
+    (allRows || []).forEach(r => {
+      stats[r.statut] = (stats[r.statut] || 0) + 1;
+      stats.total++;
+    });
+  } else {
+    offres.forEach(o => {
+      stats[o.statut] = (stats[o.statut] || 0) + 1;
+      stats.total++;
+    });
+  }
+
+  return jsonResponseNoCache({
+    offres,
+    stats,
+    filter: statutFilter || 'all',
+    meta: { version: 'V4.5', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- GET /api/admin/offre/:token/:offreId -----------
+async function handleAdminOffreDetail(token, offreId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery(
+    'offres_emploi',
+    `id=eq.${offreId}&select=*,contrats(id,partenaires(raison_sociale,siren))&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) {
+    return jsonResponseNoCache({ error: 'Offre introuvable' }, 404);
+  }
+  const o = rows[0];
+  return jsonResponseNoCache({
+    offre: {
+      id: o.id,
+      contrat_id: o.contrat_id,
+      partenaire: o.contrats?.partenaires?.raison_sociale || '—',
+      titre: o.titre,
+      description: o.description || '',
+      type_contrat: o.type_contrat || '',
+      lieu: o.lieu || '',
+      salaire_indicatif: o.salaire_indicatif || '',
+      duree: o.duree || '',
+      experience_requise: o.experience_requise || '',
+      url_externe: o.url_externe || '',
+      contact_nom: o.contact_nom || '',
+      contact_email: o.contact_email || '',
+      contact_telephone: o.contact_telephone || '',
+      statut: o.statut,
+      raison_refus: o.raison_refus || '',
+      date_publication: o.date_publication,
+      date_expiration: o.date_expiration,
+      vues_count: o.vues_count || 0,
+      candidatures_count: o.candidatures_count || 0,
+      created_by: o.created_by || '',
+      created_at: o.created_at,
+      updated_at: o.updated_at,
+    },
+  });
+}
+
+// ----------- POST /api/admin/offres/:token/create -----------
+// Body : { contrat_id, titre, description, type_contrat, lieu, ... }
+async function handleAdminOffreCreate(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const contrat_id = String(body.contrat_id || '').trim();
+  const titre = String(body.titre || '').trim();
+  if (!contrat_id || !contrat_id.match(/^CON-\d+-\d+$/)) {
+    return jsonResponseNoCache({ error: 'contrat_id invalide' }, 400);
+  }
+  if (!titre) {
+    return jsonResponseNoCache({ error: 'Titre obligatoire' }, 400);
+  }
+
+  // Default expiration : 60 jours
+  const expirationDays = Math.max(1, Math.min(365, Number(body.expiration_days) || 60));
+  const dateExpiration = new Date(Date.now() + expirationDays * 86400 * 1000).toISOString();
+
+  const insertData = {
+    contrat_id,
+    titre,
+    description: body.description || null,
+    type_contrat: body.type_contrat || null,
+    lieu: body.lieu || null,
+    salaire_indicatif: body.salaire_indicatif || null,
+    duree: body.duree || null,
+    experience_requise: body.experience_requise || null,
+    url_externe: body.url_externe || null,
+    contact_nom: body.contact_nom || null,
+    contact_email: body.contact_email || null,
+    contact_telephone: body.contact_telephone || null,
+    statut: body.publish_now ? 'publie' : 'en_attente',
+    date_publication: body.publish_now ? new Date().toISOString() : null,
+    date_expiration: dateExpiration,
+    created_by: 'admin',
+    created_by_admin_id: admin.id,
+  };
+
+  let created;
+  try {
+    const arr = await supabaseInsert_('offres_emploi', insertData, env);
+    created = Array.isArray(arr) ? arr[0] : arr;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500);
+  }
+
+  await logAudit_(admin.id, 'offre.create', 'offres_emploi', created.id, {
+    titre, contrat_id, statut: insertData.statut,
+  }, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, offre: created });
+}
+
+// ----------- POST /api/admin/offres/:token/:offreId/update -----------
+async function handleAdminOffreUpdate(token, offreId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const allowedFields = [
+    'titre', 'description', 'type_contrat', 'lieu', 'salaire_indicatif',
+    'duree', 'experience_requise', 'url_externe',
+    'contact_nom', 'contact_email', 'contact_telephone',
+    'date_expiration',
+  ];
+  const updateData = {};
+  for (const k of allowedFields) {
+    if (body[k] !== undefined) updateData[k] = body[k] || null;
+  }
+  if (Object.keys(updateData).length === 0) {
+    return jsonResponseNoCache({ error: 'Aucune mise à jour à appliquer' }, 400);
+  }
+
+  try {
+    await supabasePatch_('offres_emploi', `id=eq.${offreId}`, updateData, env);
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur update', detail: e.message }, 500);
+  }
+
+  await logAudit_(admin.id, 'offre.update', 'offres_emploi', offreId, updateData, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true });
+}
+
+// ----------- POST /api/admin/offres/:token/:offreId/publish -----------
+async function handleAdminOffrePublish(token, offreId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  await supabasePatch_('offres_emploi', `id=eq.${offreId}`, {
+    statut: 'publie',
+    date_publication: new Date().toISOString(),
+    raison_refus: null,
+  }, env);
+
+  await logAudit_(admin.id, 'offre.publish', 'offres_emploi', offreId, {}, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, statut: 'publie' });
+}
+
+// ----------- POST /api/admin/offres/:token/:offreId/reject -----------
+// Body : { raison }
+async function handleAdminOffreReject(token, offreId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const raison = String(body.raison || '').trim() || 'Refus admin';
+
+  await supabasePatch_('offres_emploi', `id=eq.${offreId}`, {
+    statut: 'refuse',
+    raison_refus: raison,
+    date_publication: null,
+  }, env);
+
+  await logAudit_(admin.id, 'offre.reject', 'offres_emploi', offreId, { raison }, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
+}
+
+// ----------- POST /api/admin/offres/:token/:offreId/archive -----------
+async function handleAdminOffreArchive(token, offreId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  await supabasePatch_('offres_emploi', `id=eq.${offreId}`, {
+    statut: 'archive',
+  }, env);
+
+  await logAudit_(admin.id, 'offre.archive', 'offres_emploi', offreId, {}, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, statut: 'archive' });
+}
+
+// Helper supabaseInsert_ (si pas déjà défini ailleurs)
+async function supabaseInsert_(table, data, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase credentials not configured');
+  }
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase insert ${res.status}: ${text.slice(0, 300)}`);
+  }
+  return res.json();
+}
+
+// ============================================================================
+//  PUBLICATIONS (forum / proposition / echange) — Sprint Publications Phase A
+// ============================================================================
+
+const PUB_TYPES = ['forum', 'proposition', 'echange'];
+const PUB_STATUTS = ['en_attente', 'publie', 'refuse', 'expire', 'archive'];
+
+// ----------- GET /api/admin/publications/:token?type=X&statut=Y -----------
+async function handleAdminPublicationsList(token, queryParams, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const typeFilter = queryParams.get('type');
+  const statutFilter = queryParams.get('statut');
+
+  let filters = [];
+  if (typeFilter && PUB_TYPES.includes(typeFilter)) filters.push(`type=eq.${typeFilter}`);
+  if (statutFilter && PUB_STATUTS.includes(statutFilter)) filters.push(`statut=eq.${statutFilter}`);
+  const baseQuery = filters.join('&') + (filters.length ? '&' : '') +
+    'select=*,partenaires(raison_sociale)&order=created_at.desc&limit=200';
+
+  const rows = await supabaseQuery('publications', baseQuery, env);
+
+  const publications = (rows || []).map(p => ({
+    id: p.id,
+    type: p.type,
+    contrat_id: p.contrat_id,
+    partenaire_id: p.partenaire_id,
+    partenaire: p.partenaires?.raison_sociale || '—',
+    titre: p.titre,
+    description: p.description || '',
+    categorie: p.categorie || '',
+    tags: p.tags || [],
+    data: p.data || {},
+    statut: p.statut,
+    raison_refus: p.raison_refus || '',
+    date_publication: p.date_publication,
+    date_expiration: p.date_expiration,
+    vues_count: p.vues_count || 0,
+    reponses_count: p.reponses_count || 0,
+    contact_email: p.contact_email || '',
+    contact_nom: p.contact_nom || '',
+    created_by: p.created_by || '',
+    created_at: p.created_at,
+  }));
+
+  // Stats globales par type/statut (utile pour les badges sidebar)
+  const allRows = await supabaseQuery('publications', 'select=type,statut', env);
+  const stats = {};
+  PUB_TYPES.forEach(t => {
+    stats[t] = { en_attente: 0, publie: 0, refuse: 0, archive: 0, expire: 0, total: 0 };
+  });
+  (allRows || []).forEach(r => {
+    if (!stats[r.type]) return;
+    stats[r.type][r.statut] = (stats[r.type][r.statut] || 0) + 1;
+    stats[r.type].total++;
+  });
+
+  return jsonResponseNoCache({
+    publications,
+    stats,
+    filter: { type: typeFilter || 'all', statut: statutFilter || 'all' },
+    meta: { version: 'V4.6', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- GET /api/admin/publication/:token/:id -----------
+async function handleAdminPublicationDetail(token, pubId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery(
+    'publications',
+    `id=eq.${pubId}&select=*,partenaires(id,raison_sociale,siren)&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Publication introuvable' }, 404);
+
+  const p = rows[0];
+  return jsonResponseNoCache({
+    publication: {
+      id: p.id,
+      type: p.type,
+      contrat_id: p.contrat_id,
+      partenaire_id: p.partenaire_id,
+      partenaire: p.partenaires?.raison_sociale || '—',
+      titre: p.titre,
+      description: p.description || '',
+      categorie: p.categorie || '',
+      tags: p.tags || [],
+      data: p.data || {},
+      contact_nom: p.contact_nom || '',
+      contact_email: p.contact_email || '',
+      contact_telephone: p.contact_telephone || '',
+      statut: p.statut,
+      raison_refus: p.raison_refus || '',
+      date_publication: p.date_publication,
+      date_expiration: p.date_expiration,
+      vues_count: p.vues_count || 0,
+      reponses_count: p.reponses_count || 0,
+      created_by: p.created_by || '',
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    },
+  });
+}
+
+// ----------- POST /api/admin/publications/:token/create -----------
+async function handleAdminPublicationCreate(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const type = String(body.type || '').trim();
+  if (!PUB_TYPES.includes(type)) {
+    return jsonResponseNoCache({ error: 'type invalide', expected: PUB_TYPES }, 400);
+  }
+  const titre = String(body.titre || '').trim();
+  if (!titre) return jsonResponseNoCache({ error: 'Titre obligatoire' }, 400);
+
+  const contrat_id = String(body.contrat_id || '').trim();
+  let partenaire_id = null;
+  if (contrat_id) {
+    if (!contrat_id.match(/^CON-\d+-\d+$/)) {
+      return jsonResponseNoCache({ error: 'contrat_id invalide' }, 400);
+    }
+    // Récupérer partenaire_id du contrat
+    const contrats = await supabaseQuery('contrats', `id=eq.${contrat_id}&select=partenaire_id&limit=1`, env);
+    if (contrats && contrats[0]) partenaire_id = contrats[0].partenaire_id;
+  }
+
+  // Default expiration : 90 jours pour forum/echange, 180j pour proposition
+  const defaultDays = type === 'proposition' ? 180 : 90;
+  const expirationDays = Math.max(1, Math.min(365, Number(body.expiration_days) || defaultDays));
+  const dateExpiration = new Date(Date.now() + expirationDays * 86400 * 1000).toISOString();
+
+  const insertData = {
+    type,
+    contrat_id: contrat_id || null,
+    partenaire_id,
+    titre,
+    description: body.description || null,
+    categorie: body.categorie || null,
+    tags: body.tags && Array.isArray(body.tags) ? body.tags : null,
+    data: body.data || {},
+    contact_nom: body.contact_nom || null,
+    contact_email: body.contact_email || null,
+    contact_telephone: body.contact_telephone || null,
+    statut: body.publish_now ? 'publie' : 'en_attente',
+    date_publication: body.publish_now ? new Date().toISOString() : null,
+    date_expiration: dateExpiration,
+    created_by: 'admin',
+    created_by_admin_id: admin.id,
+  };
+
+  let created;
+  try {
+    const arr = await supabaseInsert_('publications', insertData, env);
+    created = Array.isArray(arr) ? arr[0] : arr;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500);
+  }
+
+  await logAudit_(admin.id, 'publication.create', 'publications', created.id, {
+    type, titre, contrat_id, statut: insertData.statut,
+  }, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, publication: created });
+}
+
+// ----------- POST /api/admin/publications/:token/:id/update -----------
+async function handleAdminPublicationUpdate(token, pubId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const allowedFields = [
+    'titre', 'description', 'categorie', 'tags', 'data',
+    'contact_nom', 'contact_email', 'contact_telephone',
+    'date_expiration',
+  ];
+  const updateData = {};
+  for (const k of allowedFields) {
+    if (body[k] !== undefined) updateData[k] = body[k] || null;
+  }
+  if (Object.keys(updateData).length === 0) {
+    return jsonResponseNoCache({ error: 'Aucune mise à jour à appliquer' }, 400);
+  }
+
+  try {
+    await supabasePatch_('publications', `id=eq.${pubId}`, updateData, env);
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur update', detail: e.message }, 500);
+  }
+
+  await logAudit_(admin.id, 'publication.update', 'publications', pubId, updateData, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true });
+}
+
+// ----------- POST /api/admin/publications/:token/:id/publish -----------
+async function handleAdminPublicationPublish(token, pubId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  await supabasePatch_('publications', `id=eq.${pubId}`, {
+    statut: 'publie',
+    date_publication: new Date().toISOString(),
+    raison_refus: null,
+  }, env);
+
+  await logAudit_(admin.id, 'publication.publish', 'publications', pubId, {}, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, statut: 'publie' });
+}
+
+// ----------- POST /api/admin/publications/:token/:id/reject -----------
+async function handleAdminPublicationReject(token, pubId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const raison = String(body.raison || '').trim() || 'Refus admin';
+
+  await supabasePatch_('publications', `id=eq.${pubId}`, {
+    statut: 'refuse',
+    raison_refus: raison,
+    date_publication: null,
+  }, env);
+
+  await logAudit_(admin.id, 'publication.reject', 'publications', pubId, { raison }, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
+}
+
+// ----------- POST /api/admin/publications/:token/:id/archive -----------
+async function handleAdminPublicationArchive(token, pubId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  await supabasePatch_('publications', `id=eq.${pubId}`, { statut: 'archive' }, env);
+  await logAudit_(admin.id, 'publication.archive', 'publications', pubId, {}, env).catch(() => {});
+
+  return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
