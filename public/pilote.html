@@ -267,6 +267,16 @@
       <span class="sb-ico">⌘</span>Forum
     </a>
     <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">◈</span>Propositions business
+    </a>
+    <a class="sb-link" onclick="showPage('annonces')">
+      <span class="sb-ico">◐</span>Annonces emploi
+      <span class="sb-badge" id="sb-badge-annonces" style="display:none;"></span>
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
+      <span class="sb-ico">⌬</span>Échanges business
+    </a>
+    <a class="sb-link" onclick="showPage('soon')">
       <span class="sb-ico">◇</span>Événements
     </a>
     <a class="sb-link" onclick="showPage('soon')">
@@ -586,6 +596,38 @@
     </div>
   </section>
 
+  <!-- ============ PAGE ANNONCES EMPLOI ============ -->
+  <section class="page" id="page-annonces" style="display:none;">
+    <div class="topbar">
+      <div style="font-family:var(--font-display);font-weight:600;font-size:22px;">Annonces emploi</div>
+      <div style="flex:1;"></div>
+      <button class="btn primary" onclick="openOffreModal()">+ Nouvelle annonce</button>
+    </div>
+    <div class="content">
+
+      <!-- Filtres -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn ghost sm offre-filter active" data-filter="all" onclick="loadOffres('all')">Toutes <span id="cnt-all" style="opacity:.6;">—</span></button>
+          <button class="btn ghost sm offre-filter" data-filter="en_attente" onclick="loadOffres('en_attente')">⏱ En attente <span id="cnt-en_attente" style="background:var(--gold);color:white;border-radius:10px;padding:2px 8px;font-size:11px;margin-left:4px;">—</span></button>
+          <button class="btn ghost sm offre-filter" data-filter="publie" onclick="loadOffres('publie')">✓ Publiées <span id="cnt-publie" style="opacity:.6;">—</span></button>
+          <button class="btn ghost sm offre-filter" data-filter="refuse" onclick="loadOffres('refuse')">✕ Refusées <span id="cnt-refuse" style="opacity:.6;">—</span></button>
+          <button class="btn ghost sm offre-filter" data-filter="archive" onclick="loadOffres('archive')">Archives <span id="cnt-archive" style="opacity:.6;">—</span></button>
+        </div>
+      </div>
+
+      <!-- Liste -->
+      <div class="panel">
+        <div style="padding:18px;">
+          <div id="offres-list" style="min-height:200px;">
+            <div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ============ PAGE PLACEHOLDER ============ -->
   <section class="page" id="page-soon">
     <div class="content">
@@ -600,7 +642,102 @@
 
 </main>
 
-<!-- ============ MODALE TICKIE ============ -->
+<!-- ============ MODALE OFFRE EMPLOI (créer/éditer) ============ -->
+<div id="offre-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="background:var(--bg);border-radius:14px;max-width:680px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
+    <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;" id="offre-modal-title">Nouvelle annonce d'emploi</div>
+    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:20px;">Renseigne le contenu de l'annonce. Tu pourras la publier directement ou la laisser en brouillon.</div>
+
+    <div style="display:grid;gap:14px;">
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Partenaire concerné *
+        <select id="offre-input-contrat" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
+          <option value="">— Sélectionner —</option>
+        </select>
+      </label>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Titre du poste *
+        <input id="offre-input-titre" type="text" placeholder="ex: Développeur Full-Stack" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Description
+        <textarea id="offre-input-description" rows="5" placeholder="Mission, profil recherché, environnement…" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+      </label>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Type de contrat
+          <select id="offre-input-type" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:white;">
+            <option value="">—</option>
+            <option value="CDI">CDI</option>
+            <option value="CDD">CDD</option>
+            <option value="Stage">Stage</option>
+            <option value="Alternance">Alternance</option>
+            <option value="Apprentissage">Apprentissage</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Intérim">Intérim</option>
+          </select>
+        </label>
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Lieu
+          <input id="offre-input-lieu" type="text" placeholder="Toulouse / Remote / Hybride" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Durée (si CDD/stage)
+          <input id="offre-input-duree" type="text" placeholder="ex: 6 mois" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Expérience requise
+          <input id="offre-input-experience" type="text" placeholder="Junior / Confirmé / Senior" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+      </div>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Salaire indicatif
+        <input id="offre-input-salaire" type="text" placeholder="ex: 35-40k€ brut/an ou À négocier" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">URL externe (site carrière partenaire)
+        <input id="offre-input-url" type="url" placeholder="https://www.entreprise.fr/carrieres/poste-xxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+      </label>
+
+      <div style="border-top:1px solid var(--line);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--ink-muted);">Contact pour candidatures</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Nom du contact RH
+            <input id="offre-input-contact-nom" type="text" placeholder="Marie Dupont" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+          <label style="font-size:12px;color:var(--ink-muted);font-weight:500;">Email *
+            <input id="offre-input-contact-email" type="email" placeholder="rh@entreprise.fr" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+          </label>
+        </div>
+        <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:block;margin-top:10px;">Téléphone (optionnel)
+          <input id="offre-input-contact-tel" type="tel" placeholder="06 12 34 56 78" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;">
+        </label>
+      </div>
+
+      <label style="font-size:12px;color:var(--ink-muted);font-weight:500;display:flex;align-items:center;gap:8px;background:#f3f6fa;padding:10px 14px;border-radius:8px;">
+        <input id="offre-input-publish-now" type="checkbox" style="width:16px;height:16px;">
+        Publier immédiatement (sans passer par "en attente")
+      </label>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+      <button class="btn ghost" onclick="closeOffreModal()">Annuler</button>
+      <button class="btn primary" id="offre-modal-submit" onclick="submitOffre()">Créer l'annonce</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODALE REFUS ============ -->
+<div id="reject-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:14px;max-width:440px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
+    <div style="font-family:var(--font-display);font-size:20px;font-weight:600;margin-bottom:6px;">Refuser cette annonce</div>
+    <div style="color:var(--ink-muted);font-size:13px;margin-bottom:16px;">Indique la raison du refus (visible par le partenaire dans son espace).</div>
+    <textarea id="reject-input-raison" rows="3" placeholder="ex: Description trop vague, à compléter" style="display:block;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+      <button class="btn ghost" onclick="closeRejectModal()">Annuler</button>
+      <button class="btn primary" id="reject-modal-submit" onclick="confirmReject()" style="background:var(--red);">Refuser</button>
+    </div>
+  </div>
+</div>
 <div id="tickie-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--bg);border-radius:14px;max-width:480px;width:100%;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
     <div style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:6px;">Créer un compte Tickie</div>
@@ -1134,14 +1271,21 @@
   //  Navigation
   // =========================================================================
   function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => {
+      p.classList.remove('active');
+      p.style.display = '';
+    });
     const target = document.getElementById('page-' + name);
-    if (target) target.classList.add('active');
+    if (target) {
+      target.classList.add('active');
+      target.style.display = '';
+    }
 
     const bc = document.getElementById('breadcrumb-current');
     const labels = {
       'home': 'Accueil',
       'partners': 'Partenaires',
+      'annonces': 'Annonces emploi',
       'soon': 'Module en préparation',
     };
     if (name !== 'partner-detail') {
@@ -1153,10 +1297,288 @@
     if (activeSb && activeSb.classList.contains('sb-link')) activeSb.classList.add('active');
     else if (name === 'partner-detail') document.querySelector('[onclick="showPage(\'partners\')"]').classList.add('active');
 
-    // Lazy load partenaires à la première visite
+    // Lazy load
     if (name === 'partners') loadPartners();
+    if (name === 'annonces') loadOffres(OFFRE_CURRENT_FILTER || 'all');
 
     window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  // =========================================================================
+  //  ANNONCES EMPLOI
+  // =========================================================================
+  let OFFRE_CURRENT_FILTER = 'all';
+  let OFFRE_EDITING_ID = null;
+  let OFFRES_CACHE = [];
+
+  async function loadOffres(filter) {
+    OFFRE_CURRENT_FILTER = filter;
+    // Update filter buttons UI
+    document.querySelectorAll('.offre-filter').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+    $('offres-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Chargement…</div>';
+
+    const url = filter === 'all'
+      ? `/api/admin/offres/${ADMIN_TOKEN}`
+      : `/api/admin/offres/${ADMIN_TOKEN}?statut=${filter}`;
+    try {
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.error) {
+        $('offres-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur : ${json.error}</div>`;
+        return;
+      }
+      OFFRES_CACHE = json.offres || [];
+      renderOffres(json.offres, json.stats);
+    } catch (e) {
+      $('offres-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);">Erreur réseau : ${e.message}</div>`;
+    }
+  }
+
+  function renderOffres(offres, stats) {
+    // Update badges
+    $('cnt-all').textContent = stats.total || 0;
+    ['en_attente','publie','refuse','archive'].forEach(s => {
+      const el = $('cnt-' + s);
+      if (el) el.textContent = stats[s] || 0;
+    });
+    // Sidebar badge si en_attente > 0
+    const sbBadge = $('sb-badge-annonces');
+    if (sbBadge) {
+      const wait = stats.en_attente || 0;
+      if (wait > 0) { sbBadge.style.display = 'inline-block'; sbBadge.textContent = wait; sbBadge.style.background = 'var(--gold)'; sbBadge.style.color = 'white'; }
+      else sbBadge.style.display = 'none';
+    }
+
+    if (!offres || offres.length === 0) {
+      $('offres-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-muted);">Aucune annonce dans cette catégorie</div>';
+      return;
+    }
+
+    const statutColors = {
+      en_attente: { bg: '#fff8e1', color: '#a36b00', label: '⏱ En attente' },
+      publie:     { bg: '#e8f5e9', color: '#2e7d32', label: '✓ Publiée' },
+      refuse:     { bg: '#ffebee', color: '#c62828', label: '✕ Refusée' },
+      archive:    { bg: '#f3f6fa', color: '#5b6573', label: 'Archivée' },
+      expire:     { bg: '#f3f6fa', color: '#5b6573', label: 'Expirée' },
+      pourvue:    { bg: '#e3f2fd', color: '#1565c0', label: 'Pourvue' },
+    };
+
+    const html = `<table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--line);">
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Titre / Partenaire</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Type</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Lieu</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;">Statut</th>
+          <th style="padding:10px 12px;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${offres.map(o => {
+          const st = statutColors[o.statut] || statutColors.en_attente;
+          const actions = [];
+          if (o.statut === 'en_attente') {
+            actions.push(`<button class="btn primary sm" style="background:var(--green);" onclick="publishOffre('${o.id}')">✓ Publier</button>`);
+            actions.push(`<button class="btn ghost sm" style="color:var(--red);" onclick="openRejectModal('${o.id}')">✕ Refuser</button>`);
+          }
+          actions.push(`<button class="btn ghost sm" onclick="editOffre('${o.id}')">✎ Éditer</button>`);
+          if (o.statut !== 'archive') actions.push(`<button class="btn ghost sm" onclick="archiveOffre('${o.id}')" style="color:var(--ink-muted);">🗑</button>`);
+          return `
+            <tr style="border-bottom:1px solid var(--line);">
+              <td style="padding:14px 12px;">
+                <div style="font-weight:600;font-size:14px;">${escapeHtml(o.titre)}</div>
+                <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;">${escapeHtml(o.partenaire)}</div>
+              </td>
+              <td style="padding:14px 12px;font-size:13px;">${escapeHtml(o.type_contrat || '—')}</td>
+              <td style="padding:14px 12px;font-size:13px;">${escapeHtml(o.lieu || '—')}</td>
+              <td style="padding:14px 12px;"><span style="background:${st.bg};color:${st.color};padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;">${st.label}</span></td>
+              <td style="padding:14px 12px;text-align:right;white-space:nowrap;"><div style="display:inline-flex;gap:6px;">${actions.join('')}</div></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>`;
+    $('offres-list').innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Modale création/édition
+  async function openOffreModal(offreId) {
+    OFFRE_EDITING_ID = offreId || null;
+    $('offre-modal-title').textContent = offreId ? 'Modifier l\'annonce' : 'Nouvelle annonce d\'emploi';
+    $('offre-modal-submit').textContent = offreId ? 'Enregistrer' : 'Créer l\'annonce';
+
+    // Pré-charger PARTNERS_CACHE si pas encore en cache
+    if (!PARTNERS_CACHE) {
+      await loadPartners();
+    }
+
+    // Remplir le select partenaires
+    const sel = $('offre-input-contrat');
+    sel.innerHTML = '<option value="">— Sélectionner —</option>';
+    const partners = (PARTNERS_CACHE && PARTNERS_CACHE.partners) || [];
+    partners.forEach(p => {
+      sel.innerHTML += `<option value="${p.contrat_id}">${escapeHtml(p.raison_sociale)} — ${p.contrat_id}</option>`;
+    });
+
+    // Reset / fill
+    if (offreId) {
+      const o = OFFRES_CACHE.find(x => x.id === offreId);
+      // Pour edit on a besoin du détail complet
+      fetchOffreDetail(offreId).then(detail => {
+        if (!detail) return;
+        $('offre-input-contrat').value = detail.contrat_id || '';
+        $('offre-input-contrat').disabled = true;
+        $('offre-input-titre').value = detail.titre || '';
+        $('offre-input-description').value = detail.description || '';
+        $('offre-input-type').value = detail.type_contrat || '';
+        $('offre-input-lieu').value = detail.lieu || '';
+        $('offre-input-duree').value = detail.duree || '';
+        $('offre-input-experience').value = detail.experience_requise || '';
+        $('offre-input-salaire').value = detail.salaire_indicatif || '';
+        $('offre-input-url').value = detail.url_externe || '';
+        $('offre-input-contact-nom').value = detail.contact_nom || '';
+        $('offre-input-contact-email').value = detail.contact_email || '';
+        $('offre-input-contact-tel').value = detail.contact_telephone || '';
+        $('offre-input-publish-now').checked = false;
+        $('offre-input-publish-now').parentElement.style.display = 'none';
+      });
+    } else {
+      $('offre-input-contrat').disabled = false;
+      ['titre','description','type','lieu','duree','experience','salaire','url','contact-nom','contact-email','contact-tel'].forEach(k => {
+        const el = $('offre-input-' + k);
+        if (el) el.value = '';
+      });
+      $('offre-input-publish-now').checked = false;
+      $('offre-input-publish-now').parentElement.style.display = 'flex';
+    }
+    $('offre-modal').style.display = 'flex';
+  }
+
+  function closeOffreModal() {
+    $('offre-modal').style.display = 'none';
+    OFFRE_EDITING_ID = null;
+  }
+
+  async function fetchOffreDetail(offreId) {
+    try {
+      const res = await fetch(`/api/admin/offre/${ADMIN_TOKEN}/${offreId}`);
+      const json = await res.json();
+      return json.offre;
+    } catch (e) {
+      toast('Erreur chargement offre', 'error');
+      return null;
+    }
+  }
+
+  async function submitOffre() {
+    const contrat_id = $('offre-input-contrat').value.trim();
+    const titre = $('offre-input-titre').value.trim();
+    const contact_email = $('offre-input-contact-email').value.trim();
+
+    if (!OFFRE_EDITING_ID && !contrat_id) { toast('Sélectionne un partenaire', 'error'); return; }
+    if (!titre) { toast('Titre obligatoire', 'error'); return; }
+    if (!contact_email || !contact_email.includes('@')) { toast('Email contact invalide', 'error'); return; }
+
+    const body = {
+      titre,
+      description: $('offre-input-description').value.trim(),
+      type_contrat: $('offre-input-type').value,
+      lieu: $('offre-input-lieu').value.trim(),
+      duree: $('offre-input-duree').value.trim(),
+      experience_requise: $('offre-input-experience').value.trim(),
+      salaire_indicatif: $('offre-input-salaire').value.trim(),
+      url_externe: $('offre-input-url').value.trim(),
+      contact_nom: $('offre-input-contact-nom').value.trim(),
+      contact_email,
+      contact_telephone: $('offre-input-contact-tel').value.trim(),
+    };
+
+    const btn = $('offre-modal-submit');
+    btn.disabled = true;
+    btn.textContent = OFFRE_EDITING_ID ? 'Enregistrement…' : 'Création…';
+
+    try {
+      let url, payload;
+      if (OFFRE_EDITING_ID) {
+        url = `/api/admin/offres/${ADMIN_TOKEN}/${OFFRE_EDITING_ID}/update`;
+        payload = body;
+      } else {
+        url = `/api/admin/offres/${ADMIN_TOKEN}/create`;
+        payload = { ...body, contrat_id, publish_now: $('offre-input-publish-now').checked };
+      }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        toast(json.error || 'Erreur', 'error');
+        btn.disabled = false;
+        btn.textContent = OFFRE_EDITING_ID ? 'Enregistrer' : 'Créer l\'annonce';
+        return;
+      }
+      toast(OFFRE_EDITING_ID ? '✅ Annonce mise à jour' : '✅ Annonce créée', 'success');
+      closeOffreModal();
+      loadOffres(OFFRE_CURRENT_FILTER);
+    } catch (e) {
+      toast('Erreur réseau', 'error');
+      btn.disabled = false;
+      btn.textContent = OFFRE_EDITING_ID ? 'Enregistrer' : 'Créer l\'annonce';
+    }
+  }
+
+  function editOffre(id) { openOffreModal(id); }
+
+  async function publishOffre(id) {
+    if (!confirm('Publier cette annonce ? Elle deviendra visible par les bénévoles.')) return;
+    try {
+      const res = await fetch(`/api/admin/offres/${ADMIN_TOKEN}/${id}/publish`, { method: 'POST' });
+      const json = await res.json();
+      if (json.error) { toast(json.error, 'error'); return; }
+      toast('✅ Annonce publiée', 'success');
+      loadOffres(OFFRE_CURRENT_FILTER);
+    } catch (e) { toast('Erreur réseau', 'error'); }
+  }
+
+  let REJECT_OFFRE_ID = null;
+  function openRejectModal(id) {
+    REJECT_OFFRE_ID = id;
+    $('reject-input-raison').value = '';
+    $('reject-modal').style.display = 'flex';
+  }
+  function closeRejectModal() { $('reject-modal').style.display = 'none'; REJECT_OFFRE_ID = null; }
+  async function confirmReject() {
+    const raison = $('reject-input-raison').value.trim();
+    if (!REJECT_OFFRE_ID) return;
+    try {
+      const res = await fetch(`/api/admin/offres/${ADMIN_TOKEN}/${REJECT_OFFRE_ID}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raison }),
+      });
+      const json = await res.json();
+      if (json.error) { toast(json.error, 'error'); return; }
+      toast('✅ Annonce refusée', 'success');
+      closeRejectModal();
+      loadOffres(OFFRE_CURRENT_FILTER);
+    } catch (e) { toast('Erreur réseau', 'error'); }
+  }
+
+  async function archiveOffre(id) {
+    if (!confirm('Archiver cette annonce ?')) return;
+    try {
+      const res = await fetch(`/api/admin/offres/${ADMIN_TOKEN}/${id}/archive`, { method: 'POST' });
+      const json = await res.json();
+      if (json.error) { toast(json.error, 'error'); return; }
+      toast('✅ Annonce archivée', 'success');
+      loadOffres(OFFRE_CURRENT_FILTER);
+    } catch (e) { toast('Erreur réseau', 'error'); }
   }
 
   // Démarrage
