@@ -1749,6 +1749,7 @@ async function handlePartnerOffreCreate(token, body, env) {
     statut: 'en_attente',                    // toujours en attente
     date_expiration: dateExpiration,
     created_by: 'partenaire',
+    metadata: body.metadata || {},           // logo_b64, date_match, les_plus, source
   };
 
   let created;
