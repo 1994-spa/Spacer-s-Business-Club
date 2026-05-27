@@ -129,6 +129,10 @@ async function handleApi(request, env, path) {
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
       if (m) return await handlePartnerOffreCreate(m[1], body || {}, env);
 
+      // Public — soumission de candidature (Sprint C.1)
+      m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})\/candidature$/);
+      if (m) return await handlePublicCandidatureCreate(m[1], body || {}, env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -185,6 +189,14 @@ async function handleApi(request, env, path) {
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
     if (m) return await handlePartnerOffresList(m[1], env);
+
+    // Public — liste des annonces publiées (Sprint C.1, sans auth, pour app bénévole + page publique)
+    m = path.match(/^\/api\/public\/offres-emploi$/);
+    if (m) return await handlePublicOffresList(url.searchParams, env);
+
+    // Public — détail offre + incrément vues_count
+    m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})$/);
+    if (m) return await handlePublicOffreDetail(m[1], env);
 
     // ===== Assets statiques (PDF Minute de l'emploi en fallback) =====
     if (path === '/assets/minute-emploi-template.pdf' || path === '/minute_de_l_emploi_template.pdf') {
@@ -1771,5 +1783,183 @@ async function handlePartnerOffreCreate(token, body, env) {
     ok: true,
     offre: created,
     message: 'Annonce créée. Elle est en cours de validation par l\'équipe Spacers.',
+  });
+}
+
+// ============================================================================
+//  PUBLIC ENDPOINTS — Sprint C.1 : tuyau emploi public + candidatures
+//  Pas d'auth (sauf rate limit éventuel via Cloudflare WAF en couche au-dessus)
+//  Consommé par l'app bénévole (cross-origin) et toute page publique future
+// ============================================================================
+
+// ----------- GET /api/public/offres-emploi -----------
+// Liste publique des annonces validées (statut=publie + non-expirées)
+// Pas de pagination V1 (limit 100), filtres côté client
+async function handlePublicOffresList(queryParams, env) {
+  const nowIso = new Date().toISOString();
+  // Filtre : publie + non expirée (date_expiration null OU > now)
+  const filter =
+    `statut=eq.publie` +
+    `&or=(date_expiration.is.null,date_expiration.gt.${encodeURIComponent(nowIso)})` +
+    `&select=id,titre,description,type_contrat,lieu,duree,salaire_indicatif,experience_requise,` +
+    `url_externe,contact_nom,contact_email,contact_telephone,date_publication,metadata,` +
+    `contrats(id,partenaires(raison_sociale,niveau))` +
+    `&order=date_publication.desc&limit=100`;
+
+  const rows = await supabaseQuery('offres_emploi', filter, env);
+
+  // Normalisation pour matcher le format attendu par l'app bénévole
+  // (mêmes noms de champs que sa table annonces_emploi pour minimiser le code de merge)
+  const offres = (rows || []).map(o => {
+    const meta = o.metadata || {};
+    return {
+      id: o.id,
+      type: 'partenaire',
+      titre: o.titre,
+      description: o.description || '',
+      type_contrat: o.type_contrat || '',
+      lieu: o.lieu || '',
+      duree: o.duree || '',
+      salaire_indicatif: o.salaire_indicatif || '',
+      experience_requise: o.experience_requise || '',
+      partenaire_nom: o.contrats?.partenaires?.raison_sociale || '',
+      partenaire_niveau: o.contrats?.partenaires?.niveau || '',
+      partenaire_logo_url: meta.logo_b64 || null,  // base64 data URL, OK pour <img src>
+      contact_nom: o.contact_nom || '',
+      contact_email: o.contact_email || '',
+      contact_tel: o.contact_telephone || '',
+      contact_lien: o.url_externe || '',
+      publiee_le: o.date_publication,
+      les_plus: meta.les_plus || '',
+      date_match: meta.date_match || '',
+      source: 'spacers-business-club',
+    };
+  });
+
+  return jsonResponseNoCache({
+    offres,
+    count: offres.length,
+    meta: { version: 'V4.8-public', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- GET /api/public/offre/:id -----------
+// Détail d'une offre + incrémente vues_count (fire-and-forget)
+async function handlePublicOffreDetail(offreId, env) {
+  const rows = await supabaseQuery(
+    'offres_emploi',
+    `id=eq.${offreId}&statut=eq.publie&select=*,contrats(id,partenaires(raison_sociale,niveau))&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) {
+    return jsonResponseNoCache({ error: 'Offre introuvable ou non publiée' }, 404);
+  }
+  const o = rows[0];
+  const meta = o.metadata || {};
+
+  // Increment vues_count en fire-and-forget (n'attend pas la réponse)
+  fetch(`${env.SUPABASE_URL}/rest/v1/offres_emploi?id=eq.${offreId}`, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+    body: JSON.stringify({ vues_count: (o.vues_count || 0) + 1 }),
+  }).catch(() => {});
+
+  return jsonResponseNoCache({
+    offre: {
+      id: o.id,
+      type: 'partenaire',
+      titre: o.titre,
+      description: o.description || '',
+      type_contrat: o.type_contrat || '',
+      lieu: o.lieu || '',
+      duree: o.duree || '',
+      salaire_indicatif: o.salaire_indicatif || '',
+      experience_requise: o.experience_requise || '',
+      partenaire_nom: o.contrats?.partenaires?.raison_sociale || '',
+      partenaire_niveau: o.contrats?.partenaires?.niveau || '',
+      partenaire_logo_url: meta.logo_b64 || null,
+      contact_nom: o.contact_nom || '',
+      contact_email: o.contact_email || '',
+      contact_tel: o.contact_telephone || '',
+      contact_lien: o.url_externe || '',
+      publiee_le: o.date_publication,
+      les_plus: meta.les_plus || '',
+      date_match: meta.date_match || '',
+    },
+  });
+}
+
+// ----------- POST /api/public/offre/:id/candidature -----------
+// Body : { candidat_email, candidat_nom, candidat_prenom, candidat_telephone?, message?, cv_url?, source?, benevole_id?, benevole_pseudo? }
+async function handlePublicCandidatureCreate(offreId, body, env) {
+  // 1. Vérifier que l'offre existe et est publiée
+  const offreRows = await supabaseQuery(
+    'offres_emploi',
+    `id=eq.${offreId}&statut=eq.publie&select=id,contrat_id,titre,candidatures_count,contact_email&limit=1`,
+    env
+  );
+  if (!offreRows || offreRows.length === 0) {
+    return jsonResponseNoCache({ error: 'Offre introuvable ou non publiée' }, 404);
+  }
+  const offre = offreRows[0];
+
+  // 2. Validation body
+  const candidat_email = String(body.candidat_email || '').trim().toLowerCase();
+  const candidat_nom = String(body.candidat_nom || '').trim();
+  const candidat_prenom = String(body.candidat_prenom || '').trim();
+
+  if (!candidat_email || !candidat_email.includes('@') || candidat_email.length < 5) {
+    return jsonResponseNoCache({ error: 'Email candidat invalide' }, 400);
+  }
+  if (!candidat_nom) {
+    return jsonResponseNoCache({ error: 'Nom du candidat obligatoire' }, 400);
+  }
+  if (!candidat_prenom) {
+    return jsonResponseNoCache({ error: 'Prénom du candidat obligatoire' }, 400);
+  }
+
+  // 3. Insert candidature
+  const insertData = {
+    offre_id: offreId,
+    contrat_id: offre.contrat_id || null,
+    candidat_email,
+    candidat_nom,
+    candidat_prenom,
+    candidat_telephone: String(body.candidat_telephone || '').trim() || null,
+    message: body.message ? String(body.message).trim() : null,
+    cv_url: body.cv_url ? String(body.cv_url).trim() : null,
+    source: String(body.source || 'app-benevole').slice(0, 30),
+    benevole_id: body.benevole_id ? String(body.benevole_id).slice(0, 64) : null,
+    benevole_pseudo: body.benevole_pseudo ? String(body.benevole_pseudo).slice(0, 100) : null,
+    statut: 'nouveau',
+  };
+
+  let created;
+  try {
+    const arr = await supabaseInsert_('candidatures', insertData, env);
+    created = Array.isArray(arr) ? arr[0] : arr;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création candidature', detail: e.message }, 500);
+  }
+
+  // 4. Incrémenter candidatures_count sur l'offre (fire-and-forget)
+  fetch(`${env.SUPABASE_URL}/rest/v1/offres_emploi?id=eq.${offreId}`, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+    body: JSON.stringify({ candidatures_count: (offre.candidatures_count || 0) + 1 }),
+  }).catch(() => {});
+
+  // 5. TODO Sprint C.2 — déclencher email Resend vers le partenaire (offre.contact_email) + email confirmation au candidat
+  //    Pour C.1, on retourne juste OK avec l'ID de la candidature
+
+  return jsonResponseNoCache({
+    ok: true,
+    candidature: {
+      id: created.id,
+      offre_titre: offre.titre,
+      candidat_email,
+      created_at: created.created_at,
+    },
+    message: 'Candidature envoyée. Le partenaire sera notifié sous peu.',
   });
 }
