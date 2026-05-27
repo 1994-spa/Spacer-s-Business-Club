@@ -421,6 +421,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">◐</span><span class="label">Annonces emploi</span>
         <span class="badge" id="sb-badge-attente" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="candidatures" onclick="switchTab('candidatures')">
+        <span class="ico">⌖</span><span class="label">Candidatures</span>
+        <span class="badge" id="sb-badge-cand-nouveau" hidden>0</span>
+      </button>
       <button class="sb-link soon" data-tab="partenaires" onclick="switchTab('partenaires')">
         <span class="ico">◈</span><span class="label">Partenaires</span>
       </button>
@@ -482,6 +486,32 @@ textarea.input { resize: vertical; min-height: 80px; }
       </div>
 
       <div id="offres-list" class="list">
+        <div class="list-empty">Chargement…</div>
+      </div>
+    </section>
+
+    <!-- ===== TAB : Candidatures (Sprint C.3) ===== -->
+    <section id="tab-candidatures" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Candi<em>datures</em></h1>
+          <p class="desc">Suivi et workflow — du dépôt à la décision finale</p>
+        </div>
+        <button class="refresh-btn" onclick="loadCandidatures(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+      </div>
+
+      <div class="toolbar">
+        <div class="segs" id="cands-segs">
+          <button class="seg on" data-statut="all" onclick="setCandidatureFilter('all',this)">Toutes <span class="count" id="cnt-cand-all">·</span></button>
+          <button class="seg warn" data-statut="nouveau" onclick="setCandidatureFilter('nouveau',this)">Nouvelles <span class="count" id="cnt-cand-nouveau">·</span></button>
+          <button class="seg" data-statut="vue" onclick="setCandidatureFilter('vue',this)">Vues <span class="count" id="cnt-cand-vue">·</span></button>
+          <button class="seg" data-statut="contactee" onclick="setCandidatureFilter('contactee',this)">Contactées <span class="count" id="cnt-cand-contactee">·</span></button>
+          <button class="seg success" data-statut="acceptee" onclick="setCandidatureFilter('acceptee',this)">Acceptées <span class="count" id="cnt-cand-acceptee">·</span></button>
+          <button class="seg danger" data-statut="refusee" onclick="setCandidatureFilter('refusee',this)">Refusées <span class="count" id="cnt-cand-refusee">·</span></button>
+        </div>
+      </div>
+
+      <div id="cands-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
     </section>
@@ -576,6 +606,13 @@ textarea.input { resize: vertical; min-height: 80px; }
 <!-- ===== TOAST ===== -->
 <div id="toast" class="toast"></div>
 
+<!-- ===== MODAL : Detail candidature (Sprint C.3) ===== -->
+<div id="modal-cand" class="modal-ov" hidden onclick="if(event.target.id==='modal-cand')closeCandidatureModal()">
+  <div class="modal-card" id="modal-cand-card">
+    <!-- injected by renderCandidatureModal() -->
+  </div>
+</div>
+
 <script>
 // =============================================================================
 //  PILOTE ADMIN V7 — Spacer's Business Club
@@ -590,6 +627,12 @@ let OFFRES_CACHE = [];            // liste offres en cache
 let OFFRES_STATS = {};            // stats par statut
 let CURRENT_OFFRE_FILTER = 'all'; // filtre statut actif
 let CURRENT_OFFRE_DETAIL = null;  // offre actuellement ouverte dans la modale
+
+// Sprint C.3 — Candidatures
+let CANDS_CACHE = [];
+let CANDS_STATS = {};
+let CURRENT_CAND_FILTER = 'all';
+let CURRENT_CAND_DETAIL = null;
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -701,6 +744,7 @@ function switchTab(tab) {
 
   if (tab === 'dashboard' && !DASH_DATA) loadDashboard();
   if (tab === 'offres' && OFFRES_CACHE.length === 0) loadOffres();
+  if (tab === 'candidatures' && CANDS_CACHE.length === 0) loadCandidatures();
 }
 
 // ============================================================================
@@ -1398,12 +1442,336 @@ function drawSpacersLogo(doc, x, y, size, COLORS) {
 }
 
 // ============================================================================
+//  CANDIDATURES — Sprint C.3 (admin dashboard + workflow)
+// ============================================================================
+
+const CAND_STATUT_LABEL = {
+  nouveau:   'Nouvelle',
+  vue:       'Vue',
+  contactee: 'Contactée',
+  refusee:   'Refusée',
+  acceptee:  'Acceptée',
+};
+const CAND_STATUT_TONE = {
+  nouveau:   'attente',
+  vue:       'archive',
+  contactee: 'pourvue',
+  refusee:   'refuse',
+  acceptee:  'publie',
+};
+
+async function loadCandidatures(force=false) {
+  const btn = document.querySelector('#tab-candidatures .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('cands-list');
+
+  try {
+    const url = `/api/admin/candidatures/${encodeURIComponent(ADMIN_TOKEN)}` +
+      (CURRENT_CAND_FILTER !== 'all' ? `?statut=${encodeURIComponent(CURRENT_CAND_FILTER)}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+
+    CANDS_CACHE = data.candidatures || [];
+    CANDS_STATS = data.stats || {};
+    renderCandidatureStats();
+    renderCandidaturesList();
+
+    // Badge sidebar : nombre de candidatures "nouveau"
+    const b = $('sb-badge-cand-nouveau');
+    if (b) {
+      if (CANDS_STATS.nouveau > 0) { b.textContent = CANDS_STATS.nouveau; b.hidden = false; }
+      else { b.hidden = true; }
+    }
+  } catch (e) {
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+
+function renderCandidatureStats() {
+  const s = CANDS_STATS;
+  $('cnt-cand-all').textContent       = s.total ?? 0;
+  $('cnt-cand-nouveau').textContent   = s.nouveau ?? 0;
+  $('cnt-cand-vue').textContent       = s.vue ?? 0;
+  $('cnt-cand-contactee').textContent = s.contactee ?? 0;
+  $('cnt-cand-acceptee').textContent  = s.acceptee ?? 0;
+  $('cnt-cand-refusee').textContent   = s.refusee ?? 0;
+}
+
+function setCandidatureFilter(statut, btn) {
+  CURRENT_CAND_FILTER = statut;
+  document.querySelectorAll('#cands-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  loadCandidatures();
+}
+
+function renderCandidaturesList() {
+  const listEl = $('cands-list');
+  if (!CANDS_CACHE.length) {
+    listEl.innerHTML = `
+      <div class="list-empty">
+        <h3>Aucune candidature</h3>
+        <p>${CURRENT_CAND_FILTER === 'nouveau' ? 'Aucune candidature en attente de traitement — vous êtes à jour ✓' : `Aucune candidature ${CURRENT_CAND_FILTER !== 'all' ? `avec le statut « ${CAND_STATUT_LABEL[CURRENT_CAND_FILTER] || CURRENT_CAND_FILTER} »` : 'pour le moment'}.`}</p>
+      </div>`;
+    return;
+  }
+
+  // Map statut candidature → classe couleur cohérente avec .offre-row.attente / .publie / etc.
+  const STATUT_BORDER_CLASS = {
+    nouveau:   'attente',
+    vue:       '',
+    contactee: 'publie',  // bleu/vert pour "en cours"
+    refusee:   'refuse',
+    acceptee:  'publie',
+  };
+
+  listEl.innerHTML = CANDS_CACHE.map(c => {
+    const borderClass = STATUT_BORDER_CLASS[c.statut] || '';
+    const tone  = CAND_STATUT_TONE[c.statut] || '';
+    const label = CAND_STATUT_LABEL[c.statut] || c.statut;
+    const fullName = `${c.candidat_prenom || ''} ${c.candidat_nom || ''}`.trim() || '—';
+    const initialsTxt = initials(fullName);
+    const sourceLabel = c.source === 'app-benevole' ? 'App bénévole' : (c.source === 'web-public' ? 'Site public' : (c.source || ''));
+
+    const meta = [];
+    meta.push(`<span><b>${escapeHtml(c.offre_titre)}</b></span>`);
+    if (c.offre_type_contrat) meta.push(`<span class="tag">${escapeHtml(c.offre_type_contrat)}</span>`);
+    if (c.offre_lieu) meta.push(`<span>📍 ${escapeHtml(c.offre_lieu)}</span>`);
+    if (sourceLabel) meta.push(`<span>↗ ${escapeHtml(sourceLabel)}</span>`);
+    meta.push(`<span>Reçue ${formatRelative(c.created_at)}</span>`);
+
+    return `
+      <div class="offre-row ${borderClass}" onclick="openCandidatureModal('${c.id}')" style="cursor:pointer;">
+        <div class="offre-main" style="display:flex;gap:14px;align-items:flex-start;">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto;">${escapeHtml(initialsTxt)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
+              <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+              ${c.pilote_notes ? `<span style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;">✦ Notes</span>` : ''}
+            </div>
+            <div class="offre-titre">${escapeHtml(fullName)}</div>
+            <div class="offre-partner">
+              <span>${escapeHtml(c.candidat_email)}</span>
+              ${c.candidat_telephone ? ` · <span>${escapeHtml(c.candidat_telephone)}</span>` : ''}
+            </div>
+            <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openCandidatureModal(candidatureId) {
+  // Fetch détail complet
+  try {
+    const res = await fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(candidatureId)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_CAND_DETAIL = data.candidature;
+
+    // Auto-mark "vue" si statut === "nouveau" (en fire-and-forget, ne bloque pas le rendu)
+    if (CURRENT_CAND_DETAIL.statut === 'nouveau') {
+      fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(candidatureId)}/update-statut`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'vue' }),
+      }).then(r => r.json()).then(r => {
+        if (r.ok && r.candidature) {
+          CURRENT_CAND_DETAIL.statut = 'vue';
+          // Update le cache local + re-render la liste pour refléter le nouveau statut
+          const idx = CANDS_CACHE.findIndex(c => c.id === candidatureId);
+          if (idx !== -1) {
+            CANDS_CACHE[idx].statut = 'vue';
+            CANDS_CACHE[idx].traite_le = r.candidature.traite_le;
+          }
+          if (CANDS_STATS.nouveau > 0) {
+            CANDS_STATS.nouveau--;
+            CANDS_STATS.vue = (CANDS_STATS.vue || 0) + 1;
+          }
+          renderCandidatureStats();
+          renderCandidaturesList();
+          renderCandidatureModalContent();
+          // Update badge sidebar
+          const b = $('sb-badge-cand-nouveau');
+          if (b) {
+            if (CANDS_STATS.nouveau > 0) { b.textContent = CANDS_STATS.nouveau; b.hidden = false; }
+            else { b.hidden = true; }
+          }
+        }
+      }).catch(() => {});
+    }
+
+    renderCandidatureModalContent();
+    $('modal-cand').hidden = false;
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+function renderCandidatureModalContent() {
+  const c = CURRENT_CAND_DETAIL;
+  if (!c) return;
+  const card = $('modal-cand-card');
+  const fullName = `${c.candidat_prenom || ''} ${c.candidat_nom || ''}`.trim() || '—';
+  const initialsTxt = initials(fullName);
+  const tone = CAND_STATUT_TONE[c.statut] || '';
+  const label = CAND_STATUT_LABEL[c.statut] || c.statut;
+  const sourceLabel = c.source === 'app-benevole' ? 'App bénévole' : (c.source === 'web-public' ? 'Site public' : (c.source || '—'));
+
+  // Boutons disponibles selon statut courant
+  const isFinal = c.statut === 'refusee' || c.statut === 'acceptee';
+  const actions = isFinal ? '' : `
+    <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
+      ${c.statut !== 'contactee' ? `<button class="btn primary" onclick="updateCandidatureStatut('contactee')">📞 Marquer contactée</button>` : ''}
+      <button class="btn danger" onclick="confirmCandidatureStatut('refusee')">✗ Refuser</button>
+      <button class="btn success" onclick="confirmCandidatureStatut('acceptee')">✓ Accepter</button>
+    </div>`;
+
+  card.innerHTML = `
+    <div class="modal-head">
+      <div class="row" style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="row-av" style="width:56px;height:56px;font-size:18px;flex:0 0 auto;">${escapeHtml(initialsTxt)}</div>
+        <div style="flex:1;">
+          <div class="eyebrow">Candidature · ${escapeHtml(sourceLabel)}</div>
+          <h2 class="display" style="margin:4px 0 6px;">${escapeHtml(fullName)}</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            <span style="font-size:12px;color:var(--ink-soft);">Reçue ${escapeHtml(formatRelative(c.created_at))}</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeCandidatureModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <!-- Section : Offre ciblée -->
+      <div style="background:var(--bg-soft);border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:6px;">POSTE VISÉ</div>
+        <div style="font-size:15px;font-weight:600;color:var(--ink);">${escapeHtml(c.offre_titre)}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">
+          ${escapeHtml(c.partenaire_nom)}${c.offre_type_contrat ? ` · ${escapeHtml(c.offre_type_contrat)}` : ''}${c.offre_lieu ? ` · ${escapeHtml(c.offre_lieu)}` : ''}
+        </div>
+      </div>
+
+      <!-- Section : Coordonnées candidat -->
+      <div style="margin-bottom:18px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">COORDONNÉES</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;">
+          <div style="color:var(--ink-soft);">Email</div>
+          <div><a href="mailto:${encodeURIComponent(c.candidat_email)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(c.candidat_email)}</a></div>
+          ${c.candidat_telephone ? `
+            <div style="color:var(--ink-soft);">Téléphone</div>
+            <div><a href="tel:${escapeHtml(c.candidat_telephone)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(c.candidat_telephone)}</a></div>` : ''}
+          ${c.cv_url ? `
+            <div style="color:var(--ink-soft);">CV / Lien</div>
+            <div><a href="${escapeHtml(c.cv_url)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;word-break:break-all;">${escapeHtml(c.cv_url)}</a></div>` : ''}
+          ${c.benevole_pseudo ? `
+            <div style="color:var(--ink-soft);">Bénévole</div>
+            <div>${escapeHtml(c.benevole_pseudo)}</div>` : ''}
+        </div>
+      </div>
+
+      ${c.message ? `
+      <!-- Section : Message du candidat -->
+      <div style="margin-bottom:18px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">MESSAGE DU CANDIDAT</div>
+        <div style="background:var(--bg-soft);border-left:3px solid var(--gold);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;font-style:italic;">${escapeHtml(c.message)}</div>
+      </div>` : ''}
+
+      <!-- Section : Notes pilote -->
+      <div style="margin-bottom:6px;">
+        <label class="input-lbl" for="cand-notes">Notes pilote <span style="color:var(--ink-soft);font-weight:400;font-size:11px;">(visible uniquement par l'équipe Spacer's)</span></label>
+        <textarea id="cand-notes" class="input" rows="3" placeholder="Ex : Profil intéressant pour Picoty, voir avec Thomas avant accusé de réception…">${escapeHtml(c.pilote_notes || '')}</textarea>
+        <button class="btn ghost" style="margin-top:8px;font-size:12px;padding:6px 12px;" onclick="saveCandidatureNotes()">💾 Sauvegarder les notes</button>
+      </div>
+
+      ${c.traite_le ? `
+      <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+        Dernier statut posé le ${escapeHtml(formatDateShort(c.traite_le))}.
+      </div>` : ''}
+    </div>
+    ${actions}
+  `;
+}
+
+function closeCandidatureModal() {
+  $('modal-cand').hidden = true;
+  CURRENT_CAND_DETAIL = null;
+}
+
+async function updateCandidatureStatut(newStatut) {
+  if (!CURRENT_CAND_DETAIL) return;
+  const id = CURRENT_CAND_DETAIL.id;
+  const notes = $('cand-notes')?.value || '';
+
+  try {
+    const res = await fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update-statut`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut: newStatut, pilote_notes: notes }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+
+    showToast(`✓ Statut mis à jour : ${CAND_STATUT_LABEL[newStatut]}`, 'success');
+    closeCandidatureModal();
+    loadCandidatures(); // refresh tout
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function confirmCandidatureStatut(statut) {
+  const label = CAND_STATUT_LABEL[statut];
+  const messages = {
+    refusee: 'Confirmer le refus de cette candidature ? Le candidat n\'est pas notifié automatiquement — il faudra lui écrire directement si besoin.',
+    acceptee: 'Confirmer l\'acceptation de cette candidature ? Pense à prévenir le partenaire et le candidat par mail ou téléphone.',
+  };
+  const ok = await confirmModal({
+    eyebrow: 'Confirmation',
+    title: `Marquer comme ${label.toLowerCase()} ?`,
+    message: messages[statut] || '',
+    confirmText: 'Confirmer',
+    confirmStyle: statut === 'refusee' ? 'danger' : 'primary',
+  });
+  if (ok) updateCandidatureStatut(statut);
+}
+
+async function saveCandidatureNotes() {
+  if (!CURRENT_CAND_DETAIL) return;
+  const id = CURRENT_CAND_DETAIL.id;
+  const notes = $('cand-notes')?.value || '';
+
+  try {
+    const res = await fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update-statut`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut: CURRENT_CAND_DETAIL.statut, pilote_notes: notes }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+
+    CURRENT_CAND_DETAIL.pilote_notes = notes;
+    // Update cache local
+    const idx = CANDS_CACHE.findIndex(c => c.id === id);
+    if (idx !== -1) CANDS_CACHE[idx].pilote_notes = notes;
+
+    showToast('💾 Notes sauvegardées', 'success');
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ============================================================================
 //  BOOT
 // ============================================================================
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (!$('modal-offre').hidden) closeOffreModal();
     if (!$('modal-confirm').hidden) closeConfirm(null);
+    if (!$('modal-cand').hidden) closeCandidatureModal();
   }
 });
 
