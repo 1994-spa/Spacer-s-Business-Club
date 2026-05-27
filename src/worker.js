@@ -26,6 +26,13 @@ const CORS = {
   'Access-Control-Max-Age': '86400',
 };
 
+// ============================================================================
+//  EMAIL SETTINGS — Sprint C.2 (Resend transactional)
+// ============================================================================
+const EMAIL_FROM = "Spacer's Business Club <marketing@spacerstoulouse.fr>";
+const EMAIL_REPLY_TO_CLUB = 'marketing@spacerstoulouse.fr';
+const EMAIL_FALLBACK_PARTNER = 'spacersytb@gmail.com'; // si l'offre n'a pas de contact_email
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -1892,16 +1899,19 @@ async function handlePublicOffreDetail(offreId, env) {
 // ----------- POST /api/public/offre/:id/candidature -----------
 // Body : { candidat_email, candidat_nom, candidat_prenom, candidat_telephone?, message?, cv_url?, source?, benevole_id?, benevole_pseudo? }
 async function handlePublicCandidatureCreate(offreId, body, env) {
-  // 1. Vérifier que l'offre existe et est publiée
+  // 1. Vérifier que l'offre existe et est publiée + récupérer le nom du partenaire
   const offreRows = await supabaseQuery(
     'offres_emploi',
-    `id=eq.${offreId}&statut=eq.publie&select=id,contrat_id,titre,candidatures_count,contact_email&limit=1`,
+    `id=eq.${offreId}&statut=eq.publie` +
+    `&select=id,contrat_id,titre,candidatures_count,contact_email,contact_nom,contrats(partenaires(raison_sociale))` +
+    `&limit=1`,
     env
   );
   if (!offreRows || offreRows.length === 0) {
     return jsonResponseNoCache({ error: 'Offre introuvable ou non publiée' }, 404);
   }
   const offre = offreRows[0];
+  const partenaireRaisonSociale = offre.contrats?.partenaires?.raison_sociale || 'le partenaire';
 
   // 2. Validation body
   const candidat_email = String(body.candidat_email || '').trim().toLowerCase();
@@ -1919,15 +1929,19 @@ async function handlePublicCandidatureCreate(offreId, body, env) {
   }
 
   // 3. Insert candidature
+  const candidat_telephone = String(body.candidat_telephone || '').trim() || null;
+  const message = body.message ? String(body.message).trim() : null;
+  const cv_url = body.cv_url ? String(body.cv_url).trim() : null;
+
   const insertData = {
     offre_id: offreId,
     contrat_id: offre.contrat_id || null,
     candidat_email,
     candidat_nom,
     candidat_prenom,
-    candidat_telephone: String(body.candidat_telephone || '').trim() || null,
-    message: body.message ? String(body.message).trim() : null,
-    cv_url: body.cv_url ? String(body.cv_url).trim() : null,
+    candidat_telephone,
+    message,
+    cv_url,
     source: String(body.source || 'app-benevole').slice(0, 30),
     benevole_id: body.benevole_id ? String(body.benevole_id).slice(0, 64) : null,
     benevole_pseudo: body.benevole_pseudo ? String(body.benevole_pseudo).slice(0, 100) : null,
@@ -1949,8 +1963,35 @@ async function handlePublicCandidatureCreate(offreId, body, env) {
     body: JSON.stringify({ candidatures_count: (offre.candidatures_count || 0) + 1 }),
   }).catch(() => {});
 
-  // 5. TODO Sprint C.2 — déclencher email Resend vers le partenaire (offre.contact_email) + email confirmation au candidat
-  //    Pour C.1, on retourne juste OK avec l'ID de la candidature
+  // 5. Sprint C.2 — Envoi des 2 emails via Resend (fire-and-forget, ne bloque pas la réponse)
+  const emailContext = {
+    candidat_prenom,
+    candidat_nom,
+    candidat_email,
+    candidat_telephone,
+    message,
+    cv_url,
+    offre_titre: offre.titre,
+    partenaire_nom: partenaireRaisonSociale,
+    partenaire_contact_email: offre.contact_email || EMAIL_FALLBACK_PARTNER,
+    partenaire_contact_nom: offre.contact_nom || '',
+  };
+
+  // Email 1 : notification au partenaire (reply-to = candidat pour réponse directe)
+  sendEmailViaResend(env, {
+    to: emailContext.partenaire_contact_email,
+    subject: `Nouvelle candidature reçue — ${offre.titre}`,
+    html: renderEmailPartnerNotification(emailContext),
+    replyTo: candidat_email,
+  }).then(r => { if (!r.ok && !r.skipped) console.warn('Email partenaire failed:', r); });
+
+  // Email 2 : confirmation au candidat (reply-to = club)
+  sendEmailViaResend(env, {
+    to: candidat_email,
+    subject: `Confirmation de votre candidature — ${offre.titre}`,
+    html: renderEmailCandidateConfirmation(emailContext),
+    replyTo: EMAIL_REPLY_TO_CLUB,
+  }).then(r => { if (!r.ok && !r.skipped) console.warn('Email candidat failed:', r); });
 
   return jsonResponseNoCache({
     ok: true,
@@ -1962,4 +2003,194 @@ async function handlePublicCandidatureCreate(offreId, body, env) {
     },
     message: 'Candidature envoyée. Le partenaire sera notifié sous peu.',
   });
+}
+
+// ============================================================================
+//  RESEND EMAIL — Sprint C.2 : envoi transactionnel + templates HTML
+// ============================================================================
+
+async function sendEmailViaResend(env, { to, subject, html, text, replyTo, from }) {
+  if (!env.RESEND_API_KEY) {
+    console.warn('[Resend] RESEND_API_KEY not set — email skipped');
+    return { skipped: true, reason: 'no_api_key' };
+  }
+  if (!to) {
+    console.warn('[Resend] No recipient — email skipped');
+    return { skipped: true, reason: 'no_recipient' };
+  }
+  try {
+    const payload = {
+      from: from || EMAIL_FROM,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+    };
+    if (text) payload.text = text;
+    if (replyTo) payload.reply_to = replyTo;
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[Resend] HTTP', res.status, JSON.stringify(data));
+      return { ok: false, status: res.status, error: data };
+    }
+    return { ok: true, id: data.id };
+  } catch (e) {
+    console.error('[Resend] Network error:', e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+// Échappement HTML sûr pour insertion dans templates email
+function escEmail(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Layout commun (table-based, inline styles — compatibilité maximale clients mail)
+function emailLayout(headerEyebrow, headerTitle, headerSubtitle, bodyContent) {
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escEmail(headerTitle)}</title>
+</head>
+<body style="margin:0;padding:0;background:#FAF7F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#0A1628;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAF7F2;padding:30px 12px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#FFFFFF;border-radius:14px;border:1px solid #E5DED1;box-shadow:0 2px 10px rgba(10,22,40,0.06);">
+
+      <!-- HEADER navy + halo or -->
+      <tr><td style="background:#11203a;background-image:linear-gradient(135deg,#11203a 0%,#0A1628 100%);padding:30px 30px 26px;border-radius:14px 14px 0 0;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td style="width:48px;vertical-align:top;">
+              <div style="background:#C8932B;color:#0A1628;width:42px;height:42px;border-radius:10px;text-align:center;line-height:42px;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;">S</div>
+            </td>
+            <td style="padding-left:14px;vertical-align:middle;">
+              <div style="color:#E8C977;font-size:10px;font-weight:bold;letter-spacing:2px;line-height:1;">SPACER'S BUSINESS CLUB</div>
+              <div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:4px;">Toulouse Volley · Saison 2026–2027</div>
+            </td>
+          </tr>
+        </table>
+        <div style="margin-top:22px;">
+          <div style="color:#C8932B;font-size:10px;font-weight:bold;letter-spacing:2px;line-height:1;margin-bottom:8px;">${escEmail(headerEyebrow)}</div>
+          <div style="color:#FFFFFF;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.15;font-weight:500;">${escEmail(headerTitle)}</div>
+          ${headerSubtitle ? `<div style="color:rgba(255,255,255,0.55);font-size:13px;margin-top:6px;">${escEmail(headerSubtitle)}</div>` : ''}
+        </div>
+      </td></tr>
+
+      <!-- BODY -->
+      <tr><td style="padding:30px 30px 24px;font-size:14px;line-height:1.65;color:#4A5568;">
+        ${bodyContent}
+      </td></tr>
+
+      <!-- FOOTER -->
+      <tr><td style="background:#FAF7F2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;border-top:1px solid #E5DED1;border-radius:0 0 14px 14px;">
+        Spacer's Toulouse Volley · Palais des Sports André Brouat<br>
+        <a href="https://spacerstoulouse.fr" style="color:#C8932B;text-decoration:none;">spacerstoulouse.fr</a>
+        &nbsp;·&nbsp;
+        <a href="mailto:marketing@spacerstoulouse.fr" style="color:#C8932B;text-decoration:none;">marketing@spacerstoulouse.fr</a>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+// Email 1 : notification au partenaire (nouvelle candidature reçue)
+function renderEmailPartnerNotification(ctx) {
+  const eyebrow = 'NOUVELLE CANDIDATURE';
+  const title = `${ctx.candidat_prenom} ${ctx.candidat_nom}`;
+  const subtitle = `vient de postuler pour « ${ctx.offre_titre} »`;
+
+  const infoRows = [];
+  infoRows.push(`<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:90px;">Email</strong><a href="mailto:${escEmail(ctx.candidat_email)}" style="color:#C8932B;text-decoration:none;">${escEmail(ctx.candidat_email)}</a></td></tr>`);
+  if (ctx.candidat_telephone) {
+    infoRows.push(`<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:90px;">Téléphone</strong><a href="tel:${escEmail(ctx.candidat_telephone)}" style="color:#C8932B;text-decoration:none;">${escEmail(ctx.candidat_telephone)}</a></td></tr>`);
+  }
+  if (ctx.cv_url) {
+    infoRows.push(`<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:90px;">CV / Lien</strong><a href="${escEmail(ctx.cv_url)}" target="_blank" rel="noopener" style="color:#C8932B;text-decoration:none;word-break:break-all;">${escEmail(ctx.cv_url)}</a></td></tr>`);
+  }
+
+  const messageBlock = ctx.message ? `
+    <div style="margin-top:24px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#8A8478;font-weight:bold;margin-bottom:8px;">Message du candidat</div>
+      <div style="background:#FAF3DF;border-left:3px solid #C8932B;border-radius:6px;padding:14px 16px;font-size:14px;color:#0A1628;line-height:1.7;white-space:pre-wrap;font-style:italic;">${escEmail(ctx.message)}</div>
+    </div>` : '';
+
+  const partenaireGreet = ctx.partenaire_contact_nom ? `Bonjour ${escEmail(ctx.partenaire_contact_nom.split(' ')[0])},` : 'Bonjour,';
+
+  const body = `
+    <p style="margin:0 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">${partenaireGreet}</p>
+    <p style="margin:0 0 22px;font-size:14px;color:#4A5568;line-height:1.7;">
+      Un(e) candidat(e) vient de postuler à votre annonce <strong style="color:#0A1628;">« ${escEmail(ctx.offre_titre)} »</strong> via le réseau Spacer's. Voici ses coordonnées :
+    </p>
+
+    <table cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#FAF7F2;border-radius:10px;border:1px solid #E5DED1;padding:6px 16px;margin-bottom:8px;">
+      ${infoRows.join('')}
+    </table>
+
+    ${messageBlock}
+
+    <div style="margin-top:28px;padding-top:18px;border-top:1px solid #E5DED1;font-size:12px;color:#8A8478;line-height:1.7;font-style:italic;">
+      Pour répondre, cliquez simplement sur "Répondre" — votre message ira directement au candidat. La candidature reste aussi consultable dans votre espace partenaire.
+    </div>
+  `;
+
+  return emailLayout(eyebrow, title, subtitle, body);
+}
+
+// Email 2 : confirmation au candidat
+function renderEmailCandidateConfirmation(ctx) {
+  const eyebrow = 'CANDIDATURE BIEN REÇUE';
+  const title = `Merci, ${ctx.candidat_prenom} !`;
+  const subtitle = `Votre candidature pour « ${ctx.offre_titre} » est en route`;
+
+  const recapRows = [];
+  recapRows.push(`<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:90px;">Poste</strong>${escEmail(ctx.offre_titre)}</td></tr>`);
+  recapRows.push(`<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:90px;">Entreprise</strong>${escEmail(ctx.partenaire_nom)}</td></tr>`);
+  recapRows.push(`<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:90px;">Contact</strong>${escEmail(ctx.candidat_email)}</td></tr>`);
+
+  const body = `
+    <p style="margin:0 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">
+      Votre candidature a bien été transmise à <strong style="color:#0A1628;">${escEmail(ctx.partenaire_nom)}</strong>. Le partenaire vous contactera directement sur l'adresse email que vous avez fournie.
+    </p>
+
+    <div style="margin:24px 0;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#8A8478;font-weight:bold;margin-bottom:8px;">Récapitulatif</div>
+      <table cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#FAF7F2;border-radius:10px;border:1px solid #E5DED1;padding:6px 16px;">
+        ${recapRows.join('')}
+      </table>
+    </div>
+
+    <p style="margin:24px 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">
+      ${ctx.message ? 'Votre message a été inclus dans la notification envoyée au partenaire. ' : ''}Pensez à surveiller votre boîte de réception (et le dossier <em>spam</em>) dans les prochains jours.
+    </p>
+
+    <p style="margin:24px 0 0;font-size:14px;color:#4A5568;line-height:1.7;">
+      Bonne chance pour la suite — l'équipe Spacer's
+    </p>
+
+    <div style="margin-top:28px;padding-top:18px;border-top:1px solid #E5DED1;font-size:12px;color:#8A8478;line-height:1.7;font-style:italic;">
+      Une question ? Répondez simplement à ce mail, l'équipe vous lit.
+    </div>
+  `;
+
+  return emailLayout(eyebrow, title, subtitle, body);
 }
