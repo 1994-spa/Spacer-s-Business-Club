@@ -42,7 +42,7 @@ export default {
       if (request.method === 'OPTIONS') {
         return new Response(null, { headers: CORS });
       }
-      return await handleApi(request, env, path);
+      return await handleApi(request, env, path, ctx);
     }
 
     // Routing /pilote → pilote.html
@@ -62,7 +62,7 @@ export default {
 //  ROUTING API
 // ============================================================================
 
-async function handleApi(request, env, path) {
+async function handleApi(request, env, path, ctx) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({
       error: 'Supabase credentials not configured',
@@ -138,7 +138,7 @@ async function handleApi(request, env, path) {
 
       // Public — soumission de candidature (Sprint C.1)
       m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})\/candidature$/);
-      if (m) return await handlePublicCandidatureCreate(m[1], body || {}, env);
+      if (m) return await handlePublicCandidatureCreate(m[1], body || {}, env, ctx);
 
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
@@ -1846,7 +1846,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.8-public', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.10-emails-waituntil', generated_at: new Date().toISOString() },
   });
 }
 
@@ -1898,7 +1898,7 @@ async function handlePublicOffreDetail(offreId, env) {
 
 // ----------- POST /api/public/offre/:id/candidature -----------
 // Body : { candidat_email, candidat_nom, candidat_prenom, candidat_telephone?, message?, cv_url?, source?, benevole_id?, benevole_pseudo? }
-async function handlePublicCandidatureCreate(offreId, body, env) {
+async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
   // 1. Vérifier que l'offre existe et est publiée + récupérer le nom du partenaire
   const offreRows = await supabaseQuery(
     'offres_emploi',
@@ -1963,7 +1963,9 @@ async function handlePublicCandidatureCreate(offreId, body, env) {
     body: JSON.stringify({ candidatures_count: (offre.candidatures_count || 0) + 1 }),
   }).catch(() => {});
 
-  // 5. Sprint C.2 — Envoi des 2 emails via Resend (fire-and-forget, ne bloque pas la réponse)
+  // 5. Sprint C.2 — Envoi des 2 emails via Resend
+  //    ctx.waitUntil() = on dit à Cloudflare "garde le worker vivant jusqu'à la fin de ces promises"
+  //    Sans ça, le runtime tue les fetch après la response et les console.warn sont invisibles.
   const emailContext = {
     candidat_prenom,
     candidat_nom,
@@ -1977,21 +1979,39 @@ async function handlePublicCandidatureCreate(offreId, body, env) {
     partenaire_contact_nom: offre.contact_nom || '',
   };
 
+  console.log(`[Candidature] Envoi emails — partenaire=${emailContext.partenaire_contact_email}, candidat=${candidat_email}`);
+
   // Email 1 : notification au partenaire (reply-to = candidat pour réponse directe)
-  sendEmailViaResend(env, {
+  const emailPartnerPromise = sendEmailViaResend(env, {
     to: emailContext.partenaire_contact_email,
     subject: `Nouvelle candidature reçue — ${offre.titre}`,
     html: renderEmailPartnerNotification(emailContext),
     replyTo: candidat_email,
-  }).then(r => { if (!r.ok && !r.skipped) console.warn('Email partenaire failed:', r); });
+  }).then(r => {
+    if (r.ok) console.log(`[Email partenaire] Sent OK, id=${r.id}`);
+    else if (r.skipped) console.warn(`[Email partenaire] Skipped: ${r.reason}`);
+    else console.error(`[Email partenaire] Failed:`, JSON.stringify(r));
+  }).catch(e => console.error(`[Email partenaire] Exception:`, e.message));
 
   // Email 2 : confirmation au candidat (reply-to = club)
-  sendEmailViaResend(env, {
+  const emailCandidatePromise = sendEmailViaResend(env, {
     to: candidat_email,
     subject: `Confirmation de votre candidature — ${offre.titre}`,
     html: renderEmailCandidateConfirmation(emailContext),
     replyTo: EMAIL_REPLY_TO_CLUB,
-  }).then(r => { if (!r.ok && !r.skipped) console.warn('Email candidat failed:', r); });
+  }).then(r => {
+    if (r.ok) console.log(`[Email candidat] Sent OK, id=${r.id}`);
+    else if (r.skipped) console.warn(`[Email candidat] Skipped: ${r.reason}`);
+    else console.error(`[Email candidat] Failed:`, JSON.stringify(r));
+  }).catch(e => console.error(`[Email candidat] Exception:`, e.message));
+
+  // ctx.waitUntil garde le worker vivant après la response pour terminer ces promises
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(Promise.all([emailPartnerPromise, emailCandidatePromise]));
+  } else {
+    // Fallback si ctx absent (ne devrait pas arriver) — await synchrone
+    await Promise.all([emailPartnerPromise, emailCandidatePromise]);
+  }
 
   return jsonResponseNoCache({
     ok: true,
