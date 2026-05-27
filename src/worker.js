@@ -140,6 +140,10 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})\/candidature$/);
       if (m) return await handlePublicCandidatureCreate(m[1], body || {}, env, ctx);
 
+      // Sprint C.3 — Update statut candidature (admin)
+      m = path.match(/^\/api\/admin\/candidature\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update-statut$/);
+      if (m) return await handleAdminCandidatureUpdateStatut(m[1], m[2], body || {}, env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -205,6 +209,13 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})$/);
     if (m) return await handlePublicOffreDetail(m[1], env);
 
+    // ===== Sprint C.3 — Candidatures admin =====
+    m = path.match(/^\/api\/admin\/candidatures\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminCandidaturesList(m[1], url.searchParams, env);
+
+    m = path.match(/^\/api\/admin\/candidature\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
+    if (m) return await handleAdminCandidatureDetail(m[1], m[2], env);
+
     // ===== Assets statiques (PDF Minute de l'emploi en fallback) =====
     if (path === '/assets/minute-emploi-template.pdf' || path === '/minute_de_l_emploi_template.pdf') {
       const binary = Uint8Array.from(atob(MINUTE_EMPLOI_TEMPLATE_B64), c => c.charCodeAt(0));
@@ -254,6 +265,12 @@ async function handleApi(request, env, path, ctx) {
         'POST /api/admin/offres/:token/:offreId/publish',
         'POST /api/admin/offres/:token/:offreId/reject',
         'POST /api/admin/offres/:token/:offreId/archive',
+        'GET  /api/admin/candidatures/:token?statut=X&offre_id=Y',
+        'GET  /api/admin/candidature/:token/:candidatureId',
+        'POST /api/admin/candidature/:token/:candidatureId/update-statut',
+        'GET  /api/public/offres-emploi',
+        'GET  /api/public/offre/:offreId',
+        'POST /api/public/offre/:offreId/candidature',
         'GET  /api/admin/publications/:token?type=X&statut=Y',
         'GET  /api/admin/publication/:token/:id',
         'POST /api/admin/publications/:token/create',
@@ -1846,7 +1863,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.10-emails-waituntil', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.11-candidatures-admin', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2213,4 +2230,164 @@ function renderEmailCandidateConfirmation(ctx) {
   `;
 
   return emailLayout(eyebrow, title, subtitle, body);
+}
+
+// ============================================================================
+//  CANDIDATURES — Sprint C.3 (admin dashboard)
+// ============================================================================
+
+const CANDIDATURE_STATUTS = ['nouveau', 'vue', 'contactee', 'refusee', 'acceptee'];
+
+// ----------- GET /api/admin/candidatures/:token -----------
+// Query : ?statut=nouveau&offre_id=... (tous optionnels)
+async function handleAdminCandidaturesList(token, queryParams, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const statutFilter = queryParams.get('statut');
+  const offreFilter  = queryParams.get('offre_id');
+
+  // Join offre + partenaire pour avoir le contexte côté UI
+  let filter =
+    'select=*,offres_emploi(id,titre,type_contrat,lieu,contrats(id,partenaires(raison_sociale)))' +
+    '&order=created_at.desc&limit=500';
+  const extra = [];
+  if (statutFilter && CANDIDATURE_STATUTS.includes(statutFilter)) {
+    extra.push(`statut=eq.${statutFilter}`);
+  }
+  if (offreFilter && /^[0-9a-f-]{36}$/.test(offreFilter)) {
+    extra.push(`offre_id=eq.${offreFilter}`);
+  }
+  if (extra.length) filter = extra.join('&') + '&' + filter;
+
+  const rows = await supabaseQuery('candidatures', filter, env);
+
+  const candidatures = (rows || []).map(c => ({
+    id: c.id,
+    offre_id: c.offre_id,
+    contrat_id: c.contrat_id,
+    offre_titre: c.offres_emploi?.titre || '—',
+    offre_type_contrat: c.offres_emploi?.type_contrat || '',
+    offre_lieu: c.offres_emploi?.lieu || '',
+    partenaire_nom: c.offres_emploi?.contrats?.partenaires?.raison_sociale || '—',
+    candidat_prenom: c.candidat_prenom,
+    candidat_nom: c.candidat_nom,
+    candidat_email: c.candidat_email,
+    candidat_telephone: c.candidat_telephone || '',
+    message: c.message || '',
+    cv_url: c.cv_url || '',
+    source: c.source || '',
+    benevole_id: c.benevole_id || '',
+    benevole_pseudo: c.benevole_pseudo || '',
+    statut: c.statut,
+    pilote_notes: c.pilote_notes || '',
+    traite_par_admin_id: c.traite_par_admin_id || null,
+    traite_le: c.traite_le || null,
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  }));
+
+  // Stats globales (toujours sans filtre, pour les chips)
+  const allRows = await supabaseQuery('candidatures', 'select=statut', env);
+  const stats = { nouveau: 0, vue: 0, contactee: 0, refusee: 0, acceptee: 0, total: 0 };
+  (allRows || []).forEach(r => {
+    if (CANDIDATURE_STATUTS.includes(r.statut)) stats[r.statut]++;
+    stats.total++;
+  });
+
+  return jsonResponseNoCache({ candidatures, stats });
+}
+
+// ----------- GET /api/admin/candidature/:token/:id -----------
+async function handleAdminCandidatureDetail(token, candidatureId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery(
+    'candidatures',
+    `id=eq.${candidatureId}` +
+    `&select=*,offres_emploi(id,titre,type_contrat,lieu,description,contact_email,contact_nom,contrats(id,partenaires(raison_sociale)))` +
+    `&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) {
+    return jsonResponseNoCache({ error: 'Candidature introuvable' }, 404);
+  }
+  const c = rows[0];
+
+  return jsonResponseNoCache({
+    candidature: {
+      id: c.id,
+      offre_id: c.offre_id,
+      offre_titre: c.offres_emploi?.titre || '—',
+      offre_type_contrat: c.offres_emploi?.type_contrat || '',
+      offre_lieu: c.offres_emploi?.lieu || '',
+      offre_description: c.offres_emploi?.description || '',
+      offre_contact_nom: c.offres_emploi?.contact_nom || '',
+      offre_contact_email: c.offres_emploi?.contact_email || '',
+      partenaire_nom: c.offres_emploi?.contrats?.partenaires?.raison_sociale || '—',
+      candidat_prenom: c.candidat_prenom,
+      candidat_nom: c.candidat_nom,
+      candidat_email: c.candidat_email,
+      candidat_telephone: c.candidat_telephone || '',
+      message: c.message || '',
+      cv_url: c.cv_url || '',
+      source: c.source || '',
+      benevole_id: c.benevole_id || '',
+      benevole_pseudo: c.benevole_pseudo || '',
+      statut: c.statut,
+      pilote_notes: c.pilote_notes || '',
+      traite_par_admin_id: c.traite_par_admin_id || null,
+      traite_le: c.traite_le || null,
+      created_at: c.created_at,
+      updated_at: c.updated_at,
+    },
+  });
+}
+
+// ----------- POST /api/admin/candidature/:token/:id/update-statut -----------
+// Body : { statut: 'vue'|'contactee'|'refusee'|'acceptee', pilote_notes?: string }
+async function handleAdminCandidatureUpdateStatut(token, candidatureId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const newStatut = String(body.statut || '').trim();
+  if (!CANDIDATURE_STATUTS.includes(newStatut)) {
+    return jsonResponseNoCache({ error: `Statut invalide. Valeurs : ${CANDIDATURE_STATUTS.join(', ')}` }, 400);
+  }
+
+  // Vérifier que la candidature existe
+  const existing = await supabaseQuery(
+    'candidatures',
+    `id=eq.${candidatureId}&select=id,statut&limit=1`,
+    env
+  );
+  if (!existing || existing.length === 0) {
+    return jsonResponseNoCache({ error: 'Candidature introuvable' }, 404);
+  }
+
+  const patch = {
+    statut: newStatut,
+    traite_par_admin_id: admin.id,
+    traite_le: new Date().toISOString(),
+  };
+  if (typeof body.pilote_notes === 'string') {
+    patch.pilote_notes = body.pilote_notes.trim().slice(0, 5000) || null;
+  }
+
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/candidatures?id=eq.${candidatureId}`, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(env), Prefer: 'return=representation' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    return jsonResponseNoCache({ error: 'Erreur update statut', detail: errTxt }, 500);
+  }
+  const updated = await res.json();
+
+  return jsonResponseNoCache({
+    ok: true,
+    candidature: Array.isArray(updated) ? updated[0] : updated,
+  });
 }
