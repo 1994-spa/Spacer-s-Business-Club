@@ -318,12 +318,12 @@
     <h3 class="display">Ma <em>vie partenaire</em></h3>
     <p class="section-desc">Partager, proposer, recruter — directement depuis votre espace</p>
     <div class="vp-grid">
-      <div class="vp-card" onclick="showSoon('Forum partenaires','Bientôt — vous pourrez proposer ici des sorties, padel, afterworks et événements informels.')">
+      <div class="vp-card" onclick="openPubModal('forum')">
         <div class="vp-icon">⌘</div>
         <div class="vp-title">Forum</div>
         <div class="vp-sub">Sport, social, divers : proposer un padel, un afterwork, un moment partagé</div>
       </div>
-      <div class="vp-card" onclick="showSoon('Proposer un service','Bientôt — partagez vos offres et remises entre partenaires Spacers.')">
+      <div class="vp-card" onclick="openPubModal('proposition')">
         <div class="vp-icon">◈</div>
         <div class="vp-title">Proposer un service / produit</div>
         <div class="vp-sub">Faites connaître votre offre aux autres partenaires du club</div>
@@ -333,7 +333,7 @@
         <div class="vp-title">Minute de l'emploi</div>
         <div class="vp-sub">Recruter via le réseau bénévoles — annonce diffusée au cube vidéo en interset</div>
       </div>
-      <div class="vp-card" onclick="showSoon('Demande de service','Bientôt — cherchez un prestataire (plombier, électricien…) parmi les partenaires.')">
+      <div class="vp-card" onclick="openPubModal('echange')">
         <div class="vp-icon">⌬</div>
         <div class="vp-title">Demander un service</div>
         <div class="vp-sub">Chercher un prestataire (plombier, électricien…) parmi les partenaires</div>
@@ -342,6 +342,8 @@
 
     <!-- LISTE DES ANNONCES DU PARTENAIRE -->
     <div id="mes-publications" style="margin-top:24px;"></div>
+    <!-- LISTE DES PUBLICATIONS (forum / proposition / echange) -->
+    <div id="mes-pubs" style="margin-top:24px;"></div>
   </section>
 
   <!-- CONTACT -->
@@ -470,6 +472,48 @@
 
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
+
+<!-- ===== MODALE PUBLICATION GÉNÉRIQUE (Sprint B.2) — forum / proposition / echange ===== -->
+<div id="pub-modal" class="modal" hidden onclick="if(event.target.id==='pub-modal')closePubModal()">
+  <div class="modal-card" style="max-width:600px;text-align:left;max-height:90vh;overflow-y:auto;">
+    <div class="modal-eyebrow" id="pub-eyebrow" style="text-align:center;"></div>
+    <h3 class="display" id="pub-title" style="text-align:center;"></h3>
+    <p id="pub-intro" style="text-align:center;font-size:13px;"></p>
+
+    <div style="display:grid;gap:12px;margin-top:16px;">
+      <label class="me-label" id="pub-titre-label">Titre *
+        <input id="pub-input-titre" type="text" class="me-input">
+      </label>
+
+      <label class="me-label">Catégorie
+        <select id="pub-input-categorie" class="me-input"></select>
+      </label>
+
+      <label class="me-label">Description
+        <textarea id="pub-input-description" rows="3" class="me-input" placeholder="Décrivez votre proposition en quelques lignes…"></textarea>
+      </label>
+
+      <!-- Champs spécifiques au type (injectés dynamiquement) -->
+      <div id="pub-data-fields" style="display:grid;gap:12px;"></div>
+
+      <label class="me-label">Email de contact
+        <input id="pub-input-email" type="email" placeholder="contact@entreprise.fr" class="me-input">
+      </label>
+    </div>
+
+    <button class="btn primary" id="pub-submit-btn" onclick="submitPublication()" style="width:100%;margin-top:18px;justify-content:center;">
+      ✉ Envoyer
+    </button>
+
+    <div id="pub-status" style="font-size:13px;text-align:center;color:#5B6573;min-height:20px;margin-top:10px;"></div>
+
+    <div style="background:#FAF7EF;border-left:3px solid #C9A864;padding:12px 14px;margin-top:14px;border-radius:6px;">
+      <small style="color:#5B6573;font-size:12px;">✋ Après validation par l'équipe Spacers, votre publication sera visible des autres partenaires dans leur espace.</small>
+    </div>
+
+    <button class="btn" onclick="closePubModal()" style="width:100%;margin-top:14px;justify-content:center;">Fermer</button>
+  </div>
+</div>
 
 <script>
 // =========================================================================
@@ -669,6 +713,7 @@ function renderDashboard(data) {
 
   // ===== LISTE DES ANNONCES DU PARTENAIRE =====
   loadMesPublications();
+  loadMesPubs();
 }
 
 // =========================================================================
@@ -930,9 +975,195 @@ function renderMesPublications(offres) {
 }
 
 // =========================================================================
-//  PDF CUBE VIDÉO — Régénération côté partenaire (souvenir / impression)
-//  Mêmes paramètres que le pilote admin pour cohérence visuelle.
+//  PUBLICATIONS — Sprint B.2 (forum / proposition / echange)
 // =========================================================================
+const PUB_FORM_CONFIG = {
+  forum: {
+    eyebrow: '⌘ FORUM PARTENAIRES',
+    title: 'Proposer une sortie / un événement',
+    intro: 'Padel, afterwork, sortie… proposez un moment à partager avec les autres partenaires du club.',
+    titrePlaceholder: 'ex: Padel entre partenaires jeudi soir',
+    categories: ['Sport', 'Afterwork', 'Sortie', 'Networking', 'Autre'],
+    dataFields: [
+      { key: 'date_souhaitee', label: 'Date / créneau souhaité', placeholder: '14/03/2026 à 19h' },
+      { key: 'lieu', label: 'Lieu', placeholder: 'Padel Club Toulouse' },
+      { key: 'nb_places', label: 'Nombre de places', placeholder: 'ex: 4' },
+    ],
+  },
+  proposition: {
+    eyebrow: '◈ PROPOSITION B2B',
+    title: 'Proposer un service / produit',
+    intro: 'Faites connaître votre offre ou une remise exclusive aux autres partenaires du club.',
+    titrePlaceholder: 'ex: -20% sur nos prestations comptables',
+    categories: ['Produit', 'Service'],
+    dataFields: [
+      { key: 'remise', label: 'Remise / avantage', placeholder: 'ex: -20%, 2 mois offerts' },
+      { key: 'conditions', label: 'Conditions', placeholder: 'ex: pour tout nouveau contrat signé en 2026' },
+      { key: 'validite', label: 'Valable jusqu\'au', placeholder: '31/12/2026' },
+    ],
+  },
+  echange: {
+    eyebrow: '⌬ DEMANDE DE SERVICE',
+    title: 'Demander un service',
+    intro: 'Cherchez un prestataire (plombier, électricien, graphiste…) parmi les partenaires du réseau.',
+    titrePlaceholder: 'ex: Cherche électricien pour rénovation de notre local',
+    categories: ['Bâtiment / Travaux', 'Informatique / Web', 'Communication / Design', 'Juridique / Comptable', 'Autre'],
+    dataFields: [
+      { key: 'urgence', label: 'Urgence / délai', placeholder: 'ex: sous 2 semaines' },
+      { key: 'budget', label: 'Budget indicatif', placeholder: 'ex: 500–1000 €' },
+    ],
+  },
+};
+let CURRENT_PUB_TYPE = null;
+let MES_PUBS = [];
+
+function openPubModal(type) {
+  const cfg = PUB_FORM_CONFIG[type];
+  if (!cfg) return;
+  CURRENT_PUB_TYPE = type;
+
+  $('pub-eyebrow').textContent = cfg.eyebrow;
+  $('pub-title').textContent = cfg.title;
+  $('pub-intro').textContent = cfg.intro;
+  $('pub-input-titre').value = '';
+  $('pub-input-titre').placeholder = cfg.titrePlaceholder;
+  $('pub-input-description').value = '';
+  $('pub-input-email').value = '';
+  $('pub-status').textContent = '';
+
+  // Catégories
+  const catSel = $('pub-input-categorie');
+  catSel.innerHTML = '<option value="">—</option>' + cfg.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // Champs spécifiques au type
+  $('pub-data-fields').innerHTML = cfg.dataFields.map(f => `
+    <label class="me-label">${f.label}
+      <input id="pub-data-${f.key}" type="text" placeholder="${f.placeholder || ''}" class="me-input">
+    </label>`).join('');
+
+  $('pub-submit-btn').disabled = false;
+  $('pub-submit-btn').innerHTML = '✉ Envoyer';
+  $('pub-modal').hidden = false;
+}
+
+function closePubModal() { $('pub-modal').hidden = true; CURRENT_PUB_TYPE = null; }
+
+async function submitPublication() {
+  if (!CURRENT_PUB_TYPE) return;
+  const cfg = PUB_FORM_CONFIG[CURRENT_PUB_TYPE];
+  const btn = $('pub-submit-btn');
+  const status = $('pub-status');
+
+  const titre = $('pub-input-titre').value.trim();
+  if (!titre) { status.textContent = '⚠ Le titre est obligatoire.'; status.style.color = '#c62828'; $('pub-input-titre').focus(); return; }
+
+  if (!MAGIC_TOKEN) {
+    status.textContent = '❌ Token partenaire introuvable. Reconnecte-toi via le lien envoyé par email.';
+    status.style.color = '#c62828';
+    return;
+  }
+
+  // Collecte des champs data spécifiques
+  const data = {};
+  cfg.dataFields.forEach(f => {
+    const v = $(`pub-data-${f.key}`)?.value.trim();
+    if (v) data[f.key] = v;
+  });
+
+  const payload = {
+    type: CURRENT_PUB_TYPE,
+    titre,
+    description: $('pub-input-description').value.trim() || null,
+    categorie: $('pub-input-categorie').value || null,
+    data,
+    contact_email: $('pub-input-email').value.trim() || null,
+    contact_nom: window.__PARTNER_REPRESENTANT__ || null,
+  };
+
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Envoi en cours…';
+  status.textContent = '';
+
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/publications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || `Erreur ${res.status}`);
+
+    status.innerHTML = '✅ <b>Publication envoyée</b> — l\'équipe Spacers la valide puis la diffuse.';
+    status.style.color = '#2e7d32';
+    btn.innerHTML = '✓ Envoyée';
+    showToast('Publication envoyée — en attente de validation', 'success');
+
+    setTimeout(() => loadMesPubs(), 500);
+    setTimeout(() => { closePubModal(); }, 1600);
+  } catch (e) {
+    status.textContent = '❌ ' + e.message;
+    status.style.color = '#c62828';
+    btn.disabled = false;
+    btn.innerHTML = '✉ Envoyer';
+  }
+}
+
+const PUB_TYPE_LABEL = { forum: '⌘ Forum', proposition: '◈ Proposition', echange: '⌬ Demande' };
+
+async function loadMesPubs() {
+  if (!MAGIC_TOKEN) return;
+  const wrap = $('mes-pubs');
+  if (!wrap) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/publications`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    MES_PUBS = data.publications || [];
+    renderMesPubs(MES_PUBS);
+  } catch (e) {
+    console.warn('loadMesPubs error:', e.message);
+    wrap.innerHTML = '';
+  }
+}
+
+function renderMesPubs(pubs) {
+  const wrap = $('mes-pubs');
+  if (!wrap) return;
+  if (!pubs || pubs.length === 0) { wrap.innerHTML = ''; return; }
+
+  const statutLabelMap = { en_attente: 'En attente', publie: 'Publiée', refuse: 'Refusée', archive: 'Archivée', expire: 'Expirée' };
+  const statutCssMap = { en_attente: 'attente', publie: 'publie', refuse: 'refuse', archive: 'archive', expire: 'archive' };
+
+  const items = pubs.map(p => {
+    const statutClass = statutCssMap[p.statut] || 'attente';
+    const statutLabel = statutLabelMap[p.statut] || p.statut;
+    const meta = [];
+    meta.push(PUB_TYPE_LABEL[p.type] || p.type);
+    if (p.categorie) meta.push(escapeHtml(p.categorie));
+    meta.push(formatRelative(p.date_publication || p.created_at));
+    const refusBlock = (p.statut === 'refuse' && p.raison_refus)
+      ? `<div class="mp-item-refus">Motif : ${escapeHtml(p.raison_refus)}</div>` : '';
+
+    return `
+      <div class="mp-item ${statutClass}">
+        <div class="mp-item-content">
+          <div class="mp-item-title">${escapeHtml(p.titre)}</div>
+          <div class="mp-item-meta">${meta.join(' · ')}</div>
+          ${refusBlock}
+        </div>
+        <span class="mp-badge mp-badge-${statutClass}">${statutLabel}</span>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="mp-header">
+      <div class="mp-title">Mes <em>publications</em></div>
+      <div class="mp-count">${pubs.length} publication${pubs.length > 1 ? 's' : ''}</div>
+    </div>
+    ${items}`;
+}
+
+
 async function downloadCubePdf(offreId) {
   const offre = MES_OFFRES.find(o => o.id === offreId);
   if (!offre) { showToast('Annonce introuvable', 'error'); return; }
