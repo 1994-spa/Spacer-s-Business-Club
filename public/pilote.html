@@ -633,6 +633,7 @@ let CANDS_CACHE = [];
 let CANDS_STATS = {};
 let CURRENT_CAND_FILTER = 'all';
 let CURRENT_CAND_DETAIL = null;
+let CURRENT_CAND_OFFRE = null; // { id, titre } — filtre par annonce (Sprint C.4)
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -936,6 +937,11 @@ function renderOffresList() {
       actions.push(`<button class="btn sm danger" onclick="quickReject('${o.id}')">Refuser</button>`);
     } else if (o.statut === 'publie') {
       actions.push(`<button class="btn sm gold" onclick="generateCubePdf('${o.id}')"><span class="ico">📄</span>PDF cube</button>`);
+    }
+
+    // Sprint C.4 — compteur candidatures cliquable (ouvre le tab Candidatures filtré sur cette annonce)
+    if (o.candidatures_count > 0) {
+      actions.push(`<button class="btn sm" style="border-color:var(--gold);color:var(--gold);" onclick="viewCandidaturesForOffre('${o.id}')">📩 ${o.candidatures_count} candidature${o.candidatures_count > 1 ? 's' : ''}</button>`);
     }
 
     return `
@@ -1466,8 +1472,10 @@ async function loadCandidatures(force=false) {
   const listEl = $('cands-list');
 
   try {
-    const url = `/api/admin/candidatures/${encodeURIComponent(ADMIN_TOKEN)}` +
-      (CURRENT_CAND_FILTER !== 'all' ? `?statut=${encodeURIComponent(CURRENT_CAND_FILTER)}` : '');
+    const params = [];
+    if (CURRENT_CAND_FILTER !== 'all') params.push(`statut=${encodeURIComponent(CURRENT_CAND_FILTER)}`);
+    if (CURRENT_CAND_OFFRE) params.push(`offre_id=${encodeURIComponent(CURRENT_CAND_OFFRE.id)}`);
+    const url = `/api/admin/candidatures/${encodeURIComponent(ADMIN_TOKEN)}` + (params.length ? `?${params.join('&')}` : '');
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
@@ -1507,13 +1515,42 @@ function setCandidatureFilter(statut, btn) {
   loadCandidatures();
 }
 
+// Sprint C.4 — depuis une annonce, ouvrir le tab Candidatures filtré sur cette annonce
+function viewCandidaturesForOffre(offreId) {
+  const offre = OFFRES_CACHE.find(o => o.id === offreId);
+  CURRENT_CAND_OFFRE = { id: offreId, titre: offre ? offre.titre : '' };
+  CURRENT_CAND_FILTER = 'all';
+  // reset visuel des chips statut sur "Toutes"
+  document.querySelectorAll('#cands-segs .seg').forEach(s => s.classList.remove('on'));
+  const allSeg = document.querySelector('#cands-segs .seg[data-statut="all"]');
+  if (allSeg) allSeg.classList.add('on');
+  switchTab('candidatures');
+  loadCandidatures(true);
+}
+
+function clearCandOffreFilter() {
+  CURRENT_CAND_OFFRE = null;
+  loadCandidatures(true);
+}
+
 function renderCandidaturesList() {
   const listEl = $('cands-list');
+
+  // Bandeau filtre par annonce (Sprint C.4)
+  let banner = '';
+  if (CURRENT_CAND_OFFRE) {
+    banner = `
+      <div class="banner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--gold-tint,#FBF3E0);border-left:3px solid var(--gold);margin-bottom:14px;">
+        <span>📩 Candidatures pour l'annonce <b>« ${escapeHtml(CURRENT_CAND_OFFRE.titre || '—')} »</b></span>
+        <button class="btn sm ghost" style="flex:0 0 auto;" onclick="clearCandOffreFilter()">✕ Retirer le filtre</button>
+      </div>`;
+  }
+
   if (!CANDS_CACHE.length) {
-    listEl.innerHTML = `
+    listEl.innerHTML = banner + `
       <div class="list-empty">
         <h3>Aucune candidature</h3>
-        <p>${CURRENT_CAND_FILTER === 'nouveau' ? 'Aucune candidature en attente de traitement — vous êtes à jour ✓' : `Aucune candidature ${CURRENT_CAND_FILTER !== 'all' ? `avec le statut « ${CAND_STATUT_LABEL[CURRENT_CAND_FILTER] || CURRENT_CAND_FILTER} »` : 'pour le moment'}.`}</p>
+        <p>${CURRENT_CAND_OFFRE ? 'Cette annonce n\'a pas encore reçu de candidature.' : (CURRENT_CAND_FILTER === 'nouveau' ? 'Aucune candidature en attente de traitement — vous êtes à jour ✓' : `Aucune candidature ${CURRENT_CAND_FILTER !== 'all' ? `avec le statut « ${CAND_STATUT_LABEL[CURRENT_CAND_FILTER] || CURRENT_CAND_FILTER} »` : 'pour le moment'}.`)}</p>
       </div>`;
     return;
   }
@@ -1527,7 +1564,7 @@ function renderCandidaturesList() {
     acceptee:  'publie',
   };
 
-  listEl.innerHTML = CANDS_CACHE.map(c => {
+  listEl.innerHTML = banner + CANDS_CACHE.map(c => {
     const borderClass = STATUT_BORDER_CLASS[c.statut] || '';
     const tone  = CAND_STATUT_TONE[c.statut] || '';
     const label = CAND_STATUT_LABEL[c.statut] || c.statut;
