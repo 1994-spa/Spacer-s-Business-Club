@@ -577,6 +577,13 @@ textarea.input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- ===== MODAL : Detail candidature (Sprint C.3) — placé AVANT modal-confirm pour z-stack correct ===== -->
+<div id="modal-cand" class="modal-ov" hidden onclick="if(event.target.id==='modal-cand')closeCandidatureModal()">
+  <div class="modal-card" id="modal-cand-card">
+    <!-- injected by renderCandidatureModalContent() -->
+  </div>
+</div>
+
 <!-- ===== MODAL : Confirm (reject avec raison) ===== -->
 <div id="modal-confirm" class="modal-ov" hidden onclick="if(event.target.id==='modal-confirm')closeConfirm(null)">
   <div class="modal-card sm">
@@ -605,13 +612,6 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <!-- ===== TOAST ===== -->
 <div id="toast" class="toast"></div>
-
-<!-- ===== MODAL : Detail candidature (Sprint C.3) ===== -->
-<div id="modal-cand" class="modal-ov" hidden onclick="if(event.target.id==='modal-cand')closeCandidatureModal()">
-  <div class="modal-card" id="modal-cand-card">
-    <!-- injected by renderCandidatureModal() -->
-  </div>
-</div>
 
 <script>
 // =============================================================================
