@@ -432,6 +432,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">⌘</span><span class="label">Publications</span>
         <span class="badge" id="sb-badge-pub-attente" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="communications" onclick="switchTab('communications')">
+        <span class="ico">✦</span><span class="label">Communications</span>
+        <span class="badge" id="sb-badge-com-brouillon" hidden>0</span>
+      </button>
       <button class="sb-link soon" data-tab="tickie" onclick="switchTab('tickie')">
         <span class="ico">⌬</span><span class="label">Tickie</span>
       </button>
@@ -566,6 +570,38 @@ textarea.input { resize: vertical; min-height: 80px; }
       </div>
     </section>
 
+    <!-- ===== TAB : Communications (Sprint D.2) ===== -->
+    <section id="tab-communications" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Commu<em>nications</em></h1>
+          <p class="desc">Invitations événements (avec RSVP) et annonces aux partenaires</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn primary" onclick="openComCreateModal()"><span class="ico">+</span>&nbsp;Nouvelle</button>
+          <button class="refresh-btn" onclick="loadCommunications(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+        </div>
+      </div>
+
+      <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
+        <div class="segs" id="coms-type-segs">
+          <button class="seg on" data-type="all" onclick="setComTypeFilter('all',this)">Tout <span class="count" id="cnt-com-all">·</span></button>
+          <button class="seg" data-type="invitation" onclick="setComTypeFilter('invitation',this)">✦ Invitations <span class="count" id="cnt-com-invitation">·</span></button>
+          <button class="seg" data-type="annonce" onclick="setComTypeFilter('annonce',this)">◇ Annonces <span class="count" id="cnt-com-annonce">·</span></button>
+        </div>
+        <div class="segs" id="coms-statut-segs">
+          <button class="seg on" data-statut="all" onclick="setComStatutFilter('all',this)">Tous statuts</button>
+          <button class="seg warn" data-statut="brouillon" onclick="setComStatutFilter('brouillon',this)">Brouillons <span class="count" id="cnt-comst-brouillon">·</span></button>
+          <button class="seg success" data-statut="publie" onclick="setComStatutFilter('publie',this)">Publiées</button>
+          <button class="seg" data-statut="archive" onclick="setComStatutFilter('archive',this)">Archivées</button>
+        </div>
+      </div>
+
+      <div id="coms-list" class="list">
+        <div class="list-empty">Chargement…</div>
+      </div>
+    </section>
+
     <!-- ===== TAB : Tickie (placeholder) ===== -->
     <section id="tab-tickie" class="tab-section">
       <div class="page-head"><h1 class="display">Bille<em>tterie</em> Tickie</h1></div>
@@ -603,6 +639,67 @@ textarea.input { resize: vertical; min-height: 80px; }
   <div class="modal-card" id="modal-pub-card">
     <!-- injected by renderPublicationModalContent() -->
   </div>
+</div>
+
+<!-- ===== MODAL : Création communication (Sprint D.2) ===== -->
+<div id="modal-com-create" class="modal-ov" hidden onclick="if(event.target.id==='modal-com-create')closeComCreateModal()">
+  <div class="modal-card" id="modal-com-create-card">
+    <div class="modal-head">
+      <div class="eyebrow">Nouvelle communication</div>
+      <h2 class="display" style="margin:4px 0 0;">Créer un message</h2>
+      <button class="modal-close" onclick="closeComCreateModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">TYPE</div>
+        <div class="segs" id="com-create-type">
+          <button class="seg on" data-ctype="invitation" onclick="setComCreateType('invitation',this)">✦ Invitation (avec RSVP)</button>
+          <button class="seg" data-ctype="annonce" onclick="setComCreateType('annonce',this)">◇ Annonce (info)</button>
+        </div>
+      </div>
+
+      <label class="input-lbl" for="com-titre">Titre *</label>
+      <input id="com-titre" class="input" type="text" placeholder="ex: Soirée VIP match Spacers vs Nantes" style="margin-bottom:12px;">
+
+      <label class="input-lbl" for="com-message">Message</label>
+      <textarea id="com-message" class="input" rows="4" placeholder="Le corps du message…" style="margin-bottom:12px;"></textarea>
+
+      <!-- Champs spécifiques invitation -->
+      <div id="com-invit-fields">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label class="input-lbl" for="com-date">Date de l'événement</label>
+            <input id="com-date" class="input" type="text" placeholder="14/03/2026">
+          </div>
+          <div>
+            <label class="input-lbl" for="com-heure">Heure</label>
+            <input id="com-heure" class="input" type="text" placeholder="19h00">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label class="input-lbl" for="com-lieu">Lieu</label>
+            <input id="com-lieu" class="input" type="text" placeholder="Palais des Sports André Brouat">
+          </div>
+          <div>
+            <label class="input-lbl" for="com-deadline">Réponse souhaitée avant</label>
+            <input id="com-deadline" class="input" type="text" placeholder="10/03/2026">
+          </div>
+        </div>
+      </div>
+
+      <div id="com-create-status" style="font-size:12px;text-align:center;min-height:18px;margin:6px 0;"></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
+      <button class="btn ghost" onclick="closeComCreateModal()">Annuler</button>
+      <button class="btn primary" id="com-create-btn" onclick="submitCommunication()">Créer en brouillon</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL : Détail communication + RSVP (Sprint D.2) ===== -->
+<div id="modal-com" class="modal-ov" hidden onclick="if(event.target.id==='modal-com')closeCommunicationModal()">
+  <div class="modal-card" id="modal-com-card"></div>
 </div>
 
 <!-- ===== MODAL : Confirm (reject avec raison) ===== -->
@@ -662,6 +759,14 @@ let PUBS_STATS = {};
 let CURRENT_PUB_TYPE = 'all';
 let CURRENT_PUB_STATUT = 'all';
 let CURRENT_PUB_DETAIL = null;
+
+// Sprint D.2 — Communications
+let COMS_CACHE = [];
+let COMS_STATS = {};
+let CURRENT_COM_TYPE = 'all';
+let CURRENT_COM_STATUT = 'all';
+let CURRENT_COM_DETAIL = null;
+let COM_CREATE_TYPE = 'invitation';
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -775,6 +880,7 @@ function switchTab(tab) {
   if (tab === 'offres' && OFFRES_CACHE.length === 0) loadOffres();
   if (tab === 'candidatures' && CANDS_CACHE.length === 0) loadCandidatures();
   if (tab === 'publications' && PUBS_CACHE.length === 0) loadPublications();
+  if (tab === 'communications' && COMS_CACHE.length === 0) loadCommunications();
 }
 
 // ============================================================================
@@ -2111,6 +2217,297 @@ async function publicationReject() {
 }
 
 // ============================================================================
+//  COMMUNICATIONS — Sprint D.2 (invitations + annonces, création + RSVP)
+// ============================================================================
+
+const COM_TYPE_META = {
+  invitation: { label: 'Invitation', ico: '✦' },
+  annonce:    { label: 'Annonce',    ico: '◇' },
+};
+const COM_STATUT_LABEL = { brouillon: 'Brouillon', publie: 'Publiée', archive: 'Archivée' };
+const COM_STATUT_TONE  = { brouillon: 'attente', publie: 'publie', archive: 'archive' };
+
+async function loadCommunications(force=false) {
+  const btn = document.querySelector('#tab-communications .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('coms-list');
+  try {
+    const params = [];
+    if (CURRENT_COM_TYPE !== 'all')   params.push(`type=${encodeURIComponent(CURRENT_COM_TYPE)}`);
+    if (CURRENT_COM_STATUT !== 'all') params.push(`statut=${encodeURIComponent(CURRENT_COM_STATUT)}`);
+    const url = `/api/admin/communications/${encodeURIComponent(ADMIN_TOKEN)}` + (params.length ? `?${params.join('&')}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+
+    COMS_CACHE = data.communications || [];
+    COMS_STATS = data.stats || {};
+    renderComStats();
+    renderCommunicationsList();
+
+    const totalBrouillon = (COMS_STATS.invitation?.brouillon || 0) + (COMS_STATS.annonce?.brouillon || 0);
+    const b = $('sb-badge-com-brouillon');
+    if (b) { if (totalBrouillon > 0) { b.textContent = totalBrouillon; b.hidden = false; } else b.hidden = true; }
+  } catch (e) {
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+
+function renderComStats() {
+  const s = COMS_STATS;
+  const totalAll = (s.invitation?.total || 0) + (s.annonce?.total || 0);
+  const totalBr  = (s.invitation?.brouillon || 0) + (s.annonce?.brouillon || 0);
+  $('cnt-com-all').textContent        = totalAll;
+  $('cnt-com-invitation').textContent = s.invitation?.total || 0;
+  $('cnt-com-annonce').textContent    = s.annonce?.total || 0;
+  $('cnt-comst-brouillon').textContent = totalBr;
+}
+
+function setComTypeFilter(type, btn) {
+  CURRENT_COM_TYPE = type;
+  document.querySelectorAll('#coms-type-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  loadCommunications();
+}
+function setComStatutFilter(statut, btn) {
+  CURRENT_COM_STATUT = statut;
+  document.querySelectorAll('#coms-statut-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  loadCommunications();
+}
+
+function renderCommunicationsList() {
+  const listEl = $('coms-list');
+  if (!COMS_CACHE.length) {
+    listEl.innerHTML = `<div class="list-empty"><h3>Aucune communication</h3><p>Crée une invitation ou une annonce avec le bouton « Nouvelle ».</p></div>`;
+    return;
+  }
+  const STATUT_BORDER = { brouillon: 'attente', publie: 'publie', archive: 'archive' };
+
+  listEl.innerHTML = COMS_CACHE.map(c => {
+    const tmeta = COM_TYPE_META[c.type] || { label: c.type, ico: '•' };
+    const borderClass = STATUT_BORDER[c.statut] || '';
+    const tone  = COM_STATUT_TONE[c.statut] || '';
+    const label = COM_STATUT_LABEL[c.statut] || c.statut;
+    const d = c.data || {};
+
+    const meta = [];
+    meta.push(`<span class="tag">${tmeta.ico} ${tmeta.label}</span>`);
+    if (c.type === 'invitation' && d.date_event) meta.push(`<span>📅 ${escapeHtml(d.date_event)}${d.heure ? ' · ' + escapeHtml(d.heure) : ''}</span>`);
+    if (c.type === 'invitation' && d.lieu) meta.push(`<span>📍 ${escapeHtml(d.lieu)}</span>`);
+    meta.push(`<span>${c.statut === 'publie' && c.date_publication ? 'Publiée ' + formatRelative(c.date_publication) : 'Créée ' + formatRelative(c.created_at)}</span>`);
+
+    // Agrégat RSVP pour les invitations publiées
+    let rsvpBadge = '';
+    if (c.type === 'invitation' && c.statut === 'publie') {
+      const r = c.reponses || { present: 0, total_personnes: 0 };
+      rsvpBadge = `<span style="font-size:11px;color:var(--green);font-weight:700;">✓ ${r.present} présent${r.present>1?'s':''} · ${r.total_personnes} pers.</span>`;
+    }
+
+    return `
+      <div class="offre-row ${borderClass}" onclick="openCommunicationModal('${c.id}')" style="cursor:pointer;">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            ${rsvpBadge}
+          </div>
+          <div class="offre-titre">${escapeHtml(c.titre)}</div>
+          ${c.message ? `<div class="offre-partner" style="font-weight:400;">${escapeHtml(c.message.slice(0,110))}${c.message.length>110?'…':''}</div>` : ''}
+          <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---- Création ----
+function openComCreateModal() {
+  COM_CREATE_TYPE = 'invitation';
+  document.querySelectorAll('#com-create-type .seg').forEach(s => s.classList.remove('on'));
+  document.querySelector('#com-create-type .seg[data-ctype="invitation"]').classList.add('on');
+  $('com-invit-fields').style.display = '';
+  $('com-titre').value = '';
+  $('com-message').value = '';
+  $('com-date').value = ''; $('com-heure').value = ''; $('com-lieu').value = ''; $('com-deadline').value = '';
+  $('com-create-status').textContent = '';
+  $('com-create-btn').disabled = false;
+  $('com-create-btn').textContent = 'Créer en brouillon';
+  $('modal-com-create').hidden = false;
+}
+function closeComCreateModal() { $('modal-com-create').hidden = true; }
+
+function setComCreateType(type, btn) {
+  COM_CREATE_TYPE = type;
+  document.querySelectorAll('#com-create-type .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  $('com-invit-fields').style.display = (type === 'invitation') ? '' : 'none';
+}
+
+async function submitCommunication() {
+  const titre = $('com-titre').value.trim();
+  const status = $('com-create-status');
+  if (!titre) { status.textContent = '⚠ Le titre est obligatoire'; status.style.color = '#993556'; return; }
+
+  const data = {};
+  if (COM_CREATE_TYPE === 'invitation') {
+    if ($('com-date').value.trim())     data.date_event = $('com-date').value.trim();
+    if ($('com-heure').value.trim())    data.heure = $('com-heure').value.trim();
+    if ($('com-lieu').value.trim())     data.lieu = $('com-lieu').value.trim();
+    if ($('com-deadline').value.trim()) data.deadline_rsvp = $('com-deadline').value.trim();
+  }
+
+  const payload = {
+    type: COM_CREATE_TYPE,
+    titre,
+    message: $('com-message').value.trim() || null,
+    data,
+  };
+
+  const btn = $('com-create-btn');
+  btn.disabled = true; btn.textContent = '⏳ Création…';
+  try {
+    const res = await fetch(`/api/admin/communications/${encodeURIComponent(ADMIN_TOKEN)}/create`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    const dataR = await res.json();
+    if (!res.ok || dataR.error) throw new Error(dataR.error || `Erreur ${res.status}`);
+    showToast('✓ Communication créée en brouillon', 'success');
+    closeComCreateModal();
+    loadCommunications();
+  } catch (e) {
+    status.textContent = '❌ ' + e.message; status.style.color = '#993556';
+    btn.disabled = false; btn.textContent = 'Créer en brouillon';
+  }
+}
+
+// ---- Détail + RSVP ----
+async function openCommunicationModal(comId) {
+  try {
+    const res = await fetch(`/api/admin/communication/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(comId)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_COM_DETAIL = data;
+    renderCommunicationModalContent();
+    $('modal-com').hidden = false;
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+function renderCommunicationModalContent() {
+  const { communication: c, reponses, agg } = CURRENT_COM_DETAIL;
+  if (!c) return;
+  const card = $('modal-com-card');
+  const tmeta = COM_TYPE_META[c.type] || { label: c.type, ico: '•' };
+  const tone  = COM_STATUT_TONE[c.statut] || '';
+  const label = COM_STATUT_LABEL[c.statut] || c.statut;
+  const d = c.data || {};
+
+  // Détails invitation
+  let dataRows = '';
+  if (c.type === 'invitation') {
+    const lines = [];
+    if (d.date_event) lines.push(['Date', d.date_event + (d.heure ? ' · ' + d.heure : '')]);
+    if (d.lieu) lines.push(['Lieu', d.lieu]);
+    if (d.deadline_rsvp) lines.push(['Réponse avant', d.deadline_rsvp]);
+    if (lines.length) {
+      dataRows = `<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;background:var(--bg-soft);border-radius:10px;padding:12px 16px;margin-bottom:18px;">`
+        + lines.map(([k,v]) => `<div style="color:var(--ink-soft);">${escapeHtml(k)}</div><div>${escapeHtml(v)}</div>`).join('')
+        + `</div>`;
+    }
+  }
+
+  // Bloc RSVP (invitations publiées)
+  let rsvpBlock = '';
+  if (c.type === 'invitation' && c.statut === 'publie') {
+    const repItems = (reponses || []).map(r => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <div><b>${escapeHtml(r.partenaire_nom)}</b>${r.commentaire ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;">${escapeHtml(r.commentaire)}</div>` : ''}</div>
+        <div style="text-align:right;">
+          ${r.reponse === 'present'
+            ? `<span style="color:var(--green);font-weight:700;">✓ ${r.nb_personnes} pers.</span>`
+            : `<span style="color:var(--red);font-weight:700;">✗ Absent</span>`}
+        </div>
+      </div>`).join('');
+    rsvpBlock = `
+      <div style="margin-bottom:18px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">RÉPONSES — ${agg.present} présent${agg.present>1?'s':''} (${agg.total_personnes} pers.) · ${agg.absent} absent${agg.absent>1?'s':''}</div>
+        ${repItems || '<div style="font-size:13px;color:var(--ink-soft);font-style:italic;">Aucune réponse pour le moment.</div>'}
+      </div>`;
+  }
+
+  // Actions
+  let actions = '';
+  if (c.statut === 'brouillon') {
+    actions = `<button class="btn success" onclick="communicationPublish()">📣 Publier &amp; notifier</button>`;
+  } else if (c.statut === 'publie') {
+    actions = `<button class="btn ghost" onclick="communicationArchive()">⌫ Archiver</button>`;
+  }
+
+  card.innerHTML = `
+    <div class="modal-head">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:48px;height:48px;border-radius:12px;background:var(--ink);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;">${tmeta.ico}</div>
+        <div style="flex:1;">
+          <div class="eyebrow">${escapeHtml(tmeta.label)}</div>
+          <h2 class="display" style="margin:4px 0 6px;">${escapeHtml(c.titre)}</h2>
+          <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+        </div>
+        <button class="modal-close" onclick="closeCommunicationModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      ${c.message ? `<div style="font-size:14px;color:var(--ink);line-height:1.7;white-space:pre-wrap;margin-bottom:18px;">${escapeHtml(c.message)}</div>` : ''}
+      ${dataRows}
+      ${rsvpBlock}
+      ${c.statut === 'brouillon' ? '<div class="banner warn" style="font-size:12px;">Ce message est en brouillon. « Publier &amp; notifier » l\'enverra par email à tous les partenaires et le rendra visible dans leur espace.</div>' : ''}
+    </div>
+    ${actions ? `<div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">${actions}</div>` : ''}
+  `;
+}
+
+function closeCommunicationModal() { $('modal-com').hidden = true; CURRENT_COM_DETAIL = null; }
+
+async function communicationPublish() {
+  if (!CURRENT_COM_DETAIL?.communication) return;
+  const c = CURRENT_COM_DETAIL.communication;
+  const ok = await confirmModal({
+    eyebrow: 'Publication', title: 'Publier et notifier ?',
+    message: 'Un email partira à tous les partenaires et le message apparaîtra dans leur espace. Action immédiate.',
+    confirmText: 'Publier', confirmStyle: 'success',
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/communications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(c.id)}/publish`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('📣 Communication publiée et notifiée', 'success');
+    closeCommunicationModal();
+    loadCommunications();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function communicationArchive() {
+  if (!CURRENT_COM_DETAIL?.communication) return;
+  const c = CURRENT_COM_DETAIL.communication;
+  const ok = await confirmModal({
+    eyebrow: 'Archivage', title: 'Archiver cette communication ?',
+    message: 'Elle ne sera plus visible des partenaires.',
+    confirmText: 'Archiver', confirmStyle: 'primary',
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/communications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(c.id)}/archive`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Communication archivée', 'success');
+    closeCommunicationModal();
+    loadCommunications();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+// ============================================================================
 //  BOOT
 // ============================================================================
 document.addEventListener('keydown', (e) => {
@@ -2119,6 +2516,8 @@ document.addEventListener('keydown', (e) => {
     if (!$('modal-confirm').hidden) closeConfirm(null);
     if (!$('modal-cand').hidden) closeCandidatureModal();
     if (!$('modal-pub').hidden) closePublicationModal();
+    if (!$('modal-com').hidden) closeCommunicationModal();
+    if (!$('modal-com-create').hidden) closeComCreateModal();
   }
 });
 
