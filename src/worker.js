@@ -1863,7 +1863,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.11-candidatures-admin', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.12-cand-par-offre', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2287,10 +2287,15 @@ async function handleAdminCandidaturesList(token, queryParams, env) {
     updated_at: c.updated_at,
   }));
 
-  // Stats globales (toujours sans filtre, pour les chips)
-  const allRows = await supabaseQuery('candidatures', 'select=statut', env);
+  // Stats : si filtre offre actif, stats de cette offre ; sinon stats globales
+  let statsRows;
+  if (offreFilter && /^[0-9a-f-]{36}$/.test(offreFilter)) {
+    statsRows = await supabaseQuery('candidatures', `offre_id=eq.${offreFilter}&select=statut`, env);
+  } else {
+    statsRows = await supabaseQuery('candidatures', 'select=statut', env);
+  }
   const stats = { nouveau: 0, vue: 0, contactee: 0, refusee: 0, acceptee: 0, total: 0 };
-  (allRows || []).forEach(r => {
+  (statsRows || []).forEach(r => {
     if (CANDIDATURE_STATUTS.includes(r.statut)) stats[r.statut]++;
     stats.total++;
   });
