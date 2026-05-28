@@ -178,6 +178,23 @@
   .contact-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: white; font-weight: 700; font-size: 24px; display: grid; place-items: center; font-family: 'Fraunces', serif; }
   .contact-info b { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; display: block; }
   .contact-info small { color: var(--ink-muted); font-size: 13px; }
+  /* Communications (D.3) */
+  .com-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+  .com-card.invitation { border-left: 3px solid var(--gold); }
+  .com-card.annonce { border-left: 3px solid var(--ink-soft); }
+  .com-card .com-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+  .com-card.annonce .com-eyebrow { color: var(--ink-muted); }
+  .com-card .com-titre { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; line-height: 1.2; margin-bottom: 6px; }
+  .com-card .com-msg { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; white-space: pre-wrap; margin-bottom: 10px; }
+  .com-card .com-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-muted); margin-bottom: 12px; }
+  .com-rsvp { background: var(--bg-soft); border-radius: 10px; padding: 14px 16px; margin-top: 4px; }
+  .com-rsvp-q { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+  .com-rsvp-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .com-rsvp-btn { padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; transition: all .15s; }
+  .com-rsvp-btn.present.on { background: #1B7F4B; color: white; border-color: #1B7F4B; }
+  .com-rsvp-btn.absent.on { background: #993556; color: white; border-color: #993556; }
+  .com-nb { width: 64px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; }
+  .com-rsvp-done { font-size: 12px; color: #1B7F4B; font-weight: 600; margin-top: 8px; }
   .btn { padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: white; cursor: pointer; text-decoration: none; color: var(--ink); transition: all .2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -311,6 +328,13 @@
     <h3 class="display">Mes <em>alertes</em></h3>
     <p class="section-desc">Actions à suivre cette saison</p>
     <div class="alertes" id="alertes-list"></div>
+  </section>
+
+  <!-- INVITATIONS & ACTUS (Sprint D.3) -->
+  <section class="fade-in delay-3" id="communications-section" hidden>
+    <h3 class="display">Invi<em>tations</em> &amp; actus</h3>
+    <p class="section-desc">Événements et actualités du club — confirmez votre présence aux invitations</p>
+    <div id="com-list"></div>
   </section>
 
   <!-- MA VIE PARTENAIRE -->
@@ -714,6 +738,7 @@ function renderDashboard(data) {
   // ===== LISTE DES ANNONCES DU PARTENAIRE =====
   loadMesPublications();
   loadMesPubs();
+  loadPartnerCommunications();
 }
 
 // =========================================================================
@@ -1161,6 +1186,122 @@ function renderMesPubs(pubs) {
       <div class="mp-count">${pubs.length} publication${pubs.length > 1 ? 's' : ''}</div>
     </div>
     ${items}`;
+}
+
+
+// =========================================================================
+//  COMMUNICATIONS PARTENAIRE — Sprint D.3 (réception + RSVP)
+// =========================================================================
+let PARTNER_COMS = [];
+
+async function loadPartnerCommunications() {
+  if (!MAGIC_TOKEN) return;
+  const section = $('communications-section');
+  const wrap = $('com-list');
+  if (!wrap) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/communications`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    PARTNER_COMS = data.communications || [];
+    renderPartnerCommunications();
+    if (section) section.hidden = (PARTNER_COMS.length === 0);
+  } catch (e) {
+    console.warn('loadPartnerCommunications error:', e.message);
+    if (section) section.hidden = true;
+  }
+}
+
+function renderPartnerCommunications() {
+  const wrap = $('com-list');
+  if (!wrap) return;
+  if (!PARTNER_COMS.length) { wrap.innerHTML = ''; return; }
+
+  wrap.innerHTML = PARTNER_COMS.map(c => {
+    const isInvit = c.type === 'invitation';
+    const d = c.data || {};
+    const eyebrow = isInvit ? '\u2726 Invitation' : '\u25C7 Actualité';
+
+    const meta = [];
+    if (isInvit && d.date_event) meta.push(`<span>📅 ${escapeHtml(d.date_event)}${d.heure ? ' · ' + escapeHtml(d.heure) : ''}</span>`);
+    if (isInvit && d.lieu) meta.push(`<span>📍 ${escapeHtml(d.lieu)}</span>`);
+    if (isInvit && d.deadline_rsvp) meta.push(`<span>⏰ Réponse avant le ${escapeHtml(d.deadline_rsvp)}</span>`);
+
+    let rsvpBlock = '';
+    if (isInvit) {
+      const rep = c.ma_reponse;
+      const presentOn = rep && rep.reponse === 'present' ? 'on' : '';
+      const absentOn  = rep && rep.reponse === 'absent' ? 'on' : '';
+      const nbVal = (rep && rep.reponse === 'present') ? (rep.nb_personnes || 1) : 1;
+      const doneMsg = rep
+        ? (rep.reponse === 'present'
+            ? `<div class="com-rsvp-done">✓ Vous avez confirmé votre présence (${rep.nb_personnes} personne${rep.nb_personnes>1?'s':''}). Vous pouvez modifier.</div>`
+            : `<div class="com-rsvp-done" style="color:#993556;">✗ Vous avez indiqué être absent. Vous pouvez modifier.</div>`)
+        : '';
+      rsvpBlock = `
+        <div class="com-rsvp">
+          <div class="com-rsvp-q">Serez-vous présent ?</div>
+          <div class="com-rsvp-btns">
+            <button class="com-rsvp-btn present ${presentOn}" id="rsvp-pres-${c.id}" onclick="setRsvpChoice('${c.id}','present')">✓ Je viens</button>
+            <button class="com-rsvp-btn absent ${absentOn}" id="rsvp-abs-${c.id}" onclick="setRsvpChoice('${c.id}','absent')">✗ Absent</button>
+            <span id="rsvp-nb-wrap-${c.id}" style="display:${presentOn?'inline-flex':'none'};align-items:center;gap:6px;">
+              <input type="number" min="1" value="${nbVal}" class="com-nb" id="rsvp-nb-${c.id}"> pers.
+            </span>
+            <button class="btn primary" id="rsvp-save-${c.id}" onclick="submitRsvp('${c.id}')" style="display:none;">Valider</button>
+          </div>
+          ${doneMsg}
+        </div>`;
+    }
+
+    return `
+      <div class="com-card ${isInvit ? 'invitation' : 'annonce'}">
+        <div class="com-eyebrow">${eyebrow}</div>
+        <div class="com-titre">${escapeHtml(c.titre)}</div>
+        ${c.message ? `<div class="com-msg">${escapeHtml(c.message)}</div>` : ''}
+        ${meta.length ? `<div class="com-meta">${meta.join('')}</div>` : ''}
+        ${rsvpBlock}
+      </div>`;
+  }).join('');
+}
+
+function setRsvpChoice(comId, choice) {
+  const presBtn = $(`rsvp-pres-${comId}`);
+  const absBtn = $(`rsvp-abs-${comId}`);
+  const nbWrap = $(`rsvp-nb-wrap-${comId}`);
+  const saveBtn = $(`rsvp-save-${comId}`);
+  if (choice === 'present') {
+    presBtn.classList.add('on'); absBtn.classList.remove('on');
+    nbWrap.style.display = 'inline-flex';
+  } else {
+    absBtn.classList.add('on'); presBtn.classList.remove('on');
+    nbWrap.style.display = 'none';
+  }
+  saveBtn.style.display = 'inline-flex';
+}
+
+async function submitRsvp(comId) {
+  const presBtn = $(`rsvp-pres-${comId}`);
+  const reponse = presBtn.classList.contains('on') ? 'present' : 'absent';
+  const nb = reponse === 'present' ? (parseInt($(`rsvp-nb-${comId}`).value, 10) || 1) : 0;
+  const saveBtn = $(`rsvp-save-${comId}`);
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = '⏳';
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/communication/${encodeURIComponent(comId)}/rsvp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reponse, nb_personnes: nb }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(reponse === 'present' ? '✓ Présence confirmée' : '✗ Réponse enregistrée', 'success');
+    loadPartnerCommunications();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Valider';
+  }
 }
 
 
