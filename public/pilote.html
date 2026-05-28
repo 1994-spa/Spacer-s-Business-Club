@@ -428,8 +428,9 @@ textarea.input { resize: vertical; min-height: 80px; }
       <button class="sb-link soon" data-tab="partenaires" onclick="switchTab('partenaires')">
         <span class="ico">◈</span><span class="label">Partenaires</span>
       </button>
-      <button class="sb-link soon" data-tab="publications" onclick="switchTab('publications')">
+      <button class="sb-link" data-tab="publications" onclick="switchTab('publications')">
         <span class="ico">⌘</span><span class="label">Publications</span>
+        <span class="badge" id="sb-badge-pub-attente" hidden>0</span>
       </button>
       <button class="sb-link soon" data-tab="tickie" onclick="switchTab('tickie')">
         <span class="ico">⌬</span><span class="label">Tickie</span>
@@ -536,19 +537,32 @@ textarea.input { resize: vertical; min-height: 80px; }
 
     <!-- ===== TAB : Publications (placeholder) ===== -->
     <section id="tab-publications" class="tab-section">
-      <div class="page-head"><h1 class="display">Publi<em>cations</em></h1></div>
-      <div class="placeholder-tab">
-        <div class="ico">⌘</div>
-        <h3>Onglet à venir — V2</h3>
-        <p>Modération polymorphe des publications (forum, propositions, échanges) avec workflow identique aux annonces emploi.</p>
-        <div class="routes">
-          <b>GET</b>  /api/admin/publications/:token?type=X&statut=Y<br>
-          <b>GET</b>  /api/admin/publication/:token/:id<br>
-          <b>POST</b> /api/admin/publications/:token/create<br>
-          <b>POST</b> /api/admin/publications/:token/:id/publish<br>
-          <b>POST</b> /api/admin/publications/:token/:id/reject<br>
-          <b>POST</b> /api/admin/publications/:token/:id/archive
+      <div class="page-head">
+        <div>
+          <h1 class="display">Publi<em>cations</em></h1>
+          <p class="desc">Forum, propositions et échanges entre partenaires — modération</p>
         </div>
+        <button class="refresh-btn" onclick="loadPublications(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+      </div>
+
+      <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
+        <div class="segs" id="pubs-type-segs">
+          <button class="seg on" data-type="all" onclick="setPubTypeFilter('all',this)">Tous types <span class="count" id="cnt-pub-all">·</span></button>
+          <button class="seg" data-type="forum" onclick="setPubTypeFilter('forum',this)">⌘ Forum <span class="count" id="cnt-pub-forum">·</span></button>
+          <button class="seg" data-type="proposition" onclick="setPubTypeFilter('proposition',this)">◈ Propositions <span class="count" id="cnt-pub-proposition">·</span></button>
+          <button class="seg" data-type="echange" onclick="setPubTypeFilter('echange',this)">⌬ Échanges <span class="count" id="cnt-pub-echange">·</span></button>
+        </div>
+        <div class="segs" id="pubs-statut-segs">
+          <button class="seg on" data-statut="all" onclick="setPubStatutFilter('all',this)">Tous statuts</button>
+          <button class="seg warn" data-statut="en_attente" onclick="setPubStatutFilter('en_attente',this)">En attente <span class="count" id="cnt-pubst-attente">·</span></button>
+          <button class="seg success" data-statut="publie" onclick="setPubStatutFilter('publie',this)">Publiées</button>
+          <button class="seg danger" data-statut="refuse" onclick="setPubStatutFilter('refuse',this)">Refusées</button>
+          <button class="seg" data-statut="archive" onclick="setPubStatutFilter('archive',this)">Archivées</button>
+        </div>
+      </div>
+
+      <div id="pubs-list" class="list">
+        <div class="list-empty">Chargement…</div>
       </div>
     </section>
 
@@ -581,6 +595,13 @@ textarea.input { resize: vertical; min-height: 80px; }
 <div id="modal-cand" class="modal-ov" hidden onclick="if(event.target.id==='modal-cand')closeCandidatureModal()">
   <div class="modal-card" id="modal-cand-card">
     <!-- injected by renderCandidatureModalContent() -->
+  </div>
+</div>
+
+<!-- ===== MODAL : Detail publication (Sprint B.1) ===== -->
+<div id="modal-pub" class="modal-ov" hidden onclick="if(event.target.id==='modal-pub')closePublicationModal()">
+  <div class="modal-card" id="modal-pub-card">
+    <!-- injected by renderPublicationModalContent() -->
   </div>
 </div>
 
@@ -634,6 +655,13 @@ let CANDS_STATS = {};
 let CURRENT_CAND_FILTER = 'all';
 let CURRENT_CAND_DETAIL = null;
 let CURRENT_CAND_OFFRE = null; // { id, titre } — filtre par annonce (Sprint C.4)
+
+// Sprint B.1 — Publications
+let PUBS_CACHE = [];
+let PUBS_STATS = {};
+let CURRENT_PUB_TYPE = 'all';
+let CURRENT_PUB_STATUT = 'all';
+let CURRENT_PUB_DETAIL = null;
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -746,6 +774,7 @@ function switchTab(tab) {
   if (tab === 'dashboard' && !DASH_DATA) loadDashboard();
   if (tab === 'offres' && OFFRES_CACHE.length === 0) loadOffres();
   if (tab === 'candidatures' && CANDS_CACHE.length === 0) loadCandidatures();
+  if (tab === 'publications' && PUBS_CACHE.length === 0) loadPublications();
 }
 
 // ============================================================================
@@ -1802,6 +1831,286 @@ async function saveCandidatureNotes() {
 }
 
 // ============================================================================
+//  PUBLICATIONS — Sprint B.1 (forum / proposition / echange — modération)
+// ============================================================================
+
+const PUB_TYPE_META = {
+  forum:       { label: 'Forum',       ico: '⌘', tagline: 'Sortie / afterwork / événement' },
+  proposition: { label: 'Proposition', ico: '◈', tagline: 'Offre ou remise B2B' },
+  echange:     { label: 'Échange',     ico: '⌬', tagline: 'Demande de prestataire' },
+};
+const PUB_STATUT_LABEL = {
+  en_attente: 'En attente',
+  publie:     'Publiée',
+  refuse:     'Refusée',
+  expire:     'Expirée',
+  archive:    'Archivée',
+};
+const PUB_STATUT_TONE = {
+  en_attente: 'attente',
+  publie:     'publie',
+  refuse:     'refuse',
+  expire:     'expire',
+  archive:    'archive',
+};
+
+async function loadPublications(force=false) {
+  const btn = document.querySelector('#tab-publications .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('pubs-list');
+
+  try {
+    const params = [];
+    if (CURRENT_PUB_TYPE !== 'all')   params.push(`type=${encodeURIComponent(CURRENT_PUB_TYPE)}`);
+    if (CURRENT_PUB_STATUT !== 'all') params.push(`statut=${encodeURIComponent(CURRENT_PUB_STATUT)}`);
+    const url = `/api/admin/publications/${encodeURIComponent(ADMIN_TOKEN)}` + (params.length ? `?${params.join('&')}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+
+    PUBS_CACHE = data.publications || [];
+    PUBS_STATS = data.stats || {};
+    renderPublicationStats();
+    renderPublicationsList();
+
+    // Badge sidebar : total des publications en_attente (tous types)
+    const totalAttente = ['forum','proposition','echange'].reduce((s,t) => s + (PUBS_STATS[t]?.en_attente || 0), 0);
+    const b = $('sb-badge-pub-attente');
+    if (b) {
+      if (totalAttente > 0) { b.textContent = totalAttente; b.hidden = false; }
+      else { b.hidden = true; }
+    }
+  } catch (e) {
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+
+function renderPublicationStats() {
+  const s = PUBS_STATS;
+  const totalAll = ['forum','proposition','echange'].reduce((acc,t) => acc + (s[t]?.total || 0), 0);
+  const totalAttente = ['forum','proposition','echange'].reduce((acc,t) => acc + (s[t]?.en_attente || 0), 0);
+  $('cnt-pub-all').textContent         = totalAll;
+  $('cnt-pub-forum').textContent       = s.forum?.total || 0;
+  $('cnt-pub-proposition').textContent = s.proposition?.total || 0;
+  $('cnt-pub-echange').textContent     = s.echange?.total || 0;
+  $('cnt-pubst-attente').textContent   = totalAttente;
+}
+
+function setPubTypeFilter(type, btn) {
+  CURRENT_PUB_TYPE = type;
+  document.querySelectorAll('#pubs-type-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  loadPublications();
+}
+
+function setPubStatutFilter(statut, btn) {
+  CURRENT_PUB_STATUT = statut;
+  document.querySelectorAll('#pubs-statut-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  loadPublications();
+}
+
+function renderPublicationsList() {
+  const listEl = $('pubs-list');
+  if (!PUBS_CACHE.length) {
+    listEl.innerHTML = `
+      <div class="list-empty">
+        <h3>Aucune publication</h3>
+        <p>${CURRENT_PUB_STATUT === 'en_attente' ? 'Aucune publication en attente de modération — tout est traité ✓' : 'Aucune publication ne correspond à ces filtres.'}</p>
+      </div>`;
+    return;
+  }
+
+  const STATUT_BORDER = { en_attente:'attente', publie:'publie', refuse:'refuse', expire:'archive', archive:'archive' };
+
+  listEl.innerHTML = PUBS_CACHE.map(p => {
+    const tmeta = PUB_TYPE_META[p.type] || { label: p.type, ico: '•', tagline: '' };
+    const borderClass = STATUT_BORDER[p.statut] || '';
+    const tone  = PUB_STATUT_TONE[p.statut] || '';
+    const label = PUB_STATUT_LABEL[p.statut] || p.statut;
+
+    const meta = [];
+    meta.push(`<span class="tag">${tmeta.ico} ${tmeta.label}</span>`);
+    if (p.categorie) meta.push(`<span>${escapeHtml(p.categorie)}</span>`);
+    meta.push(`<span>${escapeHtml(p.partenaire)}</span>`);
+    meta.push(`<span>Reçue ${formatRelative(p.created_at)}</span>`);
+    if (p.reponses_count > 0) meta.push(`<span>💬 ${p.reponses_count}</span>`);
+
+    return `
+      <div class="offre-row ${borderClass}" onclick="openPublicationModal('${p.id}')" style="cursor:pointer;">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            ${p.created_by === 'partenaire' ? '<span style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;">↗ Proposée par partenaire</span>' : ''}
+          </div>
+          <div class="offre-titre">${escapeHtml(p.titre)}</div>
+          ${p.description ? `<div class="offre-partner" style="font-weight:400;">${escapeHtml(p.description.slice(0,120))}${p.description.length > 120 ? '…' : ''}</div>` : ''}
+          <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openPublicationModal(pubId) {
+  try {
+    const res = await fetch(`/api/admin/publication/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(pubId)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_PUB_DETAIL = data.publication || data;
+    renderPublicationModalContent();
+    $('modal-pub').hidden = false;
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+function renderPublicationModalContent() {
+  const p = CURRENT_PUB_DETAIL;
+  if (!p) return;
+  const card = $('modal-pub-card');
+  const tmeta = PUB_TYPE_META[p.type] || { label: p.type, ico: '•', tagline: '' };
+  const tone  = PUB_STATUT_TONE[p.statut] || '';
+  const label = PUB_STATUT_LABEL[p.statut] || p.statut;
+
+  // Rendu du champ data (JSON libre) en lignes clé/valeur
+  let dataRows = '';
+  if (p.data && typeof p.data === 'object' && Object.keys(p.data).length) {
+    dataRows = Object.entries(p.data)
+      .filter(([k,v]) => v !== null && v !== '' && v !== undefined)
+      .map(([k,v]) => `
+        <div style="color:var(--ink-soft);text-transform:capitalize;">${escapeHtml(k.replace(/_/g,' '))}</div>
+        <div>${escapeHtml(String(v))}</div>`).join('');
+  }
+
+  // Actions selon statut
+  let actions = '';
+  if (p.statut === 'en_attente') {
+    actions = `
+      <button class="btn success" onclick="publicationAction('publish')">✓ Publier</button>
+      <button class="btn danger" onclick="publicationReject()">✗ Refuser</button>`;
+  } else if (p.statut === 'publie') {
+    actions = `<button class="btn ghost" onclick="publicationAction('archive')">⌫ Archiver</button>`;
+  } else if (p.statut === 'refuse') {
+    actions = `<button class="btn success" onclick="publicationAction('publish')">↻ Publier finalement</button>`;
+  }
+
+  card.innerHTML = `
+    <div class="modal-head">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:48px;height:48px;border-radius:12px;background:var(--ink);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;">${tmeta.ico}</div>
+        <div style="flex:1;">
+          <div class="eyebrow">${escapeHtml(tmeta.label)} · ${escapeHtml(tmeta.tagline)}</div>
+          <h2 class="display" style="margin:4px 0 6px;">${escapeHtml(p.titre)}</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            <span style="font-size:12px;color:var(--ink-soft);">${escapeHtml(p.partenaire || '—')} · ${escapeHtml(formatRelative(p.created_at))}</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closePublicationModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      ${p.description ? `
+      <div style="margin-bottom:18px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">DESCRIPTION</div>
+        <div style="font-size:14px;color:var(--ink);line-height:1.7;white-space:pre-wrap;">${escapeHtml(p.description)}</div>
+      </div>` : ''}
+
+      ${p.categorie ? `<div style="margin-bottom:14px;"><span class="tag" style="background:var(--bg-soft);padding:4px 12px;border-radius:999px;font-size:12px;">${escapeHtml(p.categorie)}</span></div>` : ''}
+
+      ${dataRows ? `
+      <div style="margin-bottom:18px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">DÉTAILS</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;background:var(--bg-soft);border-radius:10px;padding:12px 16px;">${dataRows}</div>
+      </div>` : ''}
+
+      <div style="margin-bottom:6px;">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">CONTACT</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;">
+          ${p.contact_nom ? `<div style="color:var(--ink-soft);">Nom</div><div>${escapeHtml(p.contact_nom)}</div>` : ''}
+          ${p.contact_email ? `<div style="color:var(--ink-soft);">Email</div><div><a href="mailto:${encodeURIComponent(p.contact_email)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(p.contact_email)}</a></div>` : ''}
+          ${p.contact_telephone ? `<div style="color:var(--ink-soft);">Téléphone</div><div><a href="tel:${escapeHtml(p.contact_telephone)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(p.contact_telephone)}</a></div>` : ''}
+        </div>
+      </div>
+
+      ${p.raison_refus ? `
+      <div style="margin-top:16px;padding:12px 14px;background:var(--red-tint);border-left:3px solid var(--red);border-radius:6px;font-size:13px;color:var(--red);">
+        <b>Motif de refus :</b> ${escapeHtml(p.raison_refus)}
+      </div>` : ''}
+    </div>
+    ${actions ? `<div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">${actions}</div>` : ''}
+  `;
+}
+
+function closePublicationModal() {
+  $('modal-pub').hidden = true;
+  CURRENT_PUB_DETAIL = null;
+}
+
+async function publicationAction(action) {
+  if (!CURRENT_PUB_DETAIL) return;
+  const id = CURRENT_PUB_DETAIL.id;
+
+  if (action === 'publish') {
+    const ok = await confirmModal({
+      eyebrow: 'Validation', title: 'Publier cette publication ?',
+      message: 'Elle deviendra visible des autres partenaires dans leur espace.',
+      confirmText: 'Publier', confirmStyle: 'success',
+    });
+    if (!ok) return;
+  } else if (action === 'archive') {
+    const ok = await confirmModal({
+      eyebrow: 'Archivage', title: 'Archiver cette publication ?',
+      message: 'Elle ne sera plus visible des partenaires mais reste conservée.',
+      confirmText: 'Archiver', confirmStyle: 'primary',
+    });
+    if (!ok) return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/publications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/${action}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    const labels = { publish: 'publiée', archive: 'archivée' };
+    showToast(`✓ Publication ${labels[action] || 'mise à jour'}`, 'success');
+    closePublicationModal();
+    loadPublications();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function publicationReject() {
+  if (!CURRENT_PUB_DETAIL) return;
+  const id = CURRENT_PUB_DETAIL.id;
+  const raison = await promptModal({
+    eyebrow: 'Refus', title: 'Refuser cette publication',
+    message: 'Le motif sera transmis au partenaire. Sois précis et constructif.',
+    inputPlaceholder: 'Ex : Contenu hors charte, doublon, informations incomplètes…',
+    confirmText: 'Refuser', confirmStyle: 'danger',
+  });
+  if (raison === null) return; // annulé
+
+  try {
+    const res = await fetch(`/api/admin/publications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raison: raison }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Publication refusée', 'success');
+    closePublicationModal();
+    loadPublications();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ============================================================================
 //  BOOT
 // ============================================================================
 document.addEventListener('keydown', (e) => {
@@ -1809,6 +2118,7 @@ document.addEventListener('keydown', (e) => {
     if (!$('modal-offre').hidden) closeOffreModal();
     if (!$('modal-confirm').hidden) closeConfirm(null);
     if (!$('modal-cand').hidden) closeCandidatureModal();
+    if (!$('modal-pub').hidden) closePublicationModal();
   }
 });
 
