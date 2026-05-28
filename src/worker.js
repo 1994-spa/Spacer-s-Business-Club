@@ -144,6 +144,20 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/candidature\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update-statut$/);
       if (m) return await handleAdminCandidatureUpdateStatut(m[1], m[2], body || {}, env);
 
+      // ===== Sprint D — Communications (admin CRUD + publish) =====
+      m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})\/create$/);
+      if (m) return await handleAdminCommunicationCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/publish$/);
+      if (m) return await handleAdminCommunicationPublish(m[1], m[2], env, ctx);
+
+      m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
+      if (m) return await handleAdminCommunicationArchive(m[1], m[2], env);
+
+      // Sprint D — Communications (partenaire : RSVP)
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/communication\/([0-9a-f-]{36})\/rsvp$/);
+      if (m) return await handlePartnerCommunicationRsvp(m[1], m[2], body || {}, env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -208,6 +222,17 @@ async function handleApi(request, env, path, ctx) {
     // Public — détail offre + incrément vues_count
     m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})$/);
     if (m) return await handlePublicOffreDetail(m[1], env);
+
+    // ===== Sprint D — Communications (admin) =====
+    m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminCommunicationsList(m[1], url.searchParams, env);
+
+    m = path.match(/^\/api\/admin\/communication\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
+    if (m) return await handleAdminCommunicationDetail(m[1], m[2], env);
+
+    // Sprint D — Communications (partenaire : liste des publiées + sa réponse RSVP)
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/communications$/);
+    if (m) return await handlePartnerCommunicationsList(m[1], env);
 
     // ===== Sprint C.3 — Candidatures admin =====
     m = path.match(/^\/api\/admin\/candidatures\/([a-zA-Z0-9_-]{16,})$/);
@@ -1863,7 +1888,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.12-cand-par-offre', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.13-communications', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2395,4 +2420,302 @@ async function handleAdminCandidatureUpdateStatut(token, candidatureId, body, en
     ok: true,
     candidature: Array.isArray(updated) ? updated[0] : updated,
   });
+}
+
+// ============================================================================
+//  COMMUNICATIONS — Sprint D (invitations + annonces, RSVP)
+// ============================================================================
+
+const COM_TYPES = ['invitation', 'annonce'];
+const COM_STATUTS = ['brouillon', 'publie', 'archive'];
+
+// ----------- GET /api/admin/communications/:token?type=X&statut=Y -----------
+async function handleAdminCommunicationsList(token, queryParams, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const typeFilter = queryParams.get('type');
+  const statutFilter = queryParams.get('statut');
+
+  let filters = [];
+  if (typeFilter && COM_TYPES.includes(typeFilter)) filters.push(`type=eq.${typeFilter}`);
+  if (statutFilter && COM_STATUTS.includes(statutFilter)) filters.push(`statut=eq.${statutFilter}`);
+  const baseQuery = filters.join('&') + (filters.length ? '&' : '') +
+    'select=*&order=created_at.desc&limit=200';
+
+  const rows = await supabaseQuery('communications', baseQuery, env);
+
+  // Comptage des réponses par communication (présents + total personnes)
+  const ids = (rows || []).map(r => r.id);
+  let reponsesByCom = {};
+  if (ids.length) {
+    const inList = ids.map(id => `"${id}"`).join(',');
+    const reps = await supabaseQuery('communication_reponses', `communication_id=in.(${inList})&select=communication_id,reponse,nb_personnes`, env);
+    (reps || []).forEach(r => {
+      if (!reponsesByCom[r.communication_id]) reponsesByCom[r.communication_id] = { present: 0, absent: 0, total_personnes: 0 };
+      if (r.reponse === 'present') { reponsesByCom[r.communication_id].present++; reponsesByCom[r.communication_id].total_personnes += (r.nb_personnes || 1); }
+      else if (r.reponse === 'absent') reponsesByCom[r.communication_id].absent++;
+    });
+  }
+
+  const communications = (rows || []).map(c => ({
+    id: c.id, type: c.type, titre: c.titre, message: c.message || '',
+    categorie: c.categorie || '', data: c.data || {},
+    statut: c.statut, date_publication: c.date_publication,
+    created_at: c.created_at,
+    reponses: reponsesByCom[c.id] || { present: 0, absent: 0, total_personnes: 0 },
+  }));
+
+  // Stats par type/statut
+  const allRows = await supabaseQuery('communications', 'select=type,statut', env);
+  const stats = { invitation: { brouillon:0, publie:0, archive:0, total:0 }, annonce: { brouillon:0, publie:0, archive:0, total:0 } };
+  (allRows || []).forEach(r => {
+    if (!stats[r.type]) return;
+    stats[r.type][r.statut] = (stats[r.type][r.statut] || 0) + 1;
+    stats[r.type].total++;
+  });
+
+  return jsonResponseNoCache({ communications, stats });
+}
+
+// ----------- GET /api/admin/communication/:token/:id -----------
+async function handleAdminCommunicationDetail(token, comId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery('communications', `id=eq.${comId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Communication introuvable' }, 404);
+  const c = rows[0];
+
+  // Réponses RSVP détaillées + nom du partenaire
+  const reps = await supabaseQuery(
+    'communication_reponses',
+    `communication_id=eq.${comId}&select=*,contrats(id,partenaires(raison_sociale))&order=created_at.desc`,
+    env
+  );
+  const reponses = (reps || []).map(r => ({
+    id: r.id,
+    contrat_id: r.contrat_id,
+    partenaire_nom: r.contrats?.partenaires?.raison_sociale || '—',
+    reponse: r.reponse,
+    nb_personnes: r.nb_personnes || 1,
+    commentaire: r.commentaire || '',
+    created_at: r.created_at,
+  }));
+
+  const agg = { present: 0, absent: 0, total_personnes: 0 };
+  reponses.forEach(r => {
+    if (r.reponse === 'present') { agg.present++; agg.total_personnes += r.nb_personnes; }
+    else if (r.reponse === 'absent') agg.absent++;
+  });
+
+  return jsonResponseNoCache({
+    communication: {
+      id: c.id, type: c.type, titre: c.titre, message: c.message || '',
+      categorie: c.categorie || '', data: c.data || {},
+      statut: c.statut, cible: c.cible, date_publication: c.date_publication,
+      created_at: c.created_at, updated_at: c.updated_at,
+    },
+    reponses, agg,
+  });
+}
+
+// ----------- POST /api/admin/communications/:token/create -----------
+// Body : { type, titre, message, categorie, data, publish_now? }
+async function handleAdminCommunicationCreate(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const type = String(body.type || '').trim();
+  if (!COM_TYPES.includes(type)) return jsonResponseNoCache({ error: 'type invalide', expected: COM_TYPES }, 400);
+  const titre = String(body.titre || '').trim();
+  if (!titre) return jsonResponseNoCache({ error: 'Titre obligatoire' }, 400);
+
+  const insertData = {
+    type, titre,
+    message: body.message || null,
+    categorie: body.categorie || null,
+    data: body.data || {},
+    statut: 'brouillon',
+    cible: 'tous',
+    created_by_admin_id: admin.id,
+  };
+
+  let created;
+  try {
+    const arr = await supabaseInsert_('communications', insertData, env);
+    created = Array.isArray(arr) ? arr[0] : arr;
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500);
+  }
+
+  return jsonResponseNoCache({ ok: true, communication: created });
+}
+
+// ----------- POST /api/admin/communications/:token/:id/publish -----------
+async function handleAdminCommunicationPublish(token, comId, env, ctx) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery('communications', `id=eq.${comId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Communication introuvable' }, 404);
+  const com = rows[0];
+
+  await supabasePatch_('communications', `id=eq.${comId}`, {
+    statut: 'publie',
+    date_publication: new Date().toISOString(),
+  }, env);
+
+  // Emails Resend vers tous les partenaires (best-effort, fire-and-forget via waitUntil)
+  const emailJob = (async () => {
+    try {
+      const contrats = await supabaseQuery(
+        'contrats',
+        `select=id,partenaires(raison_sociale,representant,representant_email)&limit=200`,
+        env
+      );
+      const recipients = (contrats || [])
+        .map(c => ({
+          email: c.partenaires?.representant_email,
+          nom: c.partenaires?.representant || '',
+          raison: c.partenaires?.raison_sociale || '',
+        }))
+        .filter(r => r.email && r.email.includes('@'));
+
+      const isInvit = com.type === 'invitation';
+      const subject = isInvit ? `Invitation — ${com.titre}` : `${com.titre}`;
+
+      for (const r of recipients) {
+        await sendEmailViaResend(env, {
+          to: r.email,
+          subject,
+          html: isInvit ? renderEmailInvitation(com, r) : renderEmailAnnonce(com, r),
+          replyTo: EMAIL_REPLY_TO_CLUB,
+        });
+      }
+      console.log(`[Communication ${comId}] ${recipients.length} emails envoyés`);
+    } catch (e) {
+      console.error(`[Communication ${comId}] email job error:`, e.message);
+    }
+  })();
+
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(emailJob);
+  else await emailJob;
+
+  return jsonResponseNoCache({ ok: true, statut: 'publie' });
+}
+
+// ----------- POST /api/admin/communications/:token/:id/archive -----------
+async function handleAdminCommunicationArchive(token, comId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  await supabasePatch_('communications', `id=eq.${comId}`, { statut: 'archive' }, env);
+  return jsonResponseNoCache({ ok: true, statut: 'archive' });
+}
+
+// ----------- GET /api/partner/:token/communications -----------
+async function handlePartnerCommunicationsList(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  // Communications publiées (non archivées)
+  const rows = await supabaseQuery(
+    'communications',
+    `statut=eq.publie&select=id,type,titre,message,categorie,data,date_publication,created_at&order=date_publication.desc&limit=100`,
+    env
+  );
+
+  // Réponses RSVP de CE partenaire
+  const myReps = await supabaseQuery(
+    'communication_reponses',
+    `contrat_id=eq.${partner.contrat_id}&select=communication_id,reponse,nb_personnes,commentaire`,
+    env
+  );
+  const repByCom = {};
+  (myReps || []).forEach(r => { repByCom[r.communication_id] = r; });
+
+  const communications = (rows || []).map(c => ({
+    ...c,
+    ma_reponse: repByCom[c.id] || null,
+  }));
+
+  return jsonResponseNoCache({
+    contrat_id: partner.contrat_id,
+    communications,
+    meta: { version: 'V4.13-comm', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- POST /api/partner/:token/communication/:id/rsvp -----------
+// Body : { reponse: 'present'|'absent', nb_personnes?, commentaire? }
+async function handlePartnerCommunicationRsvp(token, comId, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const reponse = String(body.reponse || '').trim();
+  if (!['present', 'absent'].includes(reponse)) {
+    return jsonResponseNoCache({ error: 'reponse invalide (present|absent)' }, 400);
+  }
+
+  // Vérifier que la communication existe, est publiée et est une invitation
+  const comRows = await supabaseQuery('communications', `id=eq.${comId}&select=id,type,statut&limit=1`, env);
+  if (!comRows || comRows.length === 0) return jsonResponseNoCache({ error: 'Communication introuvable' }, 404);
+  if (comRows[0].type !== 'invitation') return jsonResponseNoCache({ error: 'Cette communication n\'attend pas de réponse' }, 400);
+
+  let nb = parseInt(body.nb_personnes, 10);
+  if (isNaN(nb) || nb < 0) nb = 1;
+  if (reponse === 'absent') nb = 0;
+
+  const payload = {
+    communication_id: comId,
+    contrat_id: partner.contrat_id,
+    partenaire_id: partner.partenaire_id,
+    reponse,
+    nb_personnes: nb,
+    commentaire: body.commentaire ? String(body.commentaire).trim().slice(0, 500) : null,
+  };
+
+  // Upsert sur (communication_id, contrat_id) — index unique
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/communication_reponses?on_conflict=communication_id,contrat_id`, {
+    method: 'POST',
+    headers: { ...supabaseHeaders(env), Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    return jsonResponseNoCache({ error: 'Erreur RSVP', detail: errTxt }, 500);
+  }
+  const saved = await res.json();
+  return jsonResponseNoCache({ ok: true, reponse: Array.isArray(saved) ? saved[0] : saved });
+}
+
+// ----------- Templates email (Sprint D) -----------
+function renderEmailInvitation(com, recipient) {
+  const d = com.data || {};
+  const eyebrow = 'INVITATION';
+  const greet = recipient.nom ? `Bonjour ${escEmail(recipient.nom.split(' ')[0])},` : 'Bonjour,';
+
+  const infoRows = [];
+  if (d.date_event) infoRows.push(`<tr><td style="padding:6px 0;font-size:13px;"><strong style="color:#0A1628;display:inline-block;width:90px;">Date</strong>${escEmail(d.date_event)}${d.heure ? ' · ' + escEmail(d.heure) : ''}</td></tr>`);
+  if (d.lieu) infoRows.push(`<tr><td style="padding:6px 0;font-size:13px;"><strong style="color:#0A1628;display:inline-block;width:90px;">Lieu</strong>${escEmail(d.lieu)}</td></tr>`);
+  if (d.deadline_rsvp) infoRows.push(`<tr><td style="padding:6px 0;font-size:13px;"><strong style="color:#0A1628;display:inline-block;width:90px;">Réponse avant</strong>${escEmail(d.deadline_rsvp)}</td></tr>`);
+
+  const body = `
+    <p style="margin:0 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">${greet}</p>
+    <p style="margin:0 0 22px;font-size:14px;color:#4A5568;line-height:1.7;">Le Spacer's Business Club a le plaisir de vous convier à l'événement suivant :</p>
+    ${com.message ? `<p style="margin:0 0 20px;font-size:14px;color:#0A1628;line-height:1.7;white-space:pre-wrap;">${escEmail(com.message)}</p>` : ''}
+    ${infoRows.length ? `<table cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#FAF7F2;border-radius:10px;border:1px solid #E5DED1;padding:6px 16px;margin-bottom:20px;">${infoRows.join('')}</table>` : ''}
+    <p style="margin:22px 0 0;font-size:13px;color:#8A8478;line-height:1.7;font-style:italic;">Merci de confirmer votre présence depuis votre espace partenaire.</p>
+  `;
+  return emailLayout(eyebrow, com.titre, '', body);
+}
+
+function renderEmailAnnonce(com, recipient) {
+  const greet = recipient.nom ? `Bonjour ${escEmail(recipient.nom.split(' ')[0])},` : 'Bonjour,';
+  const body = `
+    <p style="margin:0 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">${greet}</p>
+    ${com.message ? `<p style="margin:0 0 20px;font-size:14px;color:#0A1628;line-height:1.7;white-space:pre-wrap;">${escEmail(com.message)}</p>` : ''}
+    <p style="margin:22px 0 0;font-size:13px;color:#8A8478;line-height:1.7;font-style:italic;">Retrouvez toutes les actualités du club dans votre espace partenaire.</p>
+  `;
+  return emailLayout('ACTUALITÉ', com.titre, '', body);
 }
