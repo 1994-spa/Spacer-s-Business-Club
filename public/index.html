@@ -539,6 +539,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // =========================================================================
 //  Spacer's Business Club — PWA partenaire V6 (inline form + mes annonces)
@@ -742,37 +743,88 @@ function renderDashboard(data) {
 }
 
 // =========================================================================
-//  Bootstrap
+//  Bootstrap — Sprint E.4 : coexistence magic_token (legacy) + Supabase Auth (nouveau)
 // =========================================================================
+let SUPABASE_CLIENT = null;
+let AUTH_MODE = null;        // 'token' | 'session'
+let SESSION_ACCESS_TOKEN = null; // Bearer pour les calls /api/*
+
 (async () => {
   const params = new URLSearchParams(location.search);
   MAGIC_TOKEN = params.get('t');
   const siren = params.get('siren');
 
-  let apiUrl, identityLabel;
+  let apiUrl, fetchOpts = {};
+
   if (MAGIC_TOKEN) {
+    // Mode 1 (legacy) — magic_token dans l'URL, comme avant
+    AUTH_MODE = 'token';
     apiUrl = `/api/partner-by-token/${encodeURIComponent(MAGIC_TOKEN)}`;
-    identityLabel = 'token';
   } else if (siren) {
+    // Mode dev/debug
+    AUTH_MODE = 'siren';
     apiUrl = `/api/partner/${encodeURIComponent(siren)}`;
-    identityLabel = `SIREN ${siren}`;
   } else {
-    showError('Accès requis', 'Aucun token d\'accès fourni. Utilisez le lien personnel envoyé par email.');
-    return;
+    // Mode 2 (nouveau) — pas de magic_token : essayer la session Supabase Auth
+    try {
+      const cfg = await (await fetch('/api/auth/config')).json();
+      if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase) throw new Error('Auth indisponible');
+      SUPABASE_CLIENT = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+      const { data: { session } } = await SUPABASE_CLIENT.auth.getSession();
+      if (!session) {
+        // Aucune session : rediriger vers la page de connexion
+        window.location.href = '/login';
+        return;
+      }
+      AUTH_MODE = 'session';
+      SESSION_ACCESS_TOKEN = session.access_token;
+      apiUrl = '/api/partner-by-session';
+      fetchOpts = { headers: { Authorization: 'Bearer ' + SESSION_ACCESS_TOKEN } };
+    } catch (e) {
+      // Si l'auth Supabase échoue, on bascule vers /login
+      window.location.href = '/login';
+      return;
+    }
   }
 
   try {
-    const r = await fetch(apiUrl);
+    const r = await fetch(apiUrl, fetchOpts);
     const data = await r.json();
     if (!r.ok || data.error) {
-      showError(data.error || `Erreur ${r.status}`, data.detail || `Identité : ${identityLabel}`);
+      // Si 401 en mode session, la session a expiré → /login
+      if (r.status === 401 && AUTH_MODE === 'session') {
+        if (SUPABASE_CLIENT) await SUPABASE_CLIENT.auth.signOut();
+        window.location.href = '/login';
+        return;
+      }
+      showError(data.error || `Erreur ${r.status}`, data.detail || `Mode : ${AUTH_MODE}`);
       return;
     }
     renderDashboard(data);
+    if (AUTH_MODE === 'session') injectLogoutButton();
   } catch (e) {
     showError('Connexion impossible', e.message);
   }
 })();
+
+// Bouton "Se déconnecter" injecté discrètement dans le header (uniquement en mode session)
+function injectLogoutButton() {
+  const headerActions = document.querySelector('.header .actions') ||
+                        document.querySelector('header') ||
+                        document.body;
+  if (!headerActions) return;
+  const btn = document.createElement('button');
+  btn.id = 'logout-btn';
+  btn.textContent = 'Se déconnecter';
+  btn.title = 'Se déconnecter';
+  btn.style.cssText = 'position:fixed;top:14px;right:14px;background:white;border:1px solid var(--line,#E5DED1);padding:8px 14px;border-radius:999px;font-size:12px;font-family:inherit;font-weight:600;cursor:pointer;color:var(--ink,#0A1628);z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,.04);';
+  btn.onclick = async () => {
+    if (SUPABASE_CLIENT) await SUPABASE_CLIENT.auth.signOut();
+    window.location.href = '/login';
+  };
+  document.body.appendChild(btn);
+}
 
 // =========================================================================
 //  MINUTE DE L'EMPLOI — Modale (logo + formulaire inline)
