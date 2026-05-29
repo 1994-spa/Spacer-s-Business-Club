@@ -158,6 +158,19 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/communication\/([0-9a-f-]{36})\/rsvp$/);
       if (m) return await handlePartnerCommunicationRsvp(m[1], m[2], body || {}, env);
 
+      // ===== Sprint E.2 — Gestion des contacts partenaires (admin) =====
+      m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts\/create$/);
+      if (m) return await handleAdminContactCreate(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/contact\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminContactUpdate(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/contact\/([0-9a-f-]{36})\/delete$/);
+      if (m) return await handleAdminContactDelete(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/contact\/([0-9a-f-]{36})\/invite$/);
+      if (m) return await handleAdminContactInvite(m[1], m[2], env);
+
       return jsonResponse({ error: 'Unknown POST route', path }, 404);
     }
 
@@ -226,6 +239,13 @@ async function handleApi(request, env, path, ctx) {
     // ===== Sprint D — Communications (admin) =====
     m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminCommunicationsList(m[1], url.searchParams, env);
+
+    // ===== Sprint E.2 — Gestion des contacts partenaires (admin) =====
+    m = path.match(/^\/api\/admin\/partenaires\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminPartenairesList(m[1], env);
+
+    m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts$/);
+    if (m) return await handleAdminContactsList(m[1], m[2], env);
 
     m = path.match(/^\/api\/admin\/communication\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
     if (m) return await handleAdminCommunicationDetail(m[1], m[2], env);
@@ -1888,7 +1908,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.13-communications', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.14-contacts', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2574,13 +2594,25 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
         `select=id,partenaires(raison_sociale,representant,representant_email)&limit=200`,
         env
       );
-      const recipients = (contrats || [])
-        .map(c => ({
-          email: c.partenaires?.representant_email,
+
+      // Construit la liste des destinataires. Si l'email partenaire est invalide
+      // (données CRM non nettoyées), on bascule sur le fallback de test.
+      const seen = new Set();
+      const recipients = [];
+      let nbValid = 0, nbFallback = 0;
+      (contrats || []).forEach(c => {
+        const rawEmail = c.partenaires?.representant_email || '';
+        const valid = rawEmail.includes('@');
+        const email = valid ? rawEmail : EMAIL_FALLBACK_PARTNER;
+        if (valid) nbValid++; else nbFallback++;
+        if (seen.has(email)) return;       // déduplication
+        seen.add(email);
+        recipients.push({
+          email,
           nom: c.partenaires?.representant || '',
           raison: c.partenaires?.raison_sociale || '',
-        }))
-        .filter(r => r.email && r.email.includes('@'));
+        });
+      });
 
       const isInvit = com.type === 'invitation';
       const subject = isInvit ? `Invitation — ${com.titre}` : `${com.titre}`;
@@ -2593,7 +2625,7 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
           replyTo: EMAIL_REPLY_TO_CLUB,
         });
       }
-      console.log(`[Communication ${comId}] ${recipients.length} emails envoyés`);
+      console.log(`[Communication ${comId}] ${recipients.length} emails envoyés (${nbValid} valides, ${nbFallback} fallback)`);
     } catch (e) {
       console.error(`[Communication ${comId}] email job error:`, e.message);
     }
@@ -2718,4 +2750,255 @@ function renderEmailAnnonce(com, recipient) {
     <p style="margin:22px 0 0;font-size:13px;color:#8A8478;line-height:1.7;font-style:italic;">Retrouvez toutes les actualités du club dans votre espace partenaire.</p>
   `;
   return emailLayout('ACTUALITÉ', com.titre, '', body);
+}
+
+// ============================================================================
+//  CONTACTS PARTENAIRES — Sprint E.2 (multi-contacts + invitation Supabase Auth)
+// ============================================================================
+
+const CONTACT_STATUTS = ['a_inviter', 'invite', 'active', 'inactif'];
+
+// ----------- GET /api/admin/partenaires/:token -----------
+// Liste TOUTES les sociétés partenaires avec leurs contacts (count + stats statuts)
+async function handleAdminPartenairesList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const partenaires = await supabaseQuery(
+    'partenaires',
+    'select=id,siren,raison_sociale,representant,representant_email,tickie_customer_id&order=raison_sociale.asc&limit=500',
+    env
+  );
+
+  // Compter les contacts par statut pour chaque partenaire
+  const contacts = await supabaseQuery(
+    'partenaire_contacts',
+    'select=partenaire_id,statut',
+    env
+  );
+  const statsByPartenaire = {};
+  (contacts || []).forEach(c => {
+    if (!statsByPartenaire[c.partenaire_id]) statsByPartenaire[c.partenaire_id] = { total: 0, a_inviter: 0, invite: 0, active: 0, inactif: 0 };
+    statsByPartenaire[c.partenaire_id].total++;
+    statsByPartenaire[c.partenaire_id][c.statut] = (statsByPartenaire[c.partenaire_id][c.statut] || 0) + 1;
+  });
+
+  const result = (partenaires || []).map(p => ({
+    id: p.id,
+    siren: p.siren,
+    raison_sociale: p.raison_sociale,
+    representant: p.representant || '',
+    representant_email: p.representant_email || '',
+    tickie_customer_id: p.tickie_customer_id || null,
+    contacts_stats: statsByPartenaire[p.id] || { total: 0, a_inviter: 0, invite: 0, active: 0, inactif: 0 },
+  }));
+
+  return jsonResponseNoCache({
+    partenaires: result,
+    meta: { version: 'V4.14-contacts', generated_at: new Date().toISOString() },
+  });
+}
+
+// ----------- GET /api/admin/partenaire/:token/:partenaireId/contacts -----------
+async function handleAdminContactsList(token, partenaireId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  // Vérifier que le partenaire existe
+  const pRows = await supabaseQuery('partenaires', `id=eq.${partenaireId}&select=id,raison_sociale&limit=1`, env);
+  if (!pRows || pRows.length === 0) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
+
+  const contacts = await supabaseQuery(
+    'partenaire_contacts',
+    `partenaire_id=eq.${partenaireId}&select=*&order=created_at.asc&limit=50`,
+    env
+  );
+
+  return jsonResponseNoCache({
+    partenaire: pRows[0],
+    contacts: contacts || [],
+  });
+}
+
+// ----------- POST /api/admin/partenaire/:token/:partenaireId/contacts/create -----------
+// Body : { nom, prenom?, email, telephone?, fonction? }
+async function handleAdminContactCreate(token, partenaireId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const nom = String(body.nom || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+  if (!nom) return jsonResponseNoCache({ error: 'Le nom est obligatoire' }, 400);
+  if (!email || !email.includes('@')) return jsonResponseNoCache({ error: 'Email invalide' }, 400);
+
+  // Vérifier que le partenaire existe
+  const pRows = await supabaseQuery('partenaires', `id=eq.${partenaireId}&select=id&limit=1`, env);
+  if (!pRows || pRows.length === 0) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
+
+  // Vérifier que l'email n'est pas déjà utilisé (l'index unique le ferait aussi, mais message d'erreur plus clair)
+  const existing = await supabaseQuery('partenaire_contacts', `email=ilike.${encodeURIComponent(email)}&select=id&limit=1`, env);
+  if (existing && existing.length > 0) {
+    return jsonResponseNoCache({ error: 'Un contact avec cet email existe déjà' }, 400);
+  }
+
+  const insertData = {
+    partenaire_id: partenaireId,
+    nom,
+    prenom: body.prenom ? String(body.prenom).trim() : null,
+    email,
+    telephone: body.telephone ? String(body.telephone).trim() : null,
+    fonction: body.fonction ? String(body.fonction).trim() : null,
+    statut: 'a_inviter',
+    created_by_admin_id: admin.id,
+  };
+
+  try {
+    const arr = await supabaseInsert_('partenaire_contacts', insertData, env);
+    const created = Array.isArray(arr) ? arr[0] : arr;
+    return jsonResponseNoCache({ ok: true, contact: created });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création contact', detail: e.message }, 500);
+  }
+}
+
+// ----------- POST /api/admin/partenaire/:token/contact/:contactId/update -----------
+async function handleAdminContactUpdate(token, contactId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const payload = {};
+  if (body.nom !== undefined) payload.nom = String(body.nom).trim();
+  if (body.prenom !== undefined) payload.prenom = body.prenom ? String(body.prenom).trim() : null;
+  if (body.telephone !== undefined) payload.telephone = body.telephone ? String(body.telephone).trim() : null;
+  if (body.fonction !== undefined) payload.fonction = body.fonction ? String(body.fonction).trim() : null;
+  if (body.statut !== undefined && CONTACT_STATUTS.includes(body.statut)) payload.statut = body.statut;
+  // L'email n'est pas modifiable une fois créé (sinon désynchro avec auth.users)
+
+  if (Object.keys(payload).length === 0) return jsonResponseNoCache({ error: 'Rien à modifier' }, 400);
+
+  try {
+    await supabasePatch_('partenaire_contacts', `id=eq.${contactId}`, payload, env);
+    return jsonResponseNoCache({ ok: true });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur modification', detail: e.message }, 500);
+  }
+}
+
+// ----------- POST /api/admin/partenaire/:token/contact/:contactId/delete -----------
+// Supprime le contact + le user Supabase Auth associé (si existant)
+async function handleAdminContactDelete(token, contactId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  // Récupérer le contact pour savoir s'il a un auth_user_id
+  const rows = await supabaseQuery('partenaire_contacts', `id=eq.${contactId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Contact introuvable' }, 404);
+  const contact = rows[0];
+
+  // Supprimer le user Supabase Auth si présent
+  if (contact.auth_user_id) {
+    try {
+      await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${contact.auth_user_id}`, {
+        method: 'DELETE',
+        headers: supabaseHeaders(env),
+      });
+    } catch (e) {
+      console.warn(`[Contact ${contactId}] auth.user delete failed:`, e.message);
+    }
+  }
+
+  // Supprimer le contact (la FK auth_user_id est ON DELETE SET NULL, donc OK)
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/partenaire_contacts?id=eq.${contactId}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders(env),
+    });
+    return jsonResponseNoCache({ ok: true });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur suppression', detail: e.message }, 500);
+  }
+}
+
+// ----------- POST /api/admin/partenaire/:token/contact/:contactId/invite -----------
+// Crée le user Supabase Auth (statut 'invited') et déclenche l'email d'invitation.
+// L'email part via le SMTP Resend configuré dans Supabase Auth.
+async function handleAdminContactInvite(token, contactId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  // Récupérer le contact + le nom de la société
+  const rows = await supabaseQuery(
+    'partenaire_contacts',
+    `id=eq.${contactId}&select=*,partenaires(raison_sociale)&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Contact introuvable' }, 404);
+  const contact = rows[0];
+
+  if (contact.statut === 'active') {
+    return jsonResponseNoCache({ error: 'Ce contact a déjà un compte actif. Pour réinviter, utilise le reset password.' }, 400);
+  }
+
+  // Appel API Admin Supabase Auth pour générer une invitation
+  // Endpoint : POST /auth/v1/admin/invite
+  // L'email d'invitation est envoyé automatiquement par Supabase via le SMTP Resend qu'on a configuré
+  const inviteUrl = `${env.SUPABASE_URL}/auth/v1/admin/invite`;
+  const inviteBody = {
+    email: contact.email,
+    data: {
+      contact_id: contact.id,
+      partenaire_id: contact.partenaire_id,
+      raison_sociale: contact.partenaires?.raison_sociale || '',
+      nom: contact.nom,
+      prenom: contact.prenom || '',
+    },
+    // L'URL de redirection après clic sur le lien de l'email
+    // La page /activate sera codée en E.4 (récupère le token + permet de définir le mdp)
+    redirect_to: `${new URL('/activate', `https://spacers-business-club.spacersytb.workers.dev`).href}`,
+  };
+
+  let inviteRes;
+  try {
+    inviteRes = await fetch(inviteUrl, {
+      method: 'POST',
+      headers: { ...supabaseHeaders(env), 'Content-Type': 'application/json' },
+      body: JSON.stringify(inviteBody),
+    });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur réseau Supabase', detail: e.message }, 502);
+  }
+
+  if (!inviteRes.ok) {
+    const errTxt = await inviteRes.text();
+    let errMsg = errTxt;
+    try { const errJson = JSON.parse(errTxt); errMsg = errJson.msg || errJson.message || errJson.error_description || errTxt; } catch {}
+    // Cas connu : l'user existe déjà (re-invitation ou collision)
+    if (inviteRes.status === 422 || /already.*registered|exists/i.test(errMsg)) {
+      return jsonResponseNoCache({ error: 'Cet email a déjà un compte Auth associé. Utilise la fonction reset password.', detail: errMsg }, 409);
+    }
+    return jsonResponseNoCache({ error: 'Erreur Supabase Auth', detail: errMsg }, inviteRes.status);
+  }
+
+  const inviteJson = await inviteRes.json();
+  const authUserId = inviteJson.id || inviteJson.user?.id;
+  if (!authUserId) {
+    return jsonResponseNoCache({ error: 'Réponse Auth inattendue (id manquant)', detail: JSON.stringify(inviteJson).slice(0, 200) }, 500);
+  }
+
+  // Mettre à jour le contact : statut = 'invite', auth_user_id, invitation_envoyee_at
+  try {
+    await supabasePatch_('partenaire_contacts', `id=eq.${contactId}`, {
+      auth_user_id: authUserId,
+      statut: 'invite',
+      invitation_envoyee_at: new Date().toISOString(),
+    }, env);
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Invitation envoyée mais MAJ contact échouée', detail: e.message }, 500);
+  }
+
+  return jsonResponseNoCache({
+    ok: true,
+    message: `Invitation envoyée à ${contact.email}`,
+    auth_user_id: authUserId,
+  });
 }
