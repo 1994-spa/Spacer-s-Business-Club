@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Activation — Spacer's Business Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#FAF7F2; --ink:#0A1628; --ink-soft:#5B6573; --ink-muted:#8A8478; --gold:#C8932B; --gold-tint:#FAF3DF; --line:#E5DED1; --card:#fff; --red:#993556; --green:#1B7F4B; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .container { width: 100%; max-width: 460px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 36px 32px; box-shadow: 0 10px 40px rgba(10,22,40,.06); }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .logo { width: 48px; height: 48px; border-radius: 14px; background: var(--ink); color: var(--gold); display: grid; place-items: center; font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; font-style: italic; }
+  .brand-text { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; }
+  .brand-text small { display: block; font-family: 'Manrope', sans-serif; font-size: 10px; letter-spacing: .18em; color: var(--gold); text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+  h1 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; line-height: 1.2; margin-bottom: 8px; }
+  h1 em { color: var(--gold); font-style: italic; }
+  .lead { color: var(--ink-soft); font-size: 14px; line-height: 1.6; margin-bottom: 22px; }
+  label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-soft); font-weight: 700; margin-bottom: 6px; margin-top: 14px; }
+  input[type=password], input[type=email] { width: 100%; padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; font-family: inherit; font-size: 14px; background: var(--bg); transition: all .15s; }
+  input:focus { outline: none; border-color: var(--gold); background: white; }
+  .btn-primary { width: 100%; padding: 13px 20px; border-radius: 999px; background: var(--ink); color: var(--gold); font-family: inherit; font-size: 14px; font-weight: 600; border: none; cursor: pointer; margin-top: 20px; transition: all .15s; }
+  .btn-primary:hover:not(:disabled) { background: #1a2538; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 12px; line-height: 1.5; }
+  .msg.error { background: rgba(153,53,86,.08); color: var(--red); border-left: 3px solid var(--red); }
+  .msg.info { background: var(--gold-tint); color: var(--ink); border-left: 3px solid var(--gold); }
+  .msg.success { background: rgba(27,127,75,.08); color: var(--green); border-left: 3px solid var(--green); }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center { text-align: center; padding: 12px 0; }
+  .link { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 13px; }
+  .link:hover { text-decoration: underline; }
+  .pwd-hint { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+  .state { display: none; }
+  .state.active { display: block; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div class="brand-text">Business Club<small>Spacer's Toulouse</small></div>
+      </div>
+
+      <!-- État : chargement -->
+      <div id="state-loading" class="state active">
+        <div class="center">
+          <span class="spinner"></span>Vérification de votre invitation…
+        </div>
+      </div>
+
+      <!-- État : formulaire de définition du mot de passe -->
+      <div id="state-form" class="state">
+        <h1>Bienvenue <em id="welcome-name"></em></h1>
+        <p class="lead">Vous avez été invité par le <strong>Spacer's Business Club</strong>. Définissez votre mot de passe pour accéder à votre espace partenaire.</p>
+
+        <form id="activate-form">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" autocomplete="new-password" required>
+          <div class="pwd-hint">Minimum 8 caractères</div>
+
+          <label for="password-confirm">Confirmation</label>
+          <input type="password" id="password-confirm" autocomplete="new-password" required>
+
+          <div id="form-error" class="msg error" style="display:none;"></div>
+
+          <button type="submit" class="btn-primary" id="submit-btn">Activer mon compte</button>
+        </form>
+      </div>
+
+      <!-- État : succès -->
+      <div id="state-success" class="state">
+        <div class="msg success">
+          <strong>✓ Compte activé</strong><br>
+          Vous allez être redirigé vers votre espace…
+        </div>
+      </div>
+
+      <!-- État : erreur -->
+      <div id="state-error" class="state">
+        <div class="msg error">
+          <strong>Lien invalide ou expiré</strong>
+          <div id="error-detail" style="margin-top:6px;font-size:12px;"></div>
+        </div>
+        <div class="center" style="margin-top:18px;">
+          <a href="/login" class="link">→ Aller à la page de connexion</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let supabase = null;
+let accessToken = null;
+
+function showState(id) {
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showError(msg) {
+  document.getElementById('error-detail').textContent = msg || '';
+  showState('state-error');
+}
+
+function showFormError(msg) {
+  const el = document.getElementById('form-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function init() {
+  try {
+    // 1. Charger la config Supabase publique
+    const cfgRes = await fetch('/api/auth/config');
+    const cfg = await cfgRes.json();
+    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) throw new Error('Config Supabase manquante');
+    supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+    // 2. Lire le hash fragment de l'URL (Supabase y met access_token/refresh_token/type)
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
+
+    if (!accessToken || !refreshToken) {
+      showError('Lien d\'activation incomplet. Vérifiez que vous avez bien cliqué depuis l\'email reçu.');
+      return;
+    }
+    if (type !== 'invite' && type !== 'signup' && type !== 'recovery' && type !== 'magiclink') {
+      showError('Type de lien inattendu (' + type + ').');
+      return;
+    }
+
+    // 3. Établir la session avec les tokens
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) { showError(error.message); return; }
+
+    // 4. Personnaliser le message d'accueil avec le prénom (passé dans user_metadata à l'invitation)
+    const meta = data.user?.user_metadata || {};
+    const greetName = meta.prenom || meta.nom || '';
+    document.getElementById('welcome-name').textContent = greetName ? greetName : '';
+
+    // 5. Afficher le formulaire
+    showState('state-form');
+
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+
+  document.getElementById('activate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pwd = document.getElementById('password').value;
+    const pwd2 = document.getElementById('password-confirm').value;
+    const errEl = document.getElementById('form-error');
+    errEl.style.display = 'none';
+
+    if (pwd.length < 8) return showFormError('Mot de passe trop court (8 caractères minimum).');
+    if (pwd !== pwd2) return showFormError('Les mots de passe ne correspondent pas.');
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Activation…';
+
+    try {
+      // Définir le mot de passe via l'API Supabase Auth
+      const { error: updErr } = await supabase.auth.updateUser({ password: pwd });
+      if (updErr) throw updErr;
+
+      // Notifier le worker pour passer le statut à "active" dans partenaire_contacts
+      await fetch('/api/partner/confirm-activation', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+
+      showState('state-success');
+      setTimeout(() => { window.location.href = '/'; }, 2000);
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Activer mon compte';
+      showFormError(e.message || 'Erreur lors de l\'activation.');
+    }
+  });
+});
+</script>
+</body>
+</html>
