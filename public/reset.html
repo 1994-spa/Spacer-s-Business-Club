@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mot de passe — Spacer's Business Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#FAF7F2; --ink:#0A1628; --ink-soft:#5B6573; --ink-muted:#8A8478; --gold:#C8932B; --gold-tint:#FAF3DF; --line:#E5DED1; --card:#fff; --red:#993556; --green:#1B7F4B; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .container { width: 100%; max-width: 440px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 36px 32px; box-shadow: 0 10px 40px rgba(10,22,40,.06); }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .logo { width: 48px; height: 48px; border-radius: 14px; background: var(--ink); color: var(--gold); display: grid; place-items: center; font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; font-style: italic; }
+  .brand-text { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; }
+  .brand-text small { display: block; font-family: 'Manrope', sans-serif; font-size: 10px; letter-spacing: .18em; color: var(--gold); text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+  h1 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; line-height: 1.2; margin-bottom: 8px; }
+  h1 em { color: var(--gold); font-style: italic; }
+  .lead { color: var(--ink-soft); font-size: 14px; line-height: 1.6; margin-bottom: 22px; }
+  label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-soft); font-weight: 700; margin-bottom: 6px; margin-top: 14px; }
+  input { width: 100%; padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; font-family: inherit; font-size: 14px; background: var(--bg); transition: all .15s; }
+  input:focus { outline: none; border-color: var(--gold); background: white; }
+  .btn-primary { width: 100%; padding: 13px 20px; border-radius: 999px; background: var(--ink); color: var(--gold); font-family: inherit; font-size: 14px; font-weight: 600; border: none; cursor: pointer; margin-top: 20px; transition: all .15s; }
+  .btn-primary:hover:not(:disabled) { background: #1a2538; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 12px; line-height: 1.5; }
+  .msg.error { background: rgba(153,53,86,.08); color: var(--red); border-left: 3px solid var(--red); }
+  .msg.info { background: var(--gold-tint); color: var(--ink); border-left: 3px solid var(--gold); }
+  .msg.success { background: rgba(27,127,75,.08); color: var(--green); border-left: 3px solid var(--green); }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pwd-hint { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+  .footer-link { text-align: center; margin-top: 18px; }
+  .link { color: var(--gold); text-decoration: none; font-weight: 600; font-size: 13px; }
+  .link:hover { text-decoration: underline; }
+  .state { display: none; }
+  .state.active { display: block; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div class="brand-text">Business Club<small>Spacer's Toulouse</small></div>
+      </div>
+
+      <!-- ÉTAT 1 : Demande de reset (saisir email) -->
+      <div id="state-request" class="state">
+        <h1>Mot de passe <em>oublié</em></h1>
+        <p class="lead">Entrez votre email et nous vous enverrons un lien pour redéfinir votre mot de passe.</p>
+
+        <form id="request-form">
+          <label for="email">Email</label>
+          <input type="email" id="email" autocomplete="email" required placeholder="vous@entreprise.fr">
+          <div id="request-error" class="msg error" style="display:none;"></div>
+          <button type="submit" class="btn-primary" id="request-btn">Envoyer le lien</button>
+        </form>
+
+        <div class="footer-link">
+          <a href="/login" class="link">← Retour à la connexion</a>
+        </div>
+      </div>
+
+      <!-- ÉTAT 2 : Email envoyé -->
+      <div id="state-sent" class="state">
+        <h1>Email <em>envoyé</em></h1>
+        <div class="msg success">
+          <strong>✓ Vérifiez votre boîte mail</strong><br>
+          Si un compte existe avec cet email, vous recevrez un lien de réinitialisation dans quelques secondes.
+        </div>
+        <p class="lead" style="margin-top:16px;font-size:12px;">Pensez à regarder dans vos spams. Le lien est valable 1 heure.</p>
+        <div class="footer-link">
+          <a href="/login" class="link">← Retour à la connexion</a>
+        </div>
+      </div>
+
+      <!-- ÉTAT 3 : Définition du nouveau mot de passe (revenu du lien email) -->
+      <div id="state-newpwd" class="state">
+        <h1>Nouveau <em>mot de passe</em></h1>
+        <p class="lead">Choisissez votre nouveau mot de passe.</p>
+
+        <form id="newpwd-form">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" autocomplete="new-password" required>
+          <div class="pwd-hint">Minimum 8 caractères</div>
+
+          <label for="password-confirm">Confirmation</label>
+          <input type="password" id="password-confirm" autocomplete="new-password" required>
+
+          <div id="newpwd-error" class="msg error" style="display:none;"></div>
+          <button type="submit" class="btn-primary" id="newpwd-btn">Mettre à jour</button>
+        </form>
+      </div>
+
+      <!-- ÉTAT 4 : Succès final -->
+      <div id="state-done" class="state">
+        <h1>Mot de passe <em>mis à jour</em></h1>
+        <div class="msg success">
+          <strong>✓ Votre mot de passe a été mis à jour</strong><br>
+          Vous allez être redirigé vers votre espace…
+        </div>
+      </div>
+
+      <!-- ÉTAT 5 : Erreur lien -->
+      <div id="state-error" class="state">
+        <h1>Lien <em>invalide</em></h1>
+        <div class="msg error" id="error-msg">Le lien de réinitialisation est invalide ou a expiré.</div>
+        <div class="footer-link">
+          <a href="/reset" class="link">→ Demander un nouveau lien</a>
+        </div>
+      </div>
+
+      <!-- ÉTAT 0 : Chargement initial (pour décider quel état afficher) -->
+      <div id="state-loading" class="state active">
+        <p style="text-align:center;color:var(--ink-soft);font-size:14px;"><span class="spinner"></span>Chargement…</p>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let supabase = null;
+let accessToken = null;
+
+function showState(id) {
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showError(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function init() {
+  try {
+    const cfg = await (await fetch('/api/auth/config')).json();
+    supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+    // Si on revient avec un access_token dans le hash → étape "nouveau mdp"
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
+    const hashErr = hashParams.get('error_description') || hashParams.get('error');
+
+    if (hashErr) {
+      document.getElementById('error-msg').textContent = decodeURIComponent(hashErr.replace(/\+/g, ' '));
+      showState('state-error');
+      return;
+    }
+
+    if (accessToken && refreshToken && (type === 'recovery' || type === 'magiclink')) {
+      // Établir la session avec les tokens du lien email
+      const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error) {
+        document.getElementById('error-msg').textContent = error.message;
+        showState('state-error');
+        return;
+      }
+      showState('state-newpwd');
+      return;
+    }
+
+    // Sinon : étape "demande de reset"
+    showState('state-request');
+  } catch (e) {
+    document.getElementById('error-msg').textContent = e.message;
+    showState('state-error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+
+  // Form 1 : demande de reset
+  document.getElementById('request-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const errEl = document.getElementById('request-error'); errEl.style.display = 'none';
+    if (!email) return showError('request-error', 'Email requis.');
+
+    const btn = document.getElementById('request-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Envoi…';
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset',
+      });
+      // Note : on affiche toujours un succès (même si l'email n'existe pas), pour ne pas révéler quels emails sont enregistrés
+      showState('state-sent');
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Envoyer le lien';
+      showError('request-error', e.message || 'Erreur lors de l\'envoi.');
+    }
+  });
+
+  // Form 2 : nouveau mot de passe
+  document.getElementById('newpwd-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pwd = document.getElementById('password').value;
+    const pwd2 = document.getElementById('password-confirm').value;
+    const errEl = document.getElementById('newpwd-error'); errEl.style.display = 'none';
+
+    if (pwd.length < 8) return showError('newpwd-error', 'Mot de passe trop court (8 caractères minimum).');
+    if (pwd !== pwd2) return showError('newpwd-error', 'Les mots de passe ne correspondent pas.');
+
+    const btn = document.getElementById('newpwd-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Mise à jour…';
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pwd });
+      if (error) throw error;
+
+      // Si c'était une 1ère activation déguisée en recovery, marquer le contact actif
+      try {
+        await fetch('/api/partner/confirm-activation', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + accessToken },
+        });
+      } catch (_) {}
+
+      showState('state-done');
+      setTimeout(() => { window.location.href = '/'; }, 2000);
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Mettre à jour';
+      showError('newpwd-error', e.message || 'Erreur de mise à jour.');
+    }
+  });
+});
+</script>
+</body>
+</html>
