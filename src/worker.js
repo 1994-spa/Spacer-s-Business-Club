@@ -54,6 +54,17 @@ export default {
       return env.ASSETS.fetch(rewritten);
     }
 
+    // Sprint E.4 — Pages d'auth partenaire (/activate, /login, /reset)
+    if (path === '/activate' || path === '/activate/') {
+      return env.ASSETS.fetch(new Request(new URL('/activate.html', request.url).toString(), request));
+    }
+    if (path === '/login' || path === '/login/') {
+      return env.ASSETS.fetch(new Request(new URL('/login.html', request.url).toString(), request));
+    }
+    if (path === '/reset' || path === '/reset/') {
+      return env.ASSETS.fetch(new Request(new URL('/reset.html', request.url).toString(), request));
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
@@ -162,6 +173,11 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts\/create$/);
       if (m) return await handleAdminContactCreate(m[1], m[2], body || {}, env);
 
+      // ===== Sprint E.4 — Confirmation d'activation partenaire =====
+      if (path === '/api/partner/confirm-activation') {
+        return await handlePartnerConfirmActivation(request, env);
+      }
+
       m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/contact\/([0-9a-f-]{36})\/update$/);
       if (m) return await handleAdminContactUpdate(m[1], m[2], body || {}, env);
 
@@ -239,6 +255,12 @@ async function handleApi(request, env, path, ctx) {
     // ===== Sprint D — Communications (admin) =====
     m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminCommunicationsList(m[1], url.searchParams, env);
+
+    // ===== Sprint E.4 — Auth partenaire (Supabase Auth) =====
+    if (path === '/api/auth/config') return await handleAuthConfig(env);
+
+    m = path.match(/^\/api\/partner-by-session$/);
+    if (m) return await handlePartnerBySession(request, env);
 
     // ===== Sprint E.2 — Gestion des contacts partenaires (admin) =====
     m = path.match(/^\/api\/admin\/partenaires\/([a-zA-Z0-9_-]{16,})$/);
@@ -355,14 +377,18 @@ async function handlePartnerByToken(token, env) {
     return jsonResponse({ error: 'Token invalide ou partenaire introuvable' }, 404);
   }
 
-  const c = rows[0];
+  return jsonResponse(_buildPartnerDashboard(rows[0]));
+}
+
+// Construit le payload partenaire (format de sortie identique à l'ancien Apps Script,
+// compat index.html). Réutilisé par partner-by-token et partner-by-session (E.4).
+function _buildPartnerDashboard(c) {
   const p = c.partenaire || {};
   const prestations = (c.prestations || []).sort((a, b) => (a.id || '').localeCompare(b.id || ''));
   const packsArr = (c.packs_places || []);
   const pack = packsArr.length > 0 ? packsArr[0] : null;
 
-  // Format de sortie identique à l'ancien Apps Script (compat index.html)
-  const result = {
+  return {
     partenaire: {
       raison_sociale: p.raison_sociale || '',
       siren: p.siren || '',
@@ -410,8 +436,6 @@ async function handlePartnerByToken(token, env) {
       version: 'V4-supabase',
     },
   };
-
-  return jsonResponse(result);
 }
 
 function computePackStatut(p) {
@@ -1908,7 +1932,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.14b-domain', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.15-auth', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2795,7 +2819,7 @@ async function handleAdminPartenairesList(token, env) {
 
   return jsonResponseNoCache({
     partenaires: result,
-    meta: { version: 'V4.14b-domain', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.15-auth', generated_at: new Date().toISOString() },
   });
 }
 
@@ -3001,4 +3025,135 @@ async function handleAdminContactInvite(token, contactId, env) {
     message: `Invitation envoyée à ${contact.email}`,
     auth_user_id: authUserId,
   });
+}
+
+// ============================================================================
+//  AUTH PARTENAIRE — Sprint E.4 (Supabase Auth : config + session + activation)
+// ============================================================================
+
+// ----------- GET /api/auth/config -----------
+// Expose l'URL Supabase et la clé publique anon aux pages frontend.
+// Aucune authentification requise (la anon key est publique par design).
+async function handleAuthConfig(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return jsonResponseNoCache({
+      error: 'Configuration manquante',
+      detail: 'Add SUPABASE_ANON_KEY in Worker Settings → Variables',
+    }, 500);
+  }
+  return jsonResponseNoCache({
+    supabaseUrl: env.SUPABASE_URL,
+    supabaseAnonKey: env.SUPABASE_ANON_KEY,
+  });
+}
+
+// ----------- Helper : vérifier un JWT Supabase et retourner le user -----------
+// Appelle l'endpoint Supabase Auth /auth/v1/user avec le Bearer du client.
+// Si la session est valide, retourne le user object. Sinon, retourne null.
+async function verifySupabaseSession_(request, env) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const m = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  const accessToken = m[1].trim();
+  if (!accessToken) return null;
+
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        apikey: env.SUPABASE_ANON_KEY || env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+// ----------- GET /api/partner-by-session -----------
+// Le partenaire est authentifié via Supabase Auth (Bearer JWT dans Authorization).
+// On retrouve son contact via auth_user_id → sa société (partenaire_id)
+// → son contrat actif → on construit le même payload que /api/partner-by-token.
+async function handlePartnerBySession(request, env) {
+  const user = await verifySupabaseSession_(request, env);
+  if (!user || !user.id) return jsonResponseNoCache({ error: 'Session invalide' }, 401);
+
+  // Chercher le contact lié à ce user
+  const contacts = await supabaseQuery(
+    'partenaire_contacts',
+    `auth_user_id=eq.${user.id}&select=id,partenaire_id&limit=1`,
+    env
+  );
+  if (!contacts || contacts.length === 0) {
+    return jsonResponseNoCache({ error: 'Contact partenaire introuvable. Contactez le Spacer\'s Business Club.' }, 404);
+  }
+  const contact = contacts[0];
+
+  // Récupérer le contrat le plus récent de cette société (avec ses relations complètes)
+  const rows = await supabaseQuery(
+    'contrats',
+    `partenaire_id=eq.${contact.partenaire_id}` +
+    `&select=*,partenaire:partenaires(*),prestations(*),packs_places(*)` +
+    `&order=saison.desc&limit=1`,
+    env
+  );
+  if (!rows || rows.length === 0) {
+    return jsonResponseNoCache({ error: 'Aucun contrat actif pour votre société.' }, 404);
+  }
+
+  // Mettre à jour la dernière connexion (best-effort)
+  try {
+    await supabasePatch_('partenaire_contacts', `id=eq.${contact.id}`, {
+      derniere_connexion_at: new Date().toISOString(),
+    }, env);
+  } catch (_) {}
+
+  // Construire le payload (même format que partner-by-token, compat index.html)
+  const dashboard = _buildPartnerDashboard(rows[0]);
+  dashboard.auth_mode = 'session';
+  dashboard.contact = { email: user.email || '' };
+  return jsonResponseNoCache(dashboard);
+}
+
+// ----------- POST /api/partner/confirm-activation -----------
+// Appelé par la page /activate après que le partenaire a défini son mot de passe.
+// Met à jour partenaire_contacts.statut = 'active' et derniere_connexion_at.
+async function handlePartnerConfirmActivation(request, env) {
+  const user = await verifySupabaseSession_(request, env);
+  if (!user || !user.id) return jsonResponseNoCache({ error: 'Session invalide' }, 401);
+
+  // Trouver le contact
+  const contacts = await supabaseQuery(
+    'partenaire_contacts',
+    `auth_user_id=eq.${user.id}&select=id,statut&limit=1`,
+    env
+  );
+  if (!contacts || contacts.length === 0) {
+    // Cas rare : l'auth user existe mais pas (encore) lié au contact.
+    // Tente une liaison via l'email.
+    if (user.email) {
+      const byEmail = await supabaseQuery(
+        'partenaire_contacts',
+        `email=ilike.${encodeURIComponent(user.email)}&select=id&limit=1`,
+        env
+      );
+      if (byEmail && byEmail[0]) {
+        await supabasePatch_('partenaire_contacts', `id=eq.${byEmail[0].id}`, {
+          auth_user_id: user.id,
+          statut: 'active',
+          derniere_connexion_at: new Date().toISOString(),
+        }, env);
+        return jsonResponseNoCache({ ok: true, linked_by_email: true });
+      }
+    }
+    return jsonResponseNoCache({ error: 'Contact introuvable' }, 404);
+  }
+
+  await supabasePatch_('partenaire_contacts', `id=eq.${contacts[0].id}`, {
+    statut: 'active',
+    derniere_connexion_at: new Date().toISOString(),
+  }, env);
+
+  return jsonResponseNoCache({ ok: true });
 }
