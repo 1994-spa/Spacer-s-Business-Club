@@ -1932,7 +1932,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.15-auth', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.15b-invite-fix', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2819,7 +2819,7 @@ async function handleAdminPartenairesList(token, env) {
 
   return jsonResponseNoCache({
     partenaires: result,
-    meta: { version: 'V4.15-auth', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.15b-invite-fix', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2963,10 +2963,11 @@ async function handleAdminContactInvite(token, contactId, env) {
     return jsonResponseNoCache({ error: 'Ce contact a déjà un compte actif. Pour réinviter, utilise le reset password.' }, 400);
   }
 
-  // Appel API Admin Supabase Auth pour générer une invitation
-  // Endpoint : POST /auth/v1/admin/invite
-  // L'email d'invitation est envoyé automatiquement par Supabase via le SMTP Resend qu'on a configuré
-  const inviteUrl = `${env.SUPABASE_URL}/auth/v1/admin/invite`;
+  // Appel API Supabase Auth pour générer une invitation
+  // Endpoint correct : POST /auth/v1/invite (avec service_role en Authorization)
+  // L'email d'invitation est envoyé automatiquement par Supabase via le SMTP Resend configuré
+  const redirectTo = encodeURIComponent('https://business.spacerstoulouse.fr/activate');
+  const inviteUrl = `${env.SUPABASE_URL}/auth/v1/invite?redirect_to=${redirectTo}`;
   const inviteBody = {
     email: contact.email,
     data: {
@@ -2976,9 +2977,6 @@ async function handleAdminContactInvite(token, contactId, env) {
       nom: contact.nom,
       prenom: contact.prenom || '',
     },
-    // L'URL de redirection après clic sur le lien de l'email
-    // La page /activate sera codée en E.4 (récupère le token + permet de définir le mdp)
-    redirect_to: 'https://business.spacerstoulouse.fr/activate',
   };
 
   let inviteRes;
