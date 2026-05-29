@@ -1908,7 +1908,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.14-contacts', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.14b-domain', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2795,7 +2795,7 @@ async function handleAdminPartenairesList(token, env) {
 
   return jsonResponseNoCache({
     partenaires: result,
-    meta: { version: 'V4.14-contacts', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.14b-domain', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2954,7 +2954,7 @@ async function handleAdminContactInvite(token, contactId, env) {
     },
     // L'URL de redirection après clic sur le lien de l'email
     // La page /activate sera codée en E.4 (récupère le token + permet de définir le mdp)
-    redirect_to: `${new URL('/activate', `https://spacers-business-club.spacersytb.workers.dev`).href}`,
+    redirect_to: 'https://business.spacerstoulouse.fr/activate',
   };
 
   let inviteRes;
