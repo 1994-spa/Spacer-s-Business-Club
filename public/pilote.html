@@ -425,8 +425,9 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">⌖</span><span class="label">Candidatures</span>
         <span class="badge" id="sb-badge-cand-nouveau" hidden>0</span>
       </button>
-      <button class="sb-link soon" data-tab="partenaires" onclick="switchTab('partenaires')">
+      <button class="sb-link" data-tab="partenaires" onclick="switchTab('partenaires')">
         <span class="ico">◈</span><span class="label">Partenaires</span>
+        <span class="badge" id="sb-badge-ctc-ainviter" hidden>0</span>
       </button>
       <button class="sb-link" data-tab="publications" onclick="switchTab('publications')">
         <span class="ico">⌘</span><span class="label">Publications</span>
@@ -523,19 +524,20 @@ textarea.input { resize: vertical; min-height: 80px; }
 
     <!-- ===== TAB : Partenaires (placeholder) ===== -->
     <section id="tab-partenaires" class="tab-section">
-      <div class="page-head"><h1 class="display">Parten<em>aires</em></h1></div>
-      <div class="placeholder-tab">
-        <div class="ico">◈</div>
-        <h3>Onglet à venir — V2</h3>
-        <p>La gestion des partenaires (contrats, prestations, packs VIP, mapping Tickie) sera ajoutée dans un prochain sprint. Les endpoints worker sont déjà prêts.</p>
-        <div class="routes">
-          <b>GET</b>  /api/admin/partners/:token<br>
-          <b>GET</b>  /api/admin/partner/:token/:contractId<br>
-          <b>POST</b> /api/admin/prestation-livrer/:token/:prestationId<br>
-          <b>POST</b> /api/admin/pack-utiliser/:token/:packId<br>
-          <b>POST</b> /api/admin/partner/:token/:contractId/create-tickie-customer<br>
-          <b>POST</b> /api/admin/partner/:token/:contractId/send-tickie-login
+      <div class="page-head">
+        <div>
+          <h1 class="display">Parten<em>aires</em></h1>
+          <p class="desc">Sociétés partenaires et leurs contacts — gestion des comptes Business Club</p>
         </div>
+        <button class="refresh-btn" onclick="loadPartenaires(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+      </div>
+
+      <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
+        <input type="text" id="part-search" placeholder="🔍 Rechercher une société…" class="input" oninput="filterPartenaires()" style="max-width:380px;">
+      </div>
+
+      <div id="partenaires-list" class="list">
+        <div class="list-empty">Chargement…</div>
       </div>
     </section>
 
@@ -702,6 +704,56 @@ textarea.input { resize: vertical; min-height: 80px; }
   <div class="modal-card" id="modal-com-card"></div>
 </div>
 
+<!-- ===== MODAL : Contacts d'une société (Sprint E.3) ===== -->
+<div id="modal-partenaire" class="modal-ov" hidden onclick="if(event.target.id==='modal-partenaire')closePartenaireModal()">
+  <div class="modal-card" id="modal-partenaire-card" style="max-width:720px;"></div>
+</div>
+
+<!-- ===== MODAL : Création / édition d'un contact (Sprint E.3) ===== -->
+<div id="modal-contact-form" class="modal-ov" hidden onclick="if(event.target.id==='modal-contact-form')closeContactFormModal()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow" id="contact-form-eyebrow">Nouveau contact</div>
+        <h2 class="display" id="contact-form-title" style="margin:4px 0 0;">Ajouter un contact</h2>
+      </div>
+      <button class="modal-close" onclick="closeContactFormModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label class="input-lbl">Prénom</label>
+          <input id="ctc-prenom" class="input" type="text" placeholder="Thomas">
+        </div>
+        <div>
+          <label class="input-lbl">Nom *</label>
+          <input id="ctc-nom" class="input" type="text" placeholder="BOZEC">
+        </div>
+      </div>
+
+      <label class="input-lbl">Email *</label>
+      <input id="ctc-email" class="input" type="email" placeholder="thomas.bozec@picoty.fr" style="margin-bottom:12px;">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label class="input-lbl">Téléphone</label>
+          <input id="ctc-tel" class="input" type="tel" placeholder="06 12 34 56 78">
+        </div>
+        <div>
+          <label class="input-lbl">Fonction</label>
+          <input id="ctc-fonction" class="input" type="text" placeholder="Directeur commercial">
+        </div>
+      </div>
+
+      <div id="contact-form-status" style="font-size:12px;text-align:center;min-height:18px;margin:6px 0;"></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
+      <button class="btn ghost" onclick="closeContactFormModal()">Annuler</button>
+      <button class="btn primary" id="contact-form-submit" onclick="submitContactForm()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL : Confirm (reject avec raison) ===== -->
 <div id="modal-confirm" class="modal-ov" hidden onclick="if(event.target.id==='modal-confirm')closeConfirm(null)">
   <div class="modal-card sm">
@@ -767,6 +819,12 @@ let CURRENT_COM_TYPE = 'all';
 let CURRENT_COM_STATUT = 'all';
 let CURRENT_COM_DETAIL = null;
 let COM_CREATE_TYPE = 'invitation';
+
+// Sprint E.3 — Partenaires / Contacts
+let PARTENAIRES_CACHE = [];
+let CURRENT_PARTENAIRE = null;       // société ouverte dans la modale
+let CURRENT_PARTENAIRE_CONTACTS = []; // contacts de la société ouverte
+let CURRENT_CONTACT_EDIT = null;     // contact en cours d'édition (ou null = création)
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -881,6 +939,7 @@ function switchTab(tab) {
   if (tab === 'candidatures' && CANDS_CACHE.length === 0) loadCandidatures();
   if (tab === 'publications' && PUBS_CACHE.length === 0) loadPublications();
   if (tab === 'communications' && COMS_CACHE.length === 0) loadCommunications();
+  if (tab === 'partenaires' && PARTENAIRES_CACHE.length === 0) loadPartenaires();
 }
 
 // ============================================================================
@@ -2508,6 +2567,295 @@ async function communicationArchive() {
 }
 
 // ============================================================================
+//  PARTENAIRES / CONTACTS — Sprint E.3 (gestion des comptes BC par société)
+// ============================================================================
+
+const CTC_STATUT_LABEL = { a_inviter: 'À inviter', invite: 'Invité', active: 'Actif', inactif: 'Inactif' };
+const CTC_STATUT_TONE  = { a_inviter: 'attente', invite: 'publie', active: 'success', inactif: 'archive' };
+
+async function loadPartenaires(force=false) {
+  const btn = document.querySelector('#tab-partenaires .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('partenaires-list');
+  try {
+    const res = await fetch(`/api/admin/partenaires/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    PARTENAIRES_CACHE = data.partenaires || [];
+    renderPartenairesList();
+
+    // Badge sidebar = nb total de contacts "à inviter" sur l'ensemble des sociétés
+    const totalAinviter = PARTENAIRES_CACHE.reduce((s, p) => s + (p.contacts_stats?.a_inviter || 0), 0);
+    const b = $('sb-badge-ctc-ainviter');
+    if (b) { if (totalAinviter > 0) { b.textContent = totalAinviter; b.hidden = false; } else b.hidden = true; }
+  } catch (e) {
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+
+function filterPartenaires() {
+  const q = ($('part-search')?.value || '').trim().toLowerCase();
+  renderPartenairesList(q);
+}
+
+function renderPartenairesList(filterQuery='') {
+  const listEl = $('partenaires-list');
+  if (!PARTENAIRES_CACHE.length) {
+    listEl.innerHTML = `<div class="list-empty"><h3>Aucun partenaire</h3><p>La table partenaires est vide.</p></div>`;
+    return;
+  }
+  let items = PARTENAIRES_CACHE;
+  if (filterQuery) items = items.filter(p => (p.raison_sociale || '').toLowerCase().includes(filterQuery));
+
+  if (!items.length) { listEl.innerHTML = `<div class="list-empty">Aucun résultat pour « ${escapeHtml(filterQuery)} »</div>`; return; }
+
+  listEl.innerHTML = items.map(p => {
+    const s = p.contacts_stats || { total: 0, a_inviter: 0, invite: 0, active: 0, inactif: 0 };
+
+    // Pastilles statuts contacts
+    const pills = [];
+    if (s.active > 0)    pills.push(`<span class="status-badge success">✓ ${s.active} actif${s.active>1?'s':''}</span>`);
+    if (s.invite > 0)    pills.push(`<span class="status-badge publie">⏳ ${s.invite} invité${s.invite>1?'s':''}</span>`);
+    if (s.a_inviter > 0) pills.push(`<span class="status-badge attente">⚠ ${s.a_inviter} à inviter</span>`);
+    if (s.inactif > 0)   pills.push(`<span class="status-badge archive">${s.inactif} inactif${s.inactif>1?'s':''}</span>`);
+    if (!pills.length)   pills.push(`<span class="status-badge archive" style="opacity:.6;">Aucun contact</span>`);
+
+    const tickieBadge = p.tickie_customer_id
+      ? `<span class="tag" style="background:rgba(200,147,43,.12);color:var(--gold);">⌬ Tickie lié</span>`
+      : '';
+
+    return `
+      <div class="offre-row" onclick="openPartenaireModal('${p.id}')" style="cursor:pointer;">
+        <div class="offre-main">
+          <div class="offre-titre">${escapeHtml(p.raison_sociale || 'Sans nom')}</div>
+          <div class="offre-partner" style="font-weight:400;">${p.representant ? '👤 ' + escapeHtml(p.representant) : 'Aucun représentant'}${p.siren ? ' · SIREN ' + escapeHtml(p.siren) : ''}</div>
+          <div class="offre-meta" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            ${pills.join('')}${tickieBadge}
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-soft);align-self:center;">→</div>
+      </div>`;
+  }).join('');
+}
+
+// ---- Modale : contacts d'une société ----
+async function openPartenaireModal(partenaireId) {
+  CURRENT_PARTENAIRE = PARTENAIRES_CACHE.find(p => p.id === partenaireId) || null;
+  if (!CURRENT_PARTENAIRE) { showToast('Partenaire introuvable', 'error'); return; }
+
+  $('modal-partenaire').hidden = false;
+  $('modal-partenaire-card').innerHTML = `
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">${escapeHtml(CURRENT_PARTENAIRE.representant || 'Société partenaire')}</div>
+        <h2 class="display" style="margin:4px 0 0;">${escapeHtml(CURRENT_PARTENAIRE.raison_sociale)}</h2>
+      </div>
+      <button class="modal-close" onclick="closePartenaireModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="partenaire-contacts-list"><div style="text-align:center;color:var(--ink-soft);padding:20px;">Chargement…</div></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:space-between;padding:16px 22px;border-top:1px solid var(--line);">
+      <button class="btn ghost" onclick="closePartenaireModal()">Fermer</button>
+      <button class="btn primary" onclick="openContactFormModal()">+ Ajouter un contact</button>
+    </div>
+  `;
+  await loadContactsForCurrentPartenaire();
+}
+
+function closePartenaireModal() {
+  $('modal-partenaire').hidden = true;
+  CURRENT_PARTENAIRE = null;
+  CURRENT_PARTENAIRE_CONTACTS = [];
+}
+
+async function loadContactsForCurrentPartenaire() {
+  if (!CURRENT_PARTENAIRE) return;
+  try {
+    const res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(CURRENT_PARTENAIRE.id)}/contacts`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_PARTENAIRE_CONTACTS = data.contacts || [];
+    renderContactsList();
+  } catch (e) {
+    $('partenaire-contacts-list').innerHTML = `<div class="banner danger">Erreur : ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderContactsList() {
+  const wrap = $('partenaire-contacts-list');
+  if (!wrap) return;
+  if (!CURRENT_PARTENAIRE_CONTACTS.length) {
+    wrap.innerHTML = `
+      <div style="text-align:center;padding:30px 20px;color:var(--ink-soft);">
+        <div style="font-size:28px;margin-bottom:8px;">👥</div>
+        <div style="font-weight:600;color:var(--ink);">Aucun contact pour le moment</div>
+        <div style="font-size:13px;margin-top:6px;">Ajoute le premier contact pour cette société en cliquant sur le bouton ci-dessous.</div>
+      </div>`;
+    return;
+  }
+  wrap.innerHTML = CURRENT_PARTENAIRE_CONTACTS.map(c => {
+    const tone = CTC_STATUT_TONE[c.statut] || 'archive';
+    const label = CTC_STATUT_LABEL[c.statut] || c.statut;
+
+    // Actions selon le statut
+    let actions = '';
+    if (c.statut === 'a_inviter') {
+      actions += `<button class="btn primary" onclick="event.stopPropagation();sendInvitation('${c.id}')" style="font-size:12px;padding:6px 12px;">📧 Inviter</button>`;
+    } else if (c.statut === 'invite') {
+      actions += `<button class="btn ghost" onclick="event.stopPropagation();sendInvitation('${c.id}')" style="font-size:12px;padding:6px 12px;" title="Renvoyer l'email d'invitation">↻ Réinviter</button>`;
+    }
+    actions += `<button class="btn ghost" onclick="event.stopPropagation();openContactFormModal('${c.id}')" style="font-size:12px;padding:6px 12px;">✎</button>`;
+    actions += `<button class="btn ghost" onclick="event.stopPropagation();deleteContact('${c.id}')" style="font-size:12px;padding:6px 12px;color:#c62828;">✕</button>`;
+
+    const fullName = [c.prenom, c.nom].filter(Boolean).join(' ');
+    const invitDate = c.invitation_envoyee_at ? `Invité ${formatRelative(c.invitation_envoyee_at)}` : '';
+
+    return `
+      <div style="padding:14px 0;border-bottom:1px solid var(--line);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${escapeHtml(fullName) || '—'} <span class="status-badge ${tone}" style="font-size:10px;padding:2px 8px;margin-left:6px;">${escapeHtml(label)}</span></div>
+            <div style="font-size:13px;color:var(--ink-soft);">📧 ${escapeHtml(c.email)}</div>
+            ${c.telephone ? `<div style="font-size:13px;color:var(--ink-soft);">📞 ${escapeHtml(c.telephone)}</div>` : ''}
+            ${c.fonction ? `<div style="font-size:12px;color:var(--ink-muted);font-style:italic;margin-top:2px;">${escapeHtml(c.fonction)}</div>` : ''}
+            ${invitDate ? `<div style="font-size:11px;color:var(--ink-muted);margin-top:4px;">${invitDate}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${actions}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---- Modale : création / édition d'un contact ----
+function openContactFormModal(contactId=null) {
+  CURRENT_CONTACT_EDIT = contactId ? CURRENT_PARTENAIRE_CONTACTS.find(c => c.id === contactId) : null;
+  const isEdit = !!CURRENT_CONTACT_EDIT;
+
+  $('contact-form-eyebrow').textContent = isEdit ? `Modifier le contact` : `Nouveau contact — ${CURRENT_PARTENAIRE?.raison_sociale || ''}`;
+  $('contact-form-title').textContent = isEdit ? 'Modifier le contact' : 'Ajouter un contact';
+  $('contact-form-submit').textContent = isEdit ? 'Enregistrer' : 'Ajouter';
+
+  $('ctc-prenom').value = CURRENT_CONTACT_EDIT?.prenom || '';
+  $('ctc-nom').value    = CURRENT_CONTACT_EDIT?.nom || '';
+  $('ctc-email').value  = CURRENT_CONTACT_EDIT?.email || '';
+  $('ctc-tel').value    = CURRENT_CONTACT_EDIT?.telephone || '';
+  $('ctc-fonction').value = CURRENT_CONTACT_EDIT?.fonction || '';
+  // L'email est non-modifiable en mode édition (sinon désynchro avec auth.users)
+  $('ctc-email').disabled = isEdit;
+  $('ctc-email').style.opacity = isEdit ? '0.6' : '1';
+
+  $('contact-form-status').textContent = '';
+  $('contact-form-submit').disabled = false;
+  $('modal-contact-form').hidden = false;
+}
+
+function closeContactFormModal() {
+  $('modal-contact-form').hidden = true;
+  CURRENT_CONTACT_EDIT = null;
+}
+
+async function submitContactForm() {
+  const status = $('contact-form-status');
+  const btn = $('contact-form-submit');
+  const nom = $('ctc-nom').value.trim();
+  const email = $('ctc-email').value.trim();
+  if (!nom) { status.textContent = '⚠ Le nom est obligatoire'; status.style.color = '#993556'; $('ctc-nom').focus(); return; }
+  if (!email || !email.includes('@')) { status.textContent = '⚠ Email invalide'; status.style.color = '#993556'; $('ctc-email').focus(); return; }
+
+  const payload = {
+    nom,
+    prenom: $('ctc-prenom').value.trim() || null,
+    email,
+    telephone: $('ctc-tel').value.trim() || null,
+    fonction: $('ctc-fonction').value.trim() || null,
+  };
+
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    let res;
+    if (CURRENT_CONTACT_EDIT) {
+      // Édition : email immuable, on omet
+      delete payload.email;
+      res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/contact/${encodeURIComponent(CURRENT_CONTACT_EDIT.id)}/update`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+    } else {
+      // Création
+      res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(CURRENT_PARTENAIRE.id)}/contacts/create`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+    }
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(CURRENT_CONTACT_EDIT ? '✓ Contact modifié' : '✓ Contact ajouté', 'success');
+    closeContactFormModal();
+    await loadContactsForCurrentPartenaire();
+    loadPartenaires(); // pour rafraîchir le compteur sidebar + les stats société
+  } catch (e) {
+    status.textContent = '❌ ' + e.message; status.style.color = '#993556';
+    btn.disabled = false; btn.textContent = CURRENT_CONTACT_EDIT ? 'Enregistrer' : 'Ajouter';
+  }
+}
+
+// ---- Action : envoyer (ou renvoyer) une invitation ----
+async function sendInvitation(contactId) {
+  const contact = CURRENT_PARTENAIRE_CONTACTS.find(c => c.id === contactId);
+  if (!contact) return;
+
+  const isResend = contact.statut === 'invite';
+  const ok = await confirmModal({
+    eyebrow: isResend ? 'Renvoi d\'invitation' : 'Envoi d\'invitation',
+    title: isResend ? 'Renvoyer le lien d\'activation ?' : 'Envoyer l\'invitation ?',
+    message: `Un email partira à ${contact.email} avec un lien pour définir son mot de passe et accéder à son espace Business Club.`,
+    confirmText: isResend ? 'Renvoyer' : 'Envoyer',
+    confirmStyle: 'success',
+  });
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/contact/${encodeURIComponent(contactId)}/invite`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(`📧 ${data.message || 'Invitation envoyée'}`, 'success');
+    await loadContactsForCurrentPartenaire();
+    loadPartenaires();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function deleteContact(contactId) {
+  const contact = CURRENT_PARTENAIRE_CONTACTS.find(c => c.id === contactId);
+  if (!contact) return;
+  const fullName = [contact.prenom, contact.nom].filter(Boolean).join(' ');
+  const ok = await confirmModal({
+    eyebrow: 'Suppression',
+    title: `Supprimer ${fullName || contact.email} ?`,
+    message: contact.auth_user_id
+      ? 'Le compte Business Club associé sera également supprimé. Cette action est irréversible.'
+      : 'Cette action est irréversible.',
+    confirmText: 'Supprimer',
+    confirmStyle: 'danger',
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/contact/${encodeURIComponent(contactId)}/delete`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Contact supprimé', 'success');
+    await loadContactsForCurrentPartenaire();
+    loadPartenaires();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ============================================================================
 //  BOOT
 // ============================================================================
 document.addEventListener('keydown', (e) => {
@@ -2518,6 +2866,8 @@ document.addEventListener('keydown', (e) => {
     if (!$('modal-pub').hidden) closePublicationModal();
     if (!$('modal-com').hidden) closeCommunicationModal();
     if (!$('modal-com-create').hidden) closeComCreateModal();
+    if (!$('modal-partenaire').hidden) closePartenaireModal();
+    if (!$('modal-contact-form').hidden) closeContactFormModal();
   }
 });
 
