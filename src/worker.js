@@ -262,6 +262,9 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/partner-by-session$/);
     if (m) return await handlePartnerBySession(request, env);
 
+    // ===== Sprint G — Compte unifié multi-rôles =====
+    if (path === '/api/me/roles') return await handleMeRoles(request, env);
+
     // ===== Sprint E.2 — Gestion des contacts partenaires (admin) =====
     m = path.match(/^\/api\/admin\/partenaires\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminPartenairesList(m[1], env);
@@ -1932,7 +1935,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.15b-invite-fix', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.16-roles', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2819,7 +2822,7 @@ async function handleAdminPartenairesList(token, env) {
 
   return jsonResponseNoCache({
     partenaires: result,
-    meta: { version: 'V4.15b-invite-fix', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.16-roles', generated_at: new Date().toISOString() },
   });
 }
 
@@ -3154,4 +3157,90 @@ async function handlePartnerConfirmActivation(request, env) {
   }, env);
 
   return jsonResponseNoCache({ ok: true });
+}
+
+// ============================================================================
+//  COMPTE UNIFIÉ — Sprint G (résolution des rôles depuis le JWT Supabase Auth)
+// ============================================================================
+//
+// GET /api/me/roles
+// Authent : Bearer JWT Supabase dans le header Authorization
+// Réponse : {
+//   is_admin: bool,
+//   admin_token: string | null,            // magic_token si admin (pour switch vers /pilote)
+//   is_partner: bool,
+//   partenaire_id: uuid | null,
+//   raison_sociale: string | null,         // pour afficher dans le menu
+//   contact_id: uuid | null,
+//   email: string,
+//   prenom: string | null,
+//   nom: string | null
+// }
+//
+// Effet de bord : si l'utilisateur est un admin identifié par email mais que
+// son auth_user_id n'est pas encore lié, on le lie automatiquement (1ère connexion).
+// ============================================================================
+async function handleMeRoles(request, env) {
+  const user = await verifySupabaseSession_(request, env);
+  if (!user || !user.id) return jsonResponseNoCache({ error: 'Session invalide' }, 401);
+
+  const userEmail = (user.email || '').toLowerCase();
+  let isAdmin = false;
+  let adminToken = null;
+
+  // 1. Chercher admin par auth_user_id (lien déjà fait)
+  let admins = await supabaseQuery(
+    'admins',
+    `auth_user_id=eq.${user.id}&select=id,magic_token,email&limit=1`,
+    env
+  );
+
+  // 2. Sinon par email, et lier auth_user_id si match
+  if ((!admins || admins.length === 0) && userEmail) {
+    admins = await supabaseQuery(
+      'admins',
+      `email=ilike.${encodeURIComponent(userEmail)}&select=id,magic_token,email,auth_user_id&limit=1`,
+      env
+    );
+    if (admins && admins.length > 0 && !admins[0].auth_user_id) {
+      try {
+        await supabasePatch_('admins', `id=eq.${admins[0].id}`, { auth_user_id: user.id }, env);
+      } catch (_) {}
+    }
+  }
+
+  if (admins && admins.length > 0) {
+    isAdmin = true;
+    adminToken = admins[0].magic_token;
+  }
+
+  // 3. Chercher contact partenaire lié à ce user
+  const contacts = await supabaseQuery(
+    'partenaire_contacts',
+    `auth_user_id=eq.${user.id}&select=id,prenom,nom,partenaire_id,partenaires(raison_sociale)&limit=1`,
+    env
+  );
+
+  let isPartner = false, partenaireId = null, raisonSociale = null, contactId = null, prenom = null, nom = null;
+  if (contacts && contacts.length > 0) {
+    const c = contacts[0];
+    isPartner = true;
+    partenaireId = c.partenaire_id;
+    raisonSociale = c.partenaires?.raison_sociale || null;
+    contactId = c.id;
+    prenom = c.prenom;
+    nom = c.nom;
+  }
+
+  return jsonResponseNoCache({
+    is_admin: isAdmin,
+    admin_token: adminToken,
+    is_partner: isPartner,
+    partenaire_id: partenaireId,
+    raison_sociale: raisonSociale,
+    contact_id: contactId,
+    email: user.email,
+    prenom,
+    nom,
+  });
 }
