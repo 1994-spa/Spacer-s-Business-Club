@@ -1,10 +1,19 @@
 name = "spacers-business-club"
 main = "src/worker.js"
-compatibility_date = "2024-09-01"
+compatibility_date = "2025-09-01"
 
+# Assets statiques (public/) servis via env.ASSETS.fetch() dans worker.js
 [assets]
 directory = "./public"
 binding = "ASSETS"
 
+# Variables publiques — versionnées dans Git, accessibles via env.VARNAME.
+# ⚠ JAMAIS de secret ici (clés service_role, API keys privées, mots de passe).
+# Les secrets restent dans le dashboard Cloudflare :
+#   Settings → Variables and Secrets → type "Secret" :
+#     - RESEND_API_KEY
+#     - SUPABASE_SERVICE_ROLE_KEY
+#     - TICKIE_API_KEY
 [vars]
 SUPABASE_URL = "https://goaviqaevdkvptejrreo.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvYXZpcWFldmRrdnB0ZWpycmVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzgxMjMsImV4cCI6MjA5NDg1NDEyM30.I_KY72kLksYb4iRk9Y_Q3E_gcaK6xtm1zjb5qGaqpc4"
