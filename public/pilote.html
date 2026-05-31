@@ -3,9 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#0A1628" />
+<meta name="theme-color" content="#C8932B" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Pilote BC" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="application-name" content="Pilote — Spacer's Business Club" />
 <title>Pilote · Spacer's Business Club</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="manifest" href="/manifest-pilote.webmanifest" />
+<link rel="icon" href="/icon-pilote.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icon-pilote-192.png" sizes="192x192" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -790,7 +797,16 @@ textarea.input { resize: vertical; min-height: 80px; }
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
-const ADMIN_TOKEN = new URLSearchParams(location.search).get('t');
+// Sprint F (PWA pilote) — Token persisté en localStorage pour permettre l'usage
+// depuis l'app installée (start_url=/pilote sans paramètres). À la 1ère ouverture
+// avec ?t=TOKEN, on mémorise. Aux suivantes, on relit depuis le storage.
+const _urlToken = new URLSearchParams(location.search).get('t');
+if (_urlToken && _urlToken.length >= 16) {
+  try { localStorage.setItem('bc_pilote_token', _urlToken); } catch (_) {}
+}
+const ADMIN_TOKEN = _urlToken || (function() {
+  try { return localStorage.getItem('bc_pilote_token'); } catch (_) { return null; }
+})();
 let CURRENT_ADMIN = null;        // profil admin connecté
 let DASH_DATA = null;             // dashboard data en cache
 let OFFRES_CACHE = [];            // liste offres en cache
@@ -2874,5 +2890,26 @@ document.addEventListener('keydown', (e) => {
 init();
 </script>
 
+<script>
+// Sprint F — Enregistrement du service worker (PWA installable)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => {
+        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              sw.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[SW pilote] enregistrement échoué:', err));
+  });
+}
+</script>
 </body>
 </html>
