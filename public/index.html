@@ -813,14 +813,10 @@ let SESSION_ACCESS_TOKEN = null; // Bearer pour les calls /api/*
   }
 })();
 
-// Sprint G — Menu compte enrichi (Pilote si admin + déconnexion)
+// Sprint G+polish — Menu compte façon avatar avec dropdown,
+// badge MODE en header, toast de bienvenue 1ère connexion, titre dynamique.
 async function injectLogoutButton() {
-  // Conteneur des boutons compte
-  const wrap = document.createElement('div');
-  wrap.id = 'account-menu-partner';
-  wrap.style.cssText = 'position:fixed;top:14px;right:14px;display:flex;gap:8px;z-index:1000;align-items:center;';
-
-  // Vérifier les rôles via le worker (depuis le JWT Supabase)
+  // 1. Récupérer les rôles via le worker (depuis le JWT Supabase)
   let roles = null;
   try {
     if (SESSION_ACCESS_TOKEN) {
@@ -828,34 +824,147 @@ async function injectLogoutButton() {
       if (r.ok) roles = await r.json();
     }
   } catch (_) {}
+  if (!roles) return;
 
-  // Bouton "→ Pilote admin" si l'utilisateur est aussi admin
-  if (roles && roles.is_admin && roles.admin_token) {
-    const adminBtn = document.createElement('button');
-    adminBtn.id = 'btn-go-pilote';
-    adminBtn.textContent = '→ Pilote admin';
-    adminBtn.title = 'Accéder à l\'administration du Business Club';
-    adminBtn.style.cssText = 'background:#0A1628;border:none;color:#C8932B;padding:8px 14px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06);';
-    adminBtn.onclick = () => {
-      // On part vers /pilote sans le token dans l'URL : le pilote.html résoudra via la session Supabase active
-      window.location.href = '/pilote';
-    };
-    wrap.appendChild(adminBtn);
+  // 2. Helpers
+  const initials = (((roles.prenom || '').charAt(0) || '') + ((roles.nom || '').charAt(0) || '')).toUpperCase()
+                   || (roles.email || '?').charAt(0).toUpperCase();
+  const fullName = [roles.prenom, roles.nom].filter(Boolean).join(' ').trim() || roles.email || '';
+
+  // 3. Mettre à jour le titre d'onglet dynamiquement
+  if (roles.raison_sociale) {
+    document.title = `${roles.raison_sociale} · Spacer's Business Club`;
   }
 
-  // Bouton "Se déconnecter"
-  const btn = document.createElement('button');
-  btn.id = 'logout-btn';
-  btn.textContent = 'Se déconnecter';
-  btn.style.cssText = 'background:white;border:1px solid var(--line,#E5DED1);padding:8px 14px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink,#0A1628);box-shadow:0 2px 10px rgba(0,0,0,.04);';
-  btn.onclick = async () => {
-    if (SUPABASE_CLIENT) await SUPABASE_CLIENT.auth.signOut();
-    try { localStorage.removeItem('bc_pilote_token'); } catch (_) {}
-    window.location.href = '/login';
-  };
-  wrap.appendChild(btn);
+  // 4. Injecter le style du menu compte (une seule fois)
+  if (!document.getElementById('account-menu-style')) {
+    const st = document.createElement('style');
+    st.id = 'account-menu-style';
+    st.textContent = `
+      #account-menu-container { position: fixed; top: 14px; right: 14px; z-index: 1500; font-family: 'Manrope', system-ui, sans-serif; }
+      #account-avatar-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--ink,#0A1628); color: var(--gold,#C8932B); border: 2px solid white; cursor: pointer; display: grid; place-items: center; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(10,22,40,.15); transition: transform .15s ease-out, box-shadow .15s ease-out; }
+      #account-avatar-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(10,22,40,.22); }
+      #account-avatar-btn:active { transform: translateY(0); }
+      #account-dropdown { position: absolute; top: calc(100% + 10px); right: 0; min-width: 280px; background: white; border: 1px solid var(--line,#E5DED1); border-radius: 14px; box-shadow: 0 12px 36px rgba(10,22,40,.12); padding: 6px; opacity: 0; transform: translateY(-8px) scale(.98); pointer-events: none; transition: opacity .18s ease-out, transform .18s ease-out; transform-origin: top right; }
+      #account-dropdown.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+      .account-header { padding: 12px 14px 10px 14px; }
+      .account-name { font-family: 'Fraunces', Georgia, serif; font-size: 15px; font-weight: 500; color: var(--ink,#0A1628); line-height: 1.2; }
+      .account-email { font-size: 11px; color: var(--ink-soft,#5B6573); margin-top: 4px; word-break: break-all; }
+      .account-meta { font-size: 10px; color: var(--ink-muted,#8A8478); margin-top: 6px; letter-spacing: 0.03em; }
+      .account-divider { height: 1px; background: var(--line,#E5DED1); margin: 4px 0; }
+      .account-item { display: block; width: 100%; text-align: left; background: transparent; border: none; padding: 11px 14px; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--ink,#0A1628); cursor: pointer; border-radius: 8px; transition: background .12s ease-out; }
+      .account-item:hover { background: var(--bg,#FAF7F2); }
+      .account-item .label-sub { display: block; font-size: 10px; color: var(--ink-muted,#8A8478); font-weight: 400; margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
+      .account-logout { color: var(--red,#993556); font-weight: 600; }
+      .account-logout:hover { background: rgba(153,53,86,.06); }
+      #mode-badge { position: fixed; top: 18px; left: 18px; z-index: 1400; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(10,22,40,.04); border: 1px solid var(--line,#E5DED1); font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink,#0A1628); }
+      #mode-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold,#C8932B); }
+      #welcome-toast { position: fixed; top: 70px; right: 14px; max-width: 320px; background: white; border-left: 3px solid var(--gold,#C8932B); border-radius: 10px; box-shadow: 0 8px 24px rgba(10,22,40,.12); padding: 14px 16px; font-family: 'Manrope', sans-serif; font-size: 13px; line-height: 1.5; color: var(--ink,#0A1628); z-index: 1499; opacity: 0; transform: translateX(20px); transition: opacity .25s ease-out, transform .25s ease-out; pointer-events: none; }
+      #welcome-toast.show { opacity: 1; transform: translateX(0); pointer-events: auto; }
+      #welcome-toast strong { font-family: 'Fraunces', Georgia, serif; font-weight: 500; }
+      @media (max-width: 480px) {
+        #account-dropdown { min-width: 260px; right: -4px; }
+        #mode-badge { font-size: 9px; padding: 5px 9px; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
 
-  document.body.appendChild(wrap);
+  // 5. Construire et injecter le menu
+  const container = document.createElement('div');
+  container.id = 'account-menu-container';
+
+  // Format date dernière connexion
+  let lastSeenLabel = '';
+  if (roles.derniere_connexion_at) {
+    try {
+      const d = new Date(roles.derniere_connexion_at);
+      const now = new Date();
+      const diffMs = now - d;
+      const diffH = diffMs / 3600000;
+      if (diffH < 1) lastSeenLabel = 'connecté il y a quelques minutes';
+      else if (diffH < 24) lastSeenLabel = `dernière connexion il y a ${Math.round(diffH)} h`;
+      else lastSeenLabel = `dernière connexion le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+    } catch (_) {}
+  }
+
+  const itemAdmin = (roles.is_admin && roles.admin_token)
+    ? `<button class="account-item" data-action="go-pilote">→ Pilote admin<span class="label-sub">administration du club</span></button>`
+    : '';
+  const itemPartner = (roles.is_partner && roles.raison_sociale)
+    ? `<button class="account-item" data-action="go-partner">→ ${escapeHtml(roles.raison_sociale)}<span class="label-sub">espace partenaire</span></button>`
+    : '';
+
+  container.innerHTML = `
+    <button id="account-avatar-btn" title="${escapeHtml(fullName)}" aria-label="Menu compte"><span>${escapeHtml(initials)}</span></button>
+    <div id="account-dropdown">
+      <div class="account-header">
+        <div class="account-name">${escapeHtml(fullName)}</div>
+        <div class="account-email">${escapeHtml(roles.email || '')}</div>
+        ${lastSeenLabel ? `<div class="account-meta">${escapeHtml(lastSeenLabel)}</div>` : ''}
+      </div>
+      ${(itemAdmin || itemPartner) ? '<div class="account-divider"></div>' : ''}
+      ${itemAdmin}
+      ${itemPartner}
+      <div class="account-divider"></div>
+      <button class="account-item account-logout" data-action="logout">Se déconnecter</button>
+    </div>
+  `;
+  document.body.appendChild(container);
+
+  // 6. Câbler les events
+  const btn = container.querySelector('#account-avatar-btn');
+  const dropdown = container.querySelector('#account-dropdown');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) dropdown.classList.remove('open');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') dropdown.classList.remove('open');
+  });
+  container.querySelectorAll('[data-action]').forEach(b => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const action = b.dataset.action;
+      if (action === 'go-pilote') window.location.href = '/pilote';
+      else if (action === 'go-partner') window.location.href = '/';
+      else if (action === 'logout') {
+        if (SUPABASE_CLIENT) await SUPABASE_CLIENT.auth.signOut();
+        try { localStorage.removeItem('bc_pilote_token'); } catch (_) {}
+        window.location.href = '/login';
+      }
+    });
+  });
+
+  // 7. Badge MODE en haut à gauche
+  if (!document.getElementById('mode-badge')) {
+    const badge = document.createElement('div');
+    badge.id = 'mode-badge';
+    badge.innerHTML = `<span class="dot"></span>Mode partenaire`;
+    document.body.appendChild(badge);
+  }
+
+  // 8. Toast bienvenue à la 1ère connexion (flag localStorage)
+  try {
+    const seen = localStorage.getItem('bc_welcome_seen_partner');
+    if (!seen) {
+      setTimeout(() => {
+        const toast = document.createElement('div');
+        toast.id = 'welcome-toast';
+        toast.innerHTML = `<strong>Bienvenue ${escapeHtml(roles.prenom || '')} ✦</strong><br>${roles.is_admin ? 'Vous pouvez basculer entre votre espace partenaire et le pilote admin via l\'avatar en haut à droite.' : 'Voici votre espace partenaire dédié.'}`;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 400);
+        }, 6500);
+        localStorage.setItem('bc_welcome_seen_partner', '1');
+      }, 800);
+    }
+  } catch (_) {}
 }
 
 // =========================================================================
