@@ -123,7 +123,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-let supabase = null;
+let sb = null;
 let accessToken = null;
 
 function showState(id) {
@@ -140,7 +140,7 @@ function showError(elId, msg) {
 async function init() {
   try {
     const cfg = await (await fetch('/api/auth/config')).json();
-    supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
     // Si on revient avec un access_token dans le hash → étape "nouveau mdp"
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -157,7 +157,7 @@ async function init() {
 
     if (accessToken && refreshToken && (type === 'recovery' || type === 'magiclink')) {
       // Établir la session avec les tokens du lien email
-      const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       if (error) {
         document.getElementById('error-msg').textContent = error.message;
         showState('state-error');
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Envoi…';
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/reset',
       });
       // Note : on affiche toujours un succès (même si l'email n'existe pas), pour ne pas révéler quels emails sont enregistrés
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Mise à jour…';
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: pwd });
+      const { error } = await sb.auth.updateUser({ password: pwd });
       if (error) throw error;
 
       // Si c'était une 1ère activation déguisée en recovery, marquer le contact actif
