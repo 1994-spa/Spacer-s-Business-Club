@@ -126,6 +126,24 @@ async function init() {
 
     // 2. Lire le hash fragment de l'URL (Supabase y met access_token/refresh_token/type)
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+    // 2a. Détecter les erreurs renvoyées par Supabase (lien expiré, déjà utilisé, etc.)
+    const hashErrCode = hashParams.get('error_code');
+    const hashErrDesc = hashParams.get('error_description') || hashParams.get('error');
+    if (hashErrCode || hashErrDesc) {
+      const desc = hashErrDesc ? decodeURIComponent(hashErrDesc.replace(/\+/g, ' ')) : '';
+      let friendlyMsg;
+      if (hashErrCode === 'otp_expired') {
+        friendlyMsg = 'Ce lien d\'invitation a expiré. Demandez au Spacer\'s Business Club de vous renvoyer une nouvelle invitation.';
+      } else if (hashErrCode === 'access_denied') {
+        friendlyMsg = 'Lien d\'invitation invalide ou déjà utilisé. Si vous avez déjà activé votre compte, allez sur la page de connexion.';
+      } else {
+        friendlyMsg = desc || 'Lien d\'invitation invalide.';
+      }
+      showError(friendlyMsg);
+      return;
+    }
+
     accessToken = hashParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token');
     const type = hashParams.get('type');
