@@ -815,9 +815,11 @@ let ADMIN_TOKEN = _urlToken || (function() {
 let SUPABASE_CLIENT_PILOTE = null;
 let SESSION_ROLES = null; // { is_admin, admin_token, is_partner, raison_sociale, ... }
 
-// Si pas de magic_token URL/localStorage : tenter une session Supabase
+// Si pas de magic_token URL/localStorage : tenter une session Supabase.
+// Cette fonction peuple AUSSI SESSION_ROLES pour que le menu compte
+// puisse afficher le bouton "→ Espace partenaire" même quand l'admin
+// est venu via le magic_token URL (donc cumul des deux modes d'auth).
 async function resolveAdminTokenFromSession_() {
-  if (ADMIN_TOKEN && ADMIN_TOKEN.length >= 16) return ADMIN_TOKEN;
   try {
     const cfg = await (await fetch('/api/auth/config')).json();
     if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase) return null;
@@ -828,7 +830,7 @@ async function resolveAdminTokenFromSession_() {
     const roles = await r.json();
     SESSION_ROLES = roles;
     if (roles.is_admin && roles.admin_token) {
-      ADMIN_TOKEN = roles.admin_token;
+      if (!ADMIN_TOKEN) ADMIN_TOKEN = roles.admin_token;
       try { localStorage.setItem('bc_pilote_token', ADMIN_TOKEN); } catch (_) {}
       return ADMIN_TOKEN;
     }
@@ -940,15 +942,13 @@ async function init() {
   if (!ADMIN_TOKEN || ADMIN_TOKEN.length < 16) {
     const resolved = await resolveAdminTokenFromSession_();
     if (!resolved) {
-      // Vraiment aucun moyen d'auth → rediriger vers login partenaire (l'utilisateur s'identifiera, puis s'il est admin il sera redirigé ici)
       showError('Aucun token pilote fourni.', 'Utilisez le lien personnel transmis par l\'équipe Spacers, ou connectez-vous d\'abord côté partenaire.');
       return;
     }
-  } else if (!SESSION_ROLES) {
-    // On a un magic_token URL/localStorage. On tente quand même la résolution de session
-    // pour afficher le menu "Espace partenaire" si l'admin est aussi partenaire.
-    // (Best-effort, non bloquant)
-    resolveAdminTokenFromSession_().catch(() => {});
+  } else {
+    // On a un magic_token : on tente quand même la session pour peupler SESSION_ROLES
+    // (best-effort, mais on attend la fin pour que le menu compte ait l'info)
+    await resolveAdminTokenFromSession_();
   }
 
   try {
@@ -968,54 +968,35 @@ async function init() {
 
 // Sprint G — Menu compte en haut à droite (bascule partenaire + déconnexion)
 function injectAccountMenu_() {
-  // Ne pas injecter si déjà présent
   if (document.getElementById('account-menu-pilote')) return;
+  if (!SESSION_ROLES) return; // pas de session = pas de menu (admin via magic_token URL pur)
+
   const wrap = document.createElement('div');
   wrap.id = 'account-menu-pilote';
   wrap.style.cssText = 'position:fixed;top:14px;right:14px;display:flex;gap:8px;z-index:1000;';
 
-  // Bouton "Mon espace partenaire" si l'utilisateur en session est aussi partenaire
-  const tryRenderSwitcher = () => {
-    if (!SESSION_ROLES) return;
-    if (SESSION_ROLES.is_partner && SESSION_ROLES.raison_sociale && !document.getElementById('btn-go-partner')) {
-      const btn = document.createElement('button');
-      btn.id = 'btn-go-partner';
-      btn.textContent = '→ Espace partenaire';
-      btn.title = 'Aller à l\'espace partenaire ' + SESSION_ROLES.raison_sociale;
-      btn.style.cssText = 'background:#C8932B;border:none;color:#0A1628;padding:8px 14px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06);';
-      btn.onclick = () => { window.location.href = '/'; };
-      wrap.insertBefore(btn, wrap.firstChild);
-    }
-  };
-
-  // Bouton déconnexion (visible uniquement si l'utilisateur est en session Supabase)
-  const logoutIfSession = () => {
-    if (!SESSION_ROLES) return;
-    if (document.getElementById('btn-logout-pilote')) return;
+  if (SESSION_ROLES.is_partner && SESSION_ROLES.raison_sociale) {
     const btn = document.createElement('button');
-    btn.id = 'btn-logout-pilote';
-    btn.textContent = 'Se déconnecter';
-    btn.style.cssText = 'background:white;border:1px solid #E5DED1;padding:8px 14px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;color:#0A1628;box-shadow:0 2px 10px rgba(0,0,0,.04);';
-    btn.onclick = async () => {
-      if (SUPABASE_CLIENT_PILOTE) await SUPABASE_CLIENT_PILOTE.auth.signOut();
-      try { localStorage.removeItem('bc_pilote_token'); } catch (_) {}
-      window.location.href = '/login';
-    };
+    btn.id = 'btn-go-partner';
+    btn.textContent = '→ Espace partenaire';
+    btn.title = 'Aller à l\'espace partenaire ' + SESSION_ROLES.raison_sociale;
+    btn.style.cssText = 'background:#C8932B;border:none;color:#0A1628;padding:8px 14px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06);';
+    btn.onclick = () => { window.location.href = '/'; };
     wrap.appendChild(btn);
+  }
+
+  const logout = document.createElement('button');
+  logout.id = 'btn-logout-pilote';
+  logout.textContent = 'Se déconnecter';
+  logout.style.cssText = 'background:white;border:1px solid #E5DED1;padding:8px 14px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;color:#0A1628;box-shadow:0 2px 10px rgba(0,0,0,.04);';
+  logout.onclick = async () => {
+    if (SUPABASE_CLIENT_PILOTE) await SUPABASE_CLIENT_PILOTE.auth.signOut();
+    try { localStorage.removeItem('bc_pilote_token'); } catch (_) {}
+    window.location.href = '/login';
   };
+  wrap.appendChild(logout);
 
-  tryRenderSwitcher();
-  logoutIfSession();
-  if (wrap.children.length > 0) document.body.appendChild(wrap);
-
-  // Si la résolution de session arrive en différé, on re-essaye une fois
-  setTimeout(() => {
-    tryRenderSwitcher();
-    logoutIfSession();
-    if (wrap.children.length > 0 && !document.body.contains(wrap)) {
-      document.body.appendChild(wrap);
-    }
-  }, 800);
+  document.body.appendChild(wrap);
 }
 
 function renderApp() {
