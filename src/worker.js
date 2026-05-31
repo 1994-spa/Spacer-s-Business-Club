@@ -1935,7 +1935,7 @@ async function handlePublicOffresList(queryParams, env) {
   return jsonResponseNoCache({
     offres,
     count: offres.length,
-    meta: { version: 'V4.16-roles', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.17-polish', generated_at: new Date().toISOString() },
   });
 }
 
@@ -2822,7 +2822,7 @@ async function handleAdminPartenairesList(token, env) {
 
   return jsonResponseNoCache({
     partenaires: result,
-    meta: { version: 'V4.16-roles', generated_at: new Date().toISOString() },
+    meta: { version: 'V4.17-polish', generated_at: new Date().toISOString() },
   });
 }
 
@@ -3217,11 +3217,11 @@ async function handleMeRoles(request, env) {
   // 3. Chercher contact partenaire lié à ce user
   const contacts = await supabaseQuery(
     'partenaire_contacts',
-    `auth_user_id=eq.${user.id}&select=id,prenom,nom,partenaire_id,partenaires(raison_sociale)&limit=1`,
+    `auth_user_id=eq.${user.id}&select=id,prenom,nom,partenaire_id,derniere_connexion_at,partenaires(raison_sociale)&limit=1`,
     env
   );
 
-  let isPartner = false, partenaireId = null, raisonSociale = null, contactId = null, prenom = null, nom = null;
+  let isPartner = false, partenaireId = null, raisonSociale = null, contactId = null, prenom = null, nom = null, derniereConnexion = null;
   if (contacts && contacts.length > 0) {
     const c = contacts[0];
     isPartner = true;
@@ -3230,6 +3230,7 @@ async function handleMeRoles(request, env) {
     contactId = c.id;
     prenom = c.prenom;
     nom = c.nom;
+    derniereConnexion = c.derniere_connexion_at;
   }
 
   return jsonResponseNoCache({
@@ -3242,5 +3243,6 @@ async function handleMeRoles(request, env) {
     email: user.email,
     prenom,
     nom,
+    derniere_connexion_at: derniereConnexion,
   });
 }
