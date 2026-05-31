@@ -10,17 +10,22 @@
 //  Mise à jour : à chaque déploiement, change CACHE_VERSION pour invalider l'ancien.
 // =============================================================================
 
-const CACHE_VERSION = 'bc-v1-2026-05';
+const CACHE_VERSION = 'bc-v2-2026-05-pilote';
 const STATIC_CACHE  = `bc-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `bc-runtime-${CACHE_VERSION}`;
 
 // Assets à pré-charger immédiatement à l'installation
 const PRECACHE_URLS = [
   '/',
-  '/manifest.json',
+  '/manifest.webmanifest',
+  '/manifest-pilote.webmanifest',
+  '/favicon.svg',
   '/icon-bc.svg',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-pilote.svg',
+  '/icon-pilote-192.png',
+  '/icon-pilote-512.png',
 ];
 
 // -----------------------------------------------------------------------------
