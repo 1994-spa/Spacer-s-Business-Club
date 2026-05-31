@@ -66,15 +66,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-let supabase = null;
+let sb = null;
 
 async function init() {
   try {
     const cfg = await (await fetch('/api/auth/config')).json();
-    supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
     // Si déjà connecté, redirection directe vers l'espace partenaire
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (session) window.location.href = '/';
   } catch (e) {
     console.error('Init error:', e);
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Connexion…';
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = '/';
     } catch (e) {
