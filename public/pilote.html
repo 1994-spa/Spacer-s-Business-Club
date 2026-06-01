@@ -771,6 +771,67 @@ textarea.input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- ===== MODAL : Fiche annuaire partenaire (admin) ===== -->
+<div id="modal-admin-fiche" class="modal-ov" hidden onclick="if(event.target.id==='modal-admin-fiche')closeAdminFiche()">
+  <div class="modal-card" style="max-width:620px;">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">Fiche annuaire</div>
+        <h2 class="display" id="af-raison" style="margin:4px 0 0;">—</h2>
+      </div>
+      <button class="modal-close" onclick="closeAdminFiche()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:8px;">ENTREPRISE</div>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;">
+        <div id="af-logo-preview" style="width:72px;height:72px;border-radius:14px;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--bg-soft);flex:0 0 auto;font-size:26px;">🏢</div>
+        <div>
+          <input type="file" id="af-logo-input" accept="image/png,image/jpeg" style="display:none;" onchange="onAfLogo(event)">
+          <button class="btn ghost" onclick="document.getElementById('af-logo-input').click()">Choisir un logo</button>
+        </div>
+      </div>
+      <label class="input-lbl">Raison sociale</label>
+      <input id="af-raison-in" class="input" type="text" style="margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="input-lbl">Secteur</label><input id="af-secteur" class="input" type="text"></div>
+        <div><label class="input-lbl">SIRET</label><input id="af-siret" class="input" type="text"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="input-lbl">Email société</label><input id="af-email" class="input" type="email"></div>
+        <div><label class="input-lbl">Site web</label><input id="af-web" class="input" type="text"></div>
+      </div>
+      <label class="input-lbl">Adresse</label>
+      <input id="af-adresse" class="input" type="text" style="margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:10px;margin-bottom:4px;">
+        <div><label class="input-lbl">Code postal</label><input id="af-cp" class="input" type="text"></div>
+        <div><label class="input-lbl">Ville</label><input id="af-ville" class="input" type="text"></div>
+      </div>
+
+      <div style="font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:700;margin:18px 0 8px;">RESPONSABLE DU PARTENARIAT</div>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;">
+        <div id="af-photo-preview" style="width:64px;height:64px;border-radius:50%;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--bg-soft);flex:0 0 auto;font-size:24px;">👤</div>
+        <div>
+          <input type="file" id="af-photo-input" accept="image/png,image/jpeg" style="display:none;" onchange="onAfPhoto(event)">
+          <button class="btn ghost" onclick="document.getElementById('af-photo-input').click()">Choisir une photo</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="input-lbl">Nom du contact</label><input id="af-resp" class="input" type="text"></div>
+        <div><label class="input-lbl">Fonction</label><input id="af-resp-fonction" class="input" type="text"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="input-lbl">Email contact</label><input id="af-resp-email" class="input" type="email"></div>
+        <div><label class="input-lbl">Téléphone</label><input id="af-resp-tel" class="input" type="tel"></div>
+      </div>
+      <div id="af-status" style="font-size:12px;text-align:center;min-height:18px;margin:6px 0;"></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
+      <button class="btn ghost" onclick="closeAdminFiche()">Annuler</button>
+      <button class="btn primary" id="af-save-btn" onclick="saveAdminFiche()">Enregistrer la fiche</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL : Création / édition d'un mail (Sprint Mails) ===== -->
 <div id="modal-mail-form" class="modal-ov" hidden onclick="if(event.target.id==='modal-mail-form')closeMailFormModal()">
   <div class="modal-card" id="modal-mail-form-card" style="max-width:1040px;">
@@ -957,7 +1018,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V11 — Spacer's Business Club  (+ Invitations payantes + export CSV)
+//  PILOTE ADMIN V12 — Spacer's Business Club  (+ Annuaire : edition fiche admin)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -2638,6 +2699,7 @@ function renderContactsList() {
       </div>
     </div>
     <div class="modal-body">
+      <button class="btn" style="width:100%;justify-content:center;margin-bottom:14px;" onclick="openAdminFiche('${p.id}')"><span class="ico">✎</span>&nbsp;Éditer la fiche annuaire</button>
       <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:4px;">CONTACTS</div>
       ${contactRows}
       <button class="btn primary" style="margin-top:18px;width:100%;justify-content:center;" onclick="openContactFormModal(null, event)"><span class="ico">+</span>&nbsp;Ajouter un contact</button>
@@ -2697,6 +2759,82 @@ async function submitContactForm() {
     status.textContent = '❌ ' + e.message; status.style.color = '#993556';
     btn.disabled = false; btn.textContent = CURRENT_CONTACT_EDIT ? 'Enregistrer' : 'Ajouter';
   }
+}
+
+// ===== Fiche annuaire — édition admin (n'importe quel partenaire) =====
+let AF_PARTENAIRE_ID = null;
+let AF_LOGO_B64 = undefined;   // undefined = inchangé · string = nouveau · null = effacé
+let AF_PHOTO_B64 = undefined;
+
+async function openAdminFiche(partenaireId) {
+  AF_PARTENAIRE_ID = partenaireId;
+  AF_LOGO_B64 = undefined; AF_PHOTO_B64 = undefined;
+  $('af-status').textContent = '';
+  $('modal-admin-fiche').hidden = false;
+  try {
+    const res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(partenaireId)}/fiche`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    const f = data.fiche || {};
+    $('af-raison').textContent = f.raison_sociale || 'Fiche partenaire';
+    afSet('af-raison-in', f.raison_sociale); afSet('af-secteur', f.secteur); afSet('af-siret', f.siret);
+    afSet('af-email', f.email_societe); afSet('af-web', f.site_web); afSet('af-adresse', f.adresse);
+    afSet('af-cp', f.code_postal); afSet('af-ville', f.ville);
+    afSet('af-resp', f.representant); afSet('af-resp-fonction', f.representant_fonction);
+    afSet('af-resp-email', f.representant_email); afSet('af-resp-tel', f.representant_tel);
+    afImg('af-logo-preview', f.logo_b64, '🏢', false);
+    afImg('af-photo-preview', f.representant_photo_b64, '👤', true);
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); closeAdminFiche(); }
+}
+function closeAdminFiche() { $('modal-admin-fiche').hidden = true; AF_PARTENAIRE_ID = null; }
+function afSet(id, v) { const el = $(id); if (el) el.value = v || ''; }
+function afVal(id) { const el = $(id); return el ? el.value.trim() : ''; }
+function afImg(id, src, fb, round) { const el = $(id); if (!el) return; el.innerHTML = src ? `<img src="${src}" style="width:100%;height:100%;object-fit:${round ? 'cover' : 'contain'};">` : fb; }
+
+function afCompress(file, maxDim, cb) {
+  const r = new FileReader();
+  r.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) { const k = Math.min(maxDim / w, maxDim / h); w = Math.round(w * k); h = Math.round(h * k); }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      try { cb(c.toDataURL('image/jpeg', 0.82)); } catch (_) { cb(null); }
+    };
+    img.onerror = () => cb(null);
+    img.src = e.target.result;
+  };
+  r.onerror = () => cb(null);
+  r.readAsDataURL(file);
+}
+function onAfLogo(ev) { const f = ev.target.files && ev.target.files[0]; if (!f) return; afCompress(f, 400, d => { if (!d) return showToast('Image illisible', 'error'); AF_LOGO_B64 = d; afImg('af-logo-preview', d, '🏢', false); }); }
+function onAfPhoto(ev) { const f = ev.target.files && ev.target.files[0]; if (!f) return; afCompress(f, 320, d => { if (!d) return showToast('Image illisible', 'error'); AF_PHOTO_B64 = d; afImg('af-photo-preview', d, '👤', true); }); }
+
+async function saveAdminFiche() {
+  if (!AF_PARTENAIRE_ID) return;
+  const btn = $('af-save-btn'); const status = $('af-status');
+  const payload = {
+    raison_sociale: afVal('af-raison-in'), secteur: afVal('af-secteur'), siret: afVal('af-siret'),
+    email_societe: afVal('af-email'), site_web: afVal('af-web'), adresse: afVal('af-adresse'),
+    code_postal: afVal('af-cp'), ville: afVal('af-ville'),
+    representant: afVal('af-resp'), representant_fonction: afVal('af-resp-fonction'),
+    representant_email: afVal('af-resp-email'), representant_tel: afVal('af-resp-tel'),
+  };
+  if (AF_LOGO_B64 !== undefined) payload.logo_b64 = AF_LOGO_B64;
+  if (AF_PHOTO_B64 !== undefined) payload.representant_photo_b64 = AF_PHOTO_B64;
+  btn.disabled = true; btn.textContent = '⏳…'; status.textContent = '';
+  try {
+    const res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(AF_PARTENAIRE_ID)}/fiche`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Fiche mise à jour', 'success');
+    closeAdminFiche();
+    loadPartenaires(true);
+  } catch (e) { status.textContent = '❌ ' + e.message; status.style.color = '#993556'; }
+  finally { btn.disabled = false; btn.textContent = 'Enregistrer la fiche'; }
 }
 
 async function sendInvitation(contactId, event) {
