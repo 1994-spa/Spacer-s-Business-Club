@@ -27,6 +27,10 @@ binding = "ASSETS"
 # -----------------------------------------------------------------------------
 [vars]
 SUPABASE_URL = "https://goaviqaevdkvptejrreo.supabase.co"
+# Clé publique "anon" — Supabase → Project Settings → API → Project API keys → "anon public".
+# C'est une clé PUBLIQUE (sans danger à committer) ET OBLIGATOIRE pour la connexion email/mot de passe.
+# ⚠️ Remplace la valeur ci-dessous par ta vraie clé anon, sinon /login restera cassé.
+SUPABASE_ANON_KEY = "COLLE_ICI_TA_CLE_ANON_PUBLIQUE"
 
 # -----------------------------------------------------------------------------
 #  Cron — relances & rappels automatiques des invitations
