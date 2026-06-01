@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.19-mails-blocs
+ * Spacers Business Club — Worker V4.20-invitations
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -35,6 +35,10 @@ const PUBLIC_BASE_URL = 'https://business.spacerstoulouse.fr';
 const MAIL_ASSETS_BUCKET = 'mail-assets'; // bucket Supabase Storage public (images des mails)
 const MAIL_IMG_MAX_BYTES = 3 * 1024 * 1024; // 3 Mo
 const MAIL_IMG_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+
+// ===== Sprint Invitations — événements partenaires (RSVP, places, relances) =====
+const INVITATION_STATUTS = ['brouillon', 'valide', 'envoye', 'clos'];
+const INVITATION_SENDER_EMAIL = 'marketing@spacerstoulouse.fr';
 
 // ⚠️ RECOLLE ICI ton base64 existant du template PDF "Minute de l'emploi".
 // Il n'était pas dans le fichier que tu m'as transmis. Laisse '' si tu ne l'as pas
@@ -79,7 +83,20 @@ export default {
       return await handleDesinscription(url, env);
     }
 
+    // Sprint Invitations — pages publiques de réponse RSVP
+    if (path === '/invitation' || path === '/invitation/') {
+      return await handleInvitationPublicPage(url, env);
+    }
+    if (path === '/invitation/repondre' && request.method === 'POST') {
+      return await handleInvitationPublicRepondre(request, env);
+    }
+
     return env.ASSETS.fetch(request);
+  },
+
+  // Cron Cloudflare — relances & rappels d'invitations (déclenché par wrangler.toml [triggers] crons)
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runInvitationRelances(env));
   },
 };
 
@@ -197,6 +214,25 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/send$/);
       if (m) return await handleAdminMailSend(m[1], m[2], env, ctx);
 
+      // ===== Sprint Invitations — admin =====
+      m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})\/create$/);
+      if (m) return await handleAdminInvitationCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminInvitationUpdate(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/validate$/);
+      if (m) return await handleAdminInvitationValidate(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/test$/);
+      if (m) return await handleAdminInvitationTest(m[1], m[2], env, ctx);
+
+      m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/send$/);
+      if (m) return await handleAdminInvitationSend(m[1], m[2], env, ctx);
+
+      m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/relancer$/);
+      if (m) return await handleAdminInvitationRelancer(m[1], m[2], env, ctx);
+
       // Sprint D — Communications (partenaire : RSVP)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/communication\/([0-9a-f-]{36})\/rsvp$/);
       if (m) return await handlePartnerCommunicationRsvp(m[1], m[2], body || {}, env);
@@ -227,7 +263,7 @@ async function handleApi(request, env, path, ctx) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.19-mails-blocs — Supabase + mails par blocs + upload images',
+        version: 'V4.20-invitations — Supabase + mails par blocs + invitations RSVP + cron',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -294,6 +330,13 @@ async function handleApi(request, env, path, ctx) {
 
     m = path.match(/^\/api\/admin\/mail\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
     if (m) return await handleAdminMailDetail(m[1], m[2], env);
+
+    // ===== Sprint Invitations — admin (GET) =====
+    m = path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminInvitationsList(m[1], env);
+
+    m = path.match(/^\/api\/admin\/invitation\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
+    if (m) return await handleAdminInvitationDetail(m[1], m[2], env);
 
     // ===== Sprint E.4 — Auth partenaire (Supabase Auth) =====
     if (path === '/api/auth/config') return await handleAuthConfig(env);
@@ -371,6 +414,14 @@ async function handleApi(request, env, path, ctx) {
         'POST /api/admin/mails/:token/:id/validate',
         'POST /api/admin/mails/:token/:id/test',
         'POST /api/admin/mails/:token/:id/send',
+        'GET  /api/admin/invitations/:token',
+        'GET  /api/admin/invitation/:token/:id',
+        'POST /api/admin/invitations/:token/create',
+        'POST /api/admin/invitations/:token/:id/update',
+        'POST /api/admin/invitations/:token/:id/validate',
+        'POST /api/admin/invitations/:token/:id/test',
+        'POST /api/admin/invitations/:token/:id/send',
+        'POST /api/admin/invitations/:token/:id/relancer',
         'GET  /api/admin/tickie/ping/:token',
       ],
       path,
@@ -3274,7 +3325,7 @@ function renderBlockImageTag(url, alt, width) {
   return `<img src="${escEmail(url)}" alt="${escEmail(alt || '')}" width="${width}" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;border-radius:8px;" />`;
 }
 
-function renderOneBlock(b) {
+function renderOneBlock(b, ctx) {
   if (!b || !b.type) return '';
   const type = b.type;
   const wrap = (inner, pad) => `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="${pad}">${inner}</td></tr></table>`;
@@ -3383,13 +3434,38 @@ function renderOneBlock(b) {
     case 'html':
       // Bloc HTML libre (admin de confiance) — inséré tel quel
       return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="padding:6px 30px;">${b.code || ''}</td></tr></table>`;
+    case 'invit_modalite': {
+      const inv = ctx && ctx.invitation;
+      if (!inv) return wrap(`<div style="background:#FAF7F2;border:1px dashed #E5DED1;border-radius:10px;padding:14px 16px;font-size:12px;color:#8A8478;font-style:italic;">Modalités de l'événement (date, lieu…) — s'afficheront dans le mail réel.</div>`, 'padding:8px 30px;');
+      const rows = [];
+      const lieuParts = [inv.lieu_prelude, inv.lieu_adresse, [inv.lieu_cp, inv.lieu_ville].filter(Boolean).join(' ')].filter(Boolean);
+      if (inv.date_event) rows.push(['Date', escEmail(inv.date_event) + (inv.heure ? ' · ' + escEmail(inv.heure) : '')]);
+      if (lieuParts.length) rows.push(['Lieu', escEmail(lieuParts.join(', '))]);
+      if (inv.reponse_avant) rows.push(['Réponse avant le', escEmail(_invDateFr(inv.reponse_avant))]);
+      const body = rows.map(([k, v]) => `<tr><td style="padding:6px 0;font-size:13px;color:#4A5568;"><strong style="color:#0A1628;display:inline-block;width:120px;">${k}</strong>${v}</td></tr>`).join('');
+      return wrap(`<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAF7F2;border:1px solid #E5DED1;border-radius:10px;padding:8px 16px;">${body}</table>`, 'padding:10px 30px;');
+    }
+    case 'invit_reponse': {
+      const base = ctx && ctx.rsvpBase;
+      const labelOui = escEmail(b.label_oui || 'Je participe');
+      const labelNon = escEmail(b.label_non || 'Je ne pourrai pas');
+      if (!base) {
+        return wrap(`<div style="text-align:center;"><span style="display:inline-block;background:#C8932B;color:#0A1628;font-weight:bold;font-size:14px;padding:13px 26px;border-radius:999px;margin:4px;">${labelOui}</span><span style="display:inline-block;background:#FFFFFF;color:#0A1628;border:1px solid #E5DED1;font-weight:bold;font-size:14px;padding:12px 26px;border-radius:999px;margin:4px;">${labelNon}</span></div>`, 'padding:14px 30px;');
+      }
+      const urlOui = `${base}&r=oui`;
+      const urlNon = `${base}&r=non`;
+      return wrap(`<table cellpadding="0" cellspacing="0" border="0" align="center" role="presentation"><tr>
+        <td style="padding:4px;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#C8932B;border-radius:999px;"><a href="${escEmail(urlOui)}" target="_blank" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:bold;color:#0A1628;text-decoration:none;">${labelOui}</a></td></tr></table></td>
+        <td style="padding:4px;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#FFFFFF;border:1px solid #E5DED1;border-radius:999px;"><a href="${escEmail(urlNon)}" target="_blank" style="display:inline-block;padding:12px 26px;font-size:14px;font-weight:bold;color:#0A1628;text-decoration:none;">${labelNon}</a></td></tr></table></td>
+      </tr></table>`, 'padding:14px 30px;text-align:center;');
+    }
     default:
       return '';
   }
 }
 
-function renderBlocksToHtml(blocks) {
-  return (blocks || []).map(renderOneBlock).join('\n');
+function renderBlocksToHtml(blocks, ctx) {
+  return (blocks || []).map(b => renderOneBlock(b, ctx)).join('\n');
 }
 
 // Coquille email pour le mode blocs : carte 600px + ligne de désinscription RGPD forcée.
@@ -3492,4 +3568,430 @@ async function handleDesinscription(url, env) {
     });
   } catch (_) {}
   return page('Désinscription confirmée', `L'adresse ${escEmail(email)} ne recevra plus les emails du Spacer's Business Club.`);
+}
+
+// ============================================================================
+//  SPRINT INVITATIONS — événements partenaires (RSVP, places, relances)
+// ============================================================================
+function _invDateFr(d) {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d);
+}
+function _invToken() {
+  return (crypto.randomUUID && crypto.randomUUID().replace(/-/g, '')) || (Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+}
+function _invFrom(inv) {
+  const nom = (inv.expediteur_nom || "Le Spacer's Business Club").replace(/[<>]/g, '');
+  return `${nom} <${INVITATION_SENDER_EMAIL}>`;
+}
+function _invPlaces(inv, dests) {
+  const max = inv.max_participants || 0;
+  const used = (dests || []).filter(d => d.reponse === 'present').reduce((s, d) => s + (d.nb_personnes || 1), 0);
+  return { max, used, restantes: max > 0 ? Math.max(0, max - used) : null };
+}
+
+function renderInvitationEmail(invitation, dest) {
+  let blocks = invitation.blocks;
+  if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = []; } }
+  if (!Array.isArray(blocks) || !blocks.length) {
+    blocks = [
+      { type: 'entete', eyebrow: 'INVITATION', titre: invitation.theme || invitation.sujet || 'Invitation', marque: "SPACER'S BUSINESS CLUB", sous_marque: 'Toulouse Volley · Saison 2026–2027' },
+      { type: 'invit_modalite' },
+      { type: 'paragraphe', text: 'Nous serions ravis de vous compter parmi nous. Merci de confirmer votre présence ci-dessous.' },
+      { type: 'invit_reponse' },
+      { type: 'pied', ligne1: "Spacer's Toulouse Volley · Palais des Sports André Brouat", site: 'spacerstoulouse.fr', site_url: 'https://spacerstoulouse.fr', email: 'marketing@spacerstoulouse.fr' },
+    ];
+  }
+  const rsvpBase = dest && dest.token ? `${PUBLIC_BASE_URL}/invitation?t=${encodeURIComponent(dest.token)}` : '';
+  const inner = renderBlocksToHtml(blocks, { invitation, dest, rsvpBase });
+  return emailShellBlocks({ sujet: invitation.sujet, pre_header: invitation.theme || '' }, inner, null);
+}
+
+async function handleAdminInvitationsList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('invitations', 'select=*&order=created_at.desc&limit=200', env);
+  const invitations = (rows || []).map(i => ({
+    id: i.id, sujet: i.sujet, theme: i.theme || '', date_event: i.date_event || '', heure: i.heure || '',
+    statut: i.statut, nb_destinataires: i.nb_destinataires || 0, max_participants: i.max_participants || 0,
+    reponse_avant: i.reponse_avant, envoye_le: i.envoye_le, cree_par_nom: i.cree_par_nom || '', created_at: i.created_at,
+  }));
+  const stats = { brouillon: 0, valide: 0, envoye: 0, clos: 0, total: 0 };
+  invitations.forEach(i => { stats[i.statut] = (stats[i.statut] || 0) + 1; stats.total++; });
+  return jsonResponseNoCache({ invitations, stats });
+}
+
+async function handleAdminInvitationDetail(token, invitationId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('invitations', `id=eq.${invitationId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
+  const inv = rows[0];
+  const dests = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${invitationId}&select=contact_nom,contact_prenom,contact_email,partenaire_nom,reponse,nb_personnes,commentaire,repondu_le&order=repondu_le.desc.nullslast&limit=2000`, env);
+  const present = (dests || []).filter(d => d.reponse === 'present');
+  const absent = (dests || []).filter(d => d.reponse === 'absent');
+  const sans = (dests || []).filter(d => !d.reponse);
+  const places = _invPlaces(inv, dests);
+  const agg = {
+    total: (dests || []).length,
+    present: present.length, absent: absent.length, sans_reponse: sans.length,
+    total_personnes: present.reduce((s, d) => s + (d.nb_personnes || 1), 0),
+    places_max: places.max, places_used: places.used, places_restantes: places.restantes,
+  };
+  // estimation du nb de destinataires potentiels (si pas encore envoyé)
+  let destinataires_estimes = inv.nb_destinataires || 0;
+  if (!destinataires_estimes) {
+    const contacts = await supabaseQuery('partenaire_contacts', 'select=email,statut&limit=2000', env);
+    destinataires_estimes = (contacts || []).filter(c => c.email && c.email.includes('@') && c.statut !== 'inactif').length;
+  }
+  return jsonResponseNoCache({ invitation: inv, destinataires: dests || [], agg, destinataires_estimes });
+}
+
+function _invInsertFromBody(body, admin, email) {
+  const intOr0 = (v) => { const n = parseInt(v, 10); return isNaN(n) ? 0 : Math.max(0, n); };
+  const dateOrNull = (v) => (v && /^\d{4}-\d{2}-\d{2}/.test(String(v))) ? String(v).slice(0, 10) : null;
+  return {
+    sujet: String(body.sujet || '').trim(),
+    theme: body.theme || null,
+    date_event: body.date_event || null,
+    heure: body.heure || null,
+    lieu_prelude: body.lieu_prelude || null,
+    lieu_adresse: body.lieu_adresse || null,
+    lieu_cp: body.lieu_cp || null,
+    lieu_ville: body.lieu_ville || null,
+    reponse_avant: dateOrNull(body.reponse_avant),
+    date_relance: dateOrNull(body.date_relance),
+    date_rappel: dateOrNull(body.date_rappel),
+    expediteur_nom: body.expediteur_nom || "Le Spacer's Business Club",
+    reply_to: body.reply_to || null,
+    max_participants: intOr0(body.max_participants),
+    afficher_places: !!body.afficher_places,
+    opt_infos_complementaires: !!body.opt_infos_complementaires,
+    opt_liste_participants: body.opt_liste_participants === undefined ? true : !!body.opt_liste_participants,
+    blocks: Array.isArray(body.blocks) ? body.blocks : [],
+    page_acceptation: (body.page_acceptation && typeof body.page_acceptation === 'object') ? body.page_acceptation : {},
+    page_declinaison: (body.page_declinaison && typeof body.page_declinaison === 'object') ? body.page_declinaison : {},
+  };
+}
+
+async function handleAdminInvitationCreate(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  if (!String(body.sujet || '').trim()) return jsonResponseNoCache({ error: 'Le sujet est obligatoire' }, 400);
+  let email = '';
+  try { const a = await supabaseQuery('admins', `magic_token=eq.${token}&select=email&limit=1`, env); if (a && a[0]) email = a[0].email || ''; } catch (_) {}
+  const data = Object.assign(_invInsertFromBody(body, admin, email), {
+    statut: 'brouillon',
+    cree_par_admin_id: admin.id,
+    cree_par_nom: `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null,
+    cree_par_email: email || null,
+  });
+  try {
+    const arr = await supabaseInsert_('invitations', data, env);
+    const created = Array.isArray(arr) ? arr[0] : arr;
+    logAudit_(admin.id, 'invitation.create', 'invitations', created.id, { sujet: data.sujet }, env);
+    return jsonResponseNoCache({ ok: true, invitation: created });
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500); }
+}
+
+async function handleAdminInvitationUpdate(token, invitationId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const cur = await supabaseQuery('invitations', `id=eq.${invitationId}&select=statut&limit=1`, env);
+  if (!cur || cur.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
+  if (cur[0].statut === 'envoye' || cur[0].statut === 'clos') return jsonResponseNoCache({ error: 'Invitation déjà envoyée, non modifiable' }, 400);
+  const patch = Object.assign(_invInsertFromBody(body, admin, ''), { statut: 'brouillon', updated_at: new Date().toISOString() });
+  if (!patch.sujet) return jsonResponseNoCache({ error: 'Le sujet est obligatoire' }, 400);
+  delete patch.cree_par_admin_id; delete patch.cree_par_nom; delete patch.cree_par_email;
+  try { await supabasePatch_('invitations', `id=eq.${invitationId}`, patch, env); return jsonResponseNoCache({ ok: true }); }
+  catch (e) { return jsonResponseNoCache({ error: 'Erreur update', detail: e.message }, 500); }
+}
+
+async function handleAdminInvitationValidate(token, invitationId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('invitations', `id=eq.${invitationId}&select=statut&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
+  if (rows[0].statut === 'envoye') return jsonResponseNoCache({ error: 'Invitation déjà envoyée' }, 400);
+  await supabasePatch_('invitations', `id=eq.${invitationId}`, { statut: 'valide', updated_at: new Date().toISOString() }, env);
+  logAudit_(admin.id, 'invitation.validate', 'invitations', invitationId, {}, env);
+  return jsonResponseNoCache({ ok: true, statut: 'valide' });
+}
+
+async function handleAdminInvitationTest(token, invitationId, env, ctx) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('invitations', `id=eq.${invitationId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
+  const inv = rows[0];
+  let toEmail = inv.cree_par_email || admin.email || '';
+  if (!toEmail) { const a = await supabaseQuery('admins', `magic_token=eq.${token}&select=email&limit=1`, env); if (a && a[0]) toEmail = a[0].email || ''; }
+  if (!toEmail || !toEmail.includes('@')) return jsonResponseNoCache({ error: 'Aucune adresse de test disponible' }, 400);
+  const fakeDest = { token: 'apercu-test', contact_email: toEmail };
+  const job = sendEmailViaResend(env, {
+    to: toEmail, from: _invFrom(inv), subject: `[TEST] ${inv.sujet}`,
+    html: renderInvitationEmail(inv, fakeDest), replyTo: inv.reply_to || inv.cree_par_email || EMAIL_REPLY_TO_CLUB,
+  });
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+  return jsonResponseNoCache({ ok: true, sent_to: toEmail });
+}
+
+async function _invBuildRecipients(env) {
+  const contacts = await supabaseQuery('partenaire_contacts', 'select=email,nom,prenom,statut,partenaire_id&limit=2000', env);
+  const seen = new Set();
+  const out = [];
+  (contacts || []).forEach(c => {
+    const email = (c.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@') || c.statut === 'inactif' || seen.has(email)) return;
+    seen.add(email);
+    out.push({ contact_email: email, contact_nom: c.nom || '', contact_prenom: c.prenom || '', partenaire_id: c.partenaire_id || null });
+  });
+  return out;
+}
+
+async function handleAdminInvitationSend(token, invitationId, env, ctx) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('invitations', `id=eq.${invitationId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
+  const inv = rows[0];
+  if (inv.statut === 'envoye') return jsonResponseNoCache({ error: 'Cette invitation a déjà été envoyée' }, 400);
+  if (inv.statut !== 'valide') return jsonResponseNoCache({ error: 'L\'invitation doit être validée avant envoi' }, 400);
+
+  const recipients = await _invBuildRecipients(env);
+  if (!recipients.length) return jsonResponseNoCache({ error: 'Aucun destinataire valide' }, 400);
+
+  // résoudre les raisons sociales (pour affichage RSVP)
+  let partMap = {};
+  try {
+    const parts = await supabaseQuery('partenaires', 'select=id,raison_sociale&limit=2000', env);
+    (parts || []).forEach(p => { partMap[p.id] = p.raison_sociale; });
+  } catch (_) {}
+
+  const destRows = recipients.map(r => ({
+    invitation_id: invitationId, token: _invToken(),
+    contact_email: r.contact_email, contact_nom: r.contact_nom, contact_prenom: r.contact_prenom,
+    partenaire_nom: r.partenaire_id ? (partMap[r.partenaire_id] || null) : null,
+  }));
+  let inserted;
+  try { inserted = await supabaseInsert_('invitation_destinataires', destRows, env); }
+  catch (e) { return jsonResponseNoCache({ error: 'Erreur création destinataires', detail: e.message }, 500); }
+
+  const from = _invFrom(inv);
+  const replyTo = inv.reply_to || inv.cree_par_email || EMAIL_REPLY_TO_CLUB;
+  const job = (async () => {
+    let ok = 0, fail = 0;
+    for (const d of (inserted || destRows)) {
+      try {
+        const res = await sendEmailViaResend(env, { to: d.contact_email, from, subject: inv.sujet, html: renderInvitationEmail(inv, d), replyTo });
+        if (res && res.ok) ok++; else fail++;
+      } catch (_) { fail++; }
+      await new Promise(rs => setTimeout(rs, 120));
+    }
+    console.log(`[Invitation ${invitationId}] ${ok} OK / ${fail} échecs / ${destRows.length}`);
+  })();
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+
+  await supabasePatch_('invitations', `id=eq.${invitationId}`, {
+    statut: 'envoye', envoye_le: new Date().toISOString(), nb_destinataires: destRows.length, updated_at: new Date().toISOString(),
+  }, env);
+  logAudit_(admin.id, 'invitation.send', 'invitations', invitationId, { nb: destRows.length }, env);
+  return jsonResponseNoCache({ ok: true, statut: 'envoye', nb_destinataires: destRows.length });
+}
+
+async function handleAdminInvitationRelancer(token, invitationId, env, ctx) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('invitations', `id=eq.${invitationId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
+  const inv = rows[0];
+  if (inv.statut !== 'envoye') return jsonResponseNoCache({ error: 'Seules les invitations envoyées peuvent être relancées' }, 400);
+  const dests = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${invitationId}&reponse=is.null&select=*&limit=2000`, env);
+  if (!dests || !dests.length) return jsonResponseNoCache({ ok: true, nb_relances: 0, message: 'Tout le monde a répondu' });
+  const n = await _invSendRelances(inv, dests, env, ctx, 'relance');
+  await supabasePatch_('invitations', `id=eq.${invitationId}`, { relance_envoyee_le: new Date().toISOString(), updated_at: new Date().toISOString() }, env);
+  logAudit_(admin.id, 'invitation.relancer', 'invitations', invitationId, { nb: n }, env);
+  return jsonResponseNoCache({ ok: true, nb_relances: n });
+}
+
+async function _invSendRelances(inv, dests, env, ctx, mode) {
+  const from = _invFrom(inv);
+  const replyTo = inv.reply_to || inv.cree_par_email || EMAIL_REPLY_TO_CLUB;
+  const prefix = mode === 'rappel' ? 'Rappel — ' : 'Relance — ';
+  const job = (async () => {
+    for (const d of dests) {
+      try {
+        await sendEmailViaResend(env, { to: d.contact_email, from, subject: prefix + inv.sujet, html: renderInvitationEmail(inv, d), replyTo });
+      } catch (_) {}
+      await new Promise(rs => setTimeout(rs, 120));
+    }
+  })();
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+  return dests.length;
+}
+
+// ---- Pages publiques RSVP ----
+function _invPublicShell(title, bodyHtml) {
+  return new Response(
+    `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+    <style>
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#FAF7F2;color:#0A1628;display:grid;place-items:center;min-height:100vh;padding:24px}
+    .c{background:#fff;border:1px solid #E5DED1;border-radius:18px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 12px 40px rgba(10,22,40,.10)}
+    .hd{background:linear-gradient(135deg,#11203a,#0A1628);padding:24px 28px;color:#fff}
+    .hd .s{width:40px;height:40px;border-radius:10px;background:#C8932B;color:#0A1628;display:grid;place-items:center;font-family:Georgia,serif;font-weight:700;font-size:20px}
+    .hd .e{color:#E8C977;font-size:10px;font-weight:700;letter-spacing:2px;margin-top:14px}
+    .hd h1{font-family:Georgia,serif;font-weight:500;font-size:24px;margin:6px 0 0;line-height:1.15}
+    .bd{padding:24px 28px}
+    .row{font-size:14px;color:#4A5568;line-height:1.7;margin:0 0 6px}
+    .row b{color:#0A1628}
+    .places{background:#FAF3DF;border:1px solid #E8C977;border-radius:10px;padding:10px 14px;font-size:13px;color:#0A1628;margin:14px 0;text-align:center;font-weight:600}
+    label.l{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8A8478;font-weight:700;margin:16px 0 6px}
+    select,textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #E5DED1;border-radius:8px;font-size:14px;font-family:inherit;background:#fff}
+    .choice{display:flex;gap:10px;margin:6px 0 4px}
+    .choice label{flex:1;border:1px solid #E5DED1;border-radius:10px;padding:12px;text-align:center;cursor:pointer;font-weight:600;font-size:14px}
+    .choice input{display:none}
+    .choice input:checked+span{display:block}
+    .choice label.sel{border-color:#C8932B;background:#FAF3DF}
+    .btn{display:block;width:100%;box-sizing:border-box;margin-top:20px;background:#C8932B;color:#0A1628;border:none;border-radius:999px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+    .ft{padding:14px 28px;background:#FAF7F2;border-top:1px solid #E5DED1;text-align:center;font-size:11px;color:#8A8478}
+    </style></head><body><div class="c">${bodyHtml}</div></body></html>`,
+    { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+  );
+}
+
+function _invHeader(inv, eyebrow) {
+  return `<div class="hd"><div class="s">S</div><div class="e">${escEmail(eyebrow || 'INVITATION')}</div><h1>${escEmail(inv.theme || inv.sujet || 'Invitation')}</h1></div>`;
+}
+function _invDetailsRows(inv) {
+  const lieu = [inv.lieu_prelude, inv.lieu_adresse, [inv.lieu_cp, inv.lieu_ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  let h = '';
+  if (inv.date_event) h += `<div class="row"><b>Date :</b> ${escEmail(inv.date_event)}${inv.heure ? ' · ' + escEmail(inv.heure) : ''}</div>`;
+  if (lieu) h += `<div class="row"><b>Lieu :</b> ${escEmail(lieu)}</div>`;
+  if (inv.reponse_avant) h += `<div class="row"><b>Réponse souhaitée avant le :</b> ${escEmail(_invDateFr(inv.reponse_avant))}</div>`;
+  return h;
+}
+
+async function handleInvitationPublicPage(url, env) {
+  const token = (url.searchParams.get('t') || '').trim();
+  const pre = (url.searchParams.get('r') || '').trim();
+  if (!token) return _invPublicShell('Lien invalide', `<div class="hd"><div class="s">S</div><h1>Lien invalide</h1></div><div class="bd"><p class="row">Ce lien d'invitation est incomplet.</p></div>`);
+  const drows = await supabaseQuery('invitation_destinataires', `token=eq.${token}&select=*&limit=1`, env);
+  if (!drows || !drows.length) return _invPublicShell('Lien invalide', `<div class="hd"><div class="s">S</div><h1>Lien invalide</h1></div><div class="bd"><p class="row">Ce lien d'invitation n'est pas reconnu.</p></div>`);
+  const dest = drows[0];
+  const irows = await supabaseQuery('invitations', `id=eq.${dest.invitation_id}&select=*&limit=1`, env);
+  if (!irows || !irows.length) return _invPublicShell('Invitation close', `<div class="hd"><div class="s">S</div><h1>Invitation introuvable</h1></div><div class="bd"><p class="row">Cette invitation n'est plus disponible.</p></div>`);
+  const inv = irows[0];
+
+  let placesHtml = '';
+  if (inv.afficher_places && inv.max_participants > 0) {
+    const all = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${inv.id}&reponse=eq.present&select=nb_personnes&limit=2000`, env);
+    const used = (all || []).reduce((s, d) => s + (d.nb_personnes || 1), 0);
+    const rest = Math.max(0, inv.max_participants - used);
+    placesHtml = `<div class="places">${rest > 0 ? `Il reste ${rest} place${rest > 1 ? 's' : ''}` : 'Événement complet'}</div>`;
+  }
+
+  const presentSel = (pre === 'oui' || dest.reponse === 'present');
+  const absentSel = (pre === 'non' || dest.reponse === 'absent');
+  const nbOptions = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<option value="${n}" ${(dest.nb_personnes || 1) === n ? 'selected' : ''}>${n}</option>`).join('');
+  const greet = dest.contact_prenom ? `Bonjour ${escEmail(dest.contact_prenom)},` : 'Bonjour,';
+  const already = dest.reponse ? `<div class="row" style="font-style:italic;color:#3A8264;margin-top:8px;">Vous avez déjà répondu (${dest.reponse === 'present' ? 'présent' : 'absent'}). Vous pouvez modifier ci-dessous.</div>` : '';
+
+  const body = `${_invHeader(inv, 'VOTRE INVITATION')}
+    <div class="bd">
+      <p class="row">${greet}</p>
+      ${_invDetailsRows(inv)}
+      ${placesHtml}
+      ${already}
+      <form method="POST" action="/invitation/repondre">
+        <input type="hidden" name="token" value="${escEmail(token)}">
+        <label class="l">Votre réponse</label>
+        <div class="choice">
+          <label id="lbl-oui" class="${presentSel ? 'sel' : ''}"><input type="radio" name="reponse" value="present" ${presentSel ? 'checked' : ''} onclick="document.getElementById('lbl-oui').classList.add('sel');document.getElementById('lbl-non').classList.remove('sel');document.getElementById('pp').style.display='block';">✓ Je participe</label>
+          <label id="lbl-non" class="${absentSel ? 'sel' : ''}"><input type="radio" name="reponse" value="absent" ${absentSel ? 'checked' : ''} onclick="document.getElementById('lbl-non').classList.add('sel');document.getElementById('lbl-oui').classList.remove('sel');document.getElementById('pp').style.display='none';">✕ Je ne pourrai pas</label>
+        </div>
+        <div id="pp" style="display:${presentSel ? 'block' : 'none'};">
+          ${inv.opt_liste_participants ? `<label class="l">Combien serez-vous ?</label><select name="nb_personnes">${nbOptions}</select>` : ''}
+        </div>
+        ${inv.opt_infos_complementaires ? `<label class="l">Informations complémentaires (optionnel)</label><textarea name="commentaire" rows="3">${escEmail(dest.commentaire || '')}</textarea>` : ''}
+        <button class="btn" type="submit">Valider mon inscription</button>
+      </form>
+    </div>
+    <div class="ft">Spacer's Toulouse Volley · Business Club</div>`;
+  return _invPublicShell(escEmail(inv.sujet || 'Invitation'), body);
+}
+
+async function handleInvitationPublicRepondre(request, env) {
+  let form;
+  try { form = await request.formData(); } catch (_) { return _invPublicShell('Erreur', `<div class="hd"><div class="s">S</div><h1>Erreur</h1></div><div class="bd"><p class="row">Formulaire invalide.</p></div>`); }
+  const token = String(form.get('token') || '').trim();
+  let reponse = String(form.get('reponse') || '').trim();
+  let nb = parseInt(form.get('nb_personnes') || '1', 10); if (isNaN(nb) || nb < 1) nb = 1;
+  const commentaire = String(form.get('commentaire') || '').trim().slice(0, 1000);
+  if (!token || (reponse !== 'present' && reponse !== 'absent')) {
+    return _invPublicShell('Réponse incomplète', `<div class="hd"><div class="s">S</div><h1>Réponse incomplète</h1></div><div class="bd"><p class="row">Merci de choisir une réponse.</p></div>`);
+  }
+  const drows = await supabaseQuery('invitation_destinataires', `token=eq.${token}&select=*&limit=1`, env);
+  if (!drows || !drows.length) return _invPublicShell('Lien invalide', `<div class="hd"><div class="s">S</div><h1>Lien invalide</h1></div><div class="bd"><p class="row">Lien non reconnu.</p></div>`);
+  const dest = drows[0];
+  const irows = await supabaseQuery('invitations', `id=eq.${dest.invitation_id}&select=*&limit=1`, env);
+  const inv = irows && irows[0];
+  if (!inv) return _invPublicShell('Invitation close', `<div class="hd"><div class="s">S</div><h1>Invitation introuvable</h1></div><div class="bd"></div>`);
+
+  // contrôle des places (si plafond et nouvelle présence)
+  if (reponse === 'present' && inv.max_participants > 0) {
+    const all = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${inv.id}&reponse=eq.present&select=token,nb_personnes&limit=2000`, env);
+    let used = (all || []).reduce((s, d) => s + (d.nb_personnes || 1), 0);
+    const prev = (all || []).find(d => d.token === token);
+    if (prev) used -= (prev.nb_personnes || 1); // on retire son ancienne contribution
+    if (used + nb > inv.max_participants) {
+      const rest = Math.max(0, inv.max_participants - used);
+      return _invPublicShell('Événement complet', `${_invHeader(inv, 'INVITATION')}<div class="bd"><div class="places">Désolé, il ne reste que ${rest} place${rest > 1 ? 's' : ''}.</div><p class="row">Vous pouvez <a href="${PUBLIC_BASE_URL}/invitation?t=${encodeURIComponent(token)}" style="color:#C8932B;">revenir en arrière</a> et ajuster le nombre de participants.</p></div>`);
+    }
+  }
+
+  try {
+    await supabasePatch_('invitation_destinataires', `token=eq.${token}`, {
+      reponse, nb_personnes: reponse === 'present' ? nb : 1, commentaire: commentaire || null, repondu_le: new Date().toISOString(),
+    }, env);
+  } catch (e) { return _invPublicShell('Erreur', `<div class="hd"><div class="s">S</div><h1>Erreur</h1></div><div class="bd"><p class="row">Enregistrement impossible, réessayez.</p></div>`); }
+
+  const pages = {
+    present: inv.page_acceptation || {},
+    absent: inv.page_declinaison || {},
+  };
+  const cfg = pages[reponse] || {};
+  if (reponse === 'present') {
+    const titre = cfg.titre || 'Votre présence est confirmée !';
+    const texte = cfg.texte || `Merci ${escEmail(dest.contact_prenom || '')}, nous avons bien noté votre participation${inv.opt_liste_participants ? ` (${nb} personne${nb > 1 ? 's' : ''})` : ''}. À très bientôt !`;
+    return _invPublicShell(escEmail(titre), `${_invHeader(inv, 'PRÉSENCE CONFIRMÉE')}<div class="bd"><h1 style="font-family:Georgia,serif;font-size:22px;margin:0 0 10px;color:#3A8264;">${escEmail(titre)}</h1><p class="row">${escEmail(texte)}</p>${_invDetailsRows(inv)}</div><div class="ft">Spacer's Toulouse Volley · Business Club</div>`);
+  } else {
+    const titre = cfg.titre || 'Nous sommes navrés de votre choix';
+    const texte = cfg.texte || 'Peut-être à une autre fois. Merci de nous avoir prévenus.';
+    return _invPublicShell(escEmail(titre), `${_invHeader(inv, 'RÉPONSE ENREGISTRÉE')}<div class="bd"><h1 style="font-family:Georgia,serif;font-size:22px;margin:0 0 10px;">${escEmail(titre)}</h1><p class="row">${escEmail(texte)}</p></div><div class="ft">Spacer's Toulouse Volley · Business Club</div>`);
+  }
+}
+
+// ---- Cron : relances & rappels automatiques ----
+async function runInvitationRelances(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const today = new Date().toISOString().slice(0, 10);
+  let invs = [];
+  try { invs = await supabaseQuery('invitations', `statut=eq.envoye&select=*&limit=500`, env); } catch (_) { return; }
+  for (const inv of (invs || [])) {
+    try {
+      // Relance aux non-répondants le jour de date_relance
+      if (inv.date_relance && String(inv.date_relance).slice(0, 10) === today && !inv.relance_envoyee_le) {
+        const dests = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${inv.id}&reponse=is.null&select=*&limit=2000`, env);
+        if (dests && dests.length) await _invSendRelances(inv, dests, env, null, 'relance');
+        await supabasePatch_('invitations', `id=eq.${inv.id}`, { relance_envoyee_le: new Date().toISOString() }, env);
+      }
+      // Rappel aux présents le jour de date_rappel
+      if (inv.date_rappel && String(inv.date_rappel).slice(0, 10) === today && !inv.rappel_envoye_le) {
+        const dests = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${inv.id}&reponse=eq.present&select=*&limit=2000`, env);
+        if (dests && dests.length) await _invSendRelances(inv, dests, env, null, 'rappel');
+        await supabasePatch_('invitations', `id=eq.${inv.id}`, { rappel_envoye_le: new Date().toISOString() }, env);
+      }
+    } catch (e) { console.log('[Cron invitation]', inv.id, e.message); }
+  }
 }
