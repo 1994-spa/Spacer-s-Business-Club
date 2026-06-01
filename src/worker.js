@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.24-bridge (CORS POST pour candidatures cross-origin app bénévoles)
+ * Spacers Business Club — Worker V4.25-stripe (Invitations payantes : Checkout + webhook Stripe)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -55,6 +55,10 @@ export default {
       if (request.method === 'OPTIONS') {
         return new Response(null, { headers: CORS });
       }
+      // Stripe — webhook (corps brut + vérif signature, AVANT tout parsing JSON)
+      if (path === '/api/stripe/webhook' && request.method === 'POST') {
+        return await handleStripeWebhook(request, env, ctx);
+      }
       return await handleApi(request, env, path, ctx);
     }
 
@@ -89,6 +93,9 @@ export default {
     }
     if (path === '/invitation/repondre' && request.method === 'POST') {
       return await handleInvitationPublicRepondre(request, env);
+    }
+    if (path === '/invitation/paye' || path === '/invitation/paye/') {
+      return await handleInvitationPaidPage(url, env);
     }
 
     return env.ASSETS.fetch(request);
@@ -3921,6 +3928,13 @@ async function handleInvitationPublicPage(url, env) {
   }
 
   const presentSel = (pre === 'oui' || dest.reponse === 'present');
+  const isPaidEvent = inv.est_payant && Number(inv.prix_personne) > 0;
+  let payInfoHtml = '';
+  if (isPaidEvent) {
+    payInfoHtml = (dest.statut_paiement === 'paye')
+      ? `<div class="places" style="background:#EAF3DE;color:#3A8264;">✓ Participation déjà réglée${dest.montant_paye ? ` (${Number(dest.montant_paye).toFixed(2)} €)` : ''}. Merci !</div>`
+      : `<div class="places">Participation : ${Number(inv.prix_personne).toFixed(2)} € / personne · paiement sécurisé Stripe</div>`;
+  }
   const absentSel = (pre === 'non' || dest.reponse === 'absent');
   const nbOptions = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<option value="${n}" ${(dest.nb_personnes || 1) === n ? 'selected' : ''}>${n}</option>`).join('');
   const greet = dest.contact_prenom ? `Bonjour ${escEmail(dest.contact_prenom)},` : 'Bonjour,';
@@ -3931,6 +3945,7 @@ async function handleInvitationPublicPage(url, env) {
       <p class="row">${greet}</p>
       ${_invDetailsRows(inv)}
       ${placesHtml}
+      ${payInfoHtml}
       ${already}
       <form method="POST" action="/invitation/repondre">
         <input type="hidden" name="token" value="${escEmail(token)}">
@@ -3943,7 +3958,7 @@ async function handleInvitationPublicPage(url, env) {
           ${inv.opt_liste_participants ? `<label class="l">Combien serez-vous ?</label><select name="nb_personnes">${nbOptions}</select>` : ''}
         </div>
         ${inv.opt_infos_complementaires ? `<label class="l">Informations complémentaires (optionnel)</label><textarea name="commentaire" rows="3">${escEmail(dest.commentaire || '')}</textarea>` : ''}
-        <button class="btn" type="submit">Valider mon inscription</button>
+        <button class="btn" type="submit">${isPaidEvent ? 'Participer et payer' : 'Valider mon inscription'}</button>
       </form>
     </div>
     <div class="ft">Spacer's Toulouse Volley · Business Club</div>`;
@@ -3979,6 +3994,14 @@ async function handleInvitationPublicRepondre(request, env) {
     }
   }
 
+  // Événement payant : présence → flux de paiement Stripe (sinon comportement normal)
+  if (reponse === 'present' && inv.est_payant && Number(inv.prix_personne) > 0) {
+    if (dest.statut_paiement === 'paye') {
+      return new Response(null, { status: 303, headers: { Location: `${PUBLIC_BASE_URL}/invitation/paye?t=${encodeURIComponent(token)}` } });
+    }
+    return await _invStartPayment(inv, dest, token, nb, commentaire, env);
+  }
+
   try {
     await supabasePatch_('invitation_destinataires', `token=eq.${token}`, {
       reponse, nb_personnes: reponse === 'present' ? nb : 1, commentaire: commentaire || null, repondu_le: new Date().toISOString(),
@@ -3999,6 +4022,154 @@ async function handleInvitationPublicRepondre(request, env) {
     const texte = cfg.texte || 'Peut-être à une autre fois. Merci de nous avoir prévenus.';
     return _invPublicShell(escEmail(titre), `${_invHeader(inv, 'RÉPONSE ENREGISTRÉE')}<div class="bd"><h1 style="font-family:Georgia,serif;font-size:22px;margin:0 0 10px;">${escEmail(titre)}</h1><p class="row">${escEmail(texte)}</p></div><div class="ft">Spacer's Toulouse Volley · Business Club</div>`);
   }
+}
+
+// ============================================================================
+//  STRIPE — Paiement des invitations payantes (Checkout + webhook)
+// ============================================================================
+
+async function _invStartPayment(inv, dest, token, nb, commentaire, env) {
+  if (!env.STRIPE_SECRET_KEY) {
+    return _invPublicShell('Paiement indisponible', `${_invHeader(inv, 'INVITATION')}<div class="bd"><p class="row">Le paiement en ligne n'est pas encore activé. Merci de contacter le Business Club.</p></div><div class="ft">Spacer's Toulouse Volley · Business Club</div>`);
+  }
+  // contrôle des places (présence payante = on réserve la place)
+  if (inv.max_participants > 0) {
+    const all = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${inv.id}&reponse=eq.present&select=token,nb_personnes&limit=2000`, env);
+    let used = (all || []).reduce((s, d) => s + (d.nb_personnes || 1), 0);
+    const prev = (all || []).find(d => d.token === token);
+    if (prev) used -= (prev.nb_personnes || 1);
+    if (used + nb > inv.max_participants) {
+      const rest = Math.max(0, inv.max_participants - used);
+      return _invPublicShell('Événement complet', `${_invHeader(inv, 'INVITATION')}<div class="bd"><div class="places">Désolé, il ne reste que ${rest} place${rest > 1 ? 's' : ''}.</div></div>`);
+    }
+  }
+  // enregistre la réponse en attente de paiement
+  try {
+    await supabasePatch_('invitation_destinataires', `token=eq.${token}`, {
+      reponse: 'present', nb_personnes: nb, commentaire: commentaire || null,
+      repondu_le: new Date().toISOString(), statut_paiement: 'en_attente',
+    }, env);
+  } catch (_) {}
+
+  const unitAmount = Math.round(Number(inv.prix_personne) * 100);
+  const currency = (inv.devise || 'eur').toLowerCase();
+  const base = PUBLIC_BASE_URL;
+  let session;
+  try {
+    session = await stripeCreateCheckoutSession(env, {
+      currency, unitAmount, quantity: nb,
+      productName: `${inv.sujet} — participation`,
+      customerEmail: dest.contact_email || null,
+      successUrl: `${base}/invitation/paye?t=${encodeURIComponent(token)}`,
+      cancelUrl: `${base}/invitation?t=${encodeURIComponent(token)}`,
+      metadata: { token, invitation_id: inv.id, nb: String(nb) },
+    });
+  } catch (e) {
+    return _invPublicShell('Paiement indisponible', `${_invHeader(inv, 'INVITATION')}<div class="bd"><p class="row">Impossible d'initialiser le paiement (${escEmail(e.message)}). Réessayez plus tard.</p></div><div class="ft">Spacer's Toulouse Volley · Business Club</div>`);
+  }
+  if (session && session.id) {
+    await supabasePatch_('invitation_destinataires', `token=eq.${token}`, { stripe_session_id: session.id }, env).catch(() => {});
+  }
+  if (session && session.url) {
+    return new Response(null, { status: 303, headers: { Location: session.url } });
+  }
+  return _invPublicShell('Paiement indisponible', `${_invHeader(inv, 'INVITATION')}<div class="bd"><p class="row">Le paiement n'a pas pu démarrer. Réessayez.</p></div></div>`);
+}
+
+async function stripeCreateCheckoutSession(env, { currency, unitAmount, quantity, productName, customerEmail, successUrl, cancelUrl, metadata }) {
+  const params = new URLSearchParams();
+  params.set('mode', 'payment');
+  params.set('success_url', successUrl);
+  params.set('cancel_url', cancelUrl);
+  params.set('line_items[0][quantity]', String(quantity || 1));
+  params.set('line_items[0][price_data][currency]', currency || 'eur');
+  params.set('line_items[0][price_data][unit_amount]', String(unitAmount));
+  params.set('line_items[0][price_data][product_data][name]', String(productName || 'Participation'));
+  if (customerEmail) params.set('customer_email', customerEmail);
+  for (const [k, v] of Object.entries(metadata || {})) params.set(`metadata[${k}]`, String(v));
+  const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data && data.error && data.error.message) || `Stripe ${res.status}`);
+  return data;
+}
+
+async function verifyStripeSignature(secret, payload, sigHeader) {
+  try {
+    if (!sigHeader) return false;
+    let t = null; const v1s = [];
+    sigHeader.split(',').forEach(part => {
+      const idx = part.indexOf('=');
+      if (idx < 0) return;
+      const k = part.slice(0, idx).trim(); const v = part.slice(idx + 1).trim();
+      if (k === 't') t = v; else if (k === 'v1') v1s.push(v);
+    });
+    if (!t || !v1s.length) return false;
+    // tolérance d'horodatage : 5 minutes
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - parseInt(t, 10)) > 300) return false;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const mac = await crypto.subtle.sign('HMAC', key, enc.encode(`${t}.${payload}`));
+    const hex = [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, '0')).join('');
+    return v1s.some(v1 => {
+      if (v1.length !== hex.length) return false;
+      let diff = 0;
+      for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
+      return diff === 0;
+    });
+  } catch (e) { return false; }
+}
+
+async function handleStripeWebhook(request, env, ctx) {
+  const raw = await request.text();
+  const sig = request.headers.get('stripe-signature') || '';
+  if (!env.STRIPE_WEBHOOK_SECRET) return new Response('webhook secret manquant', { status: 500 });
+  const ok = await verifyStripeSignature(env.STRIPE_WEBHOOK_SECRET, raw, sig);
+  if (!ok) return new Response('signature invalide', { status: 400 });
+  let event;
+  try { event = JSON.parse(raw); } catch { return new Response('json invalide', { status: 400 }); }
+
+  if (event.type === 'checkout.session.completed') {
+    const s = event.data && event.data.object ? event.data.object : {};
+    const token = s.metadata && s.metadata.token;
+    if (token) {
+      const patch = {
+        statut_paiement: 'paye',
+        montant_paye: (s.amount_total != null) ? (s.amount_total / 100) : null,
+        stripe_payment_intent: s.payment_intent || null,
+        paye_le: new Date().toISOString(),
+      };
+      const p = supabasePatch_('invitation_destinataires', `token=eq.${token}`, patch, env)
+        .catch(e => console.error('[StripeWebhook] patch error:', e.message));
+      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(p); else await p;
+      console.log(`[StripeWebhook] checkout.session.completed → token=${token}, montant=${patch.montant_paye}`);
+    }
+  }
+  return new Response(JSON.stringify({ received: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+async function handleInvitationPaidPage(url, env) {
+  const token = (url.searchParams.get('t') || '').trim();
+  let dest = null, inv = null;
+  if (token) {
+    const drows = await supabaseQuery('invitation_destinataires', `token=eq.${token}&select=*&limit=1`, env);
+    if (drows && drows[0]) {
+      dest = drows[0];
+      const irows = await supabaseQuery('invitations', `id=eq.${dest.invitation_id}&select=*&limit=1`, env);
+      inv = irows && irows[0];
+    }
+  }
+  if (!inv) return _invPublicShell('Merci', `<div class="hd"><div class="s">S</div><h1>Merci</h1></div><div class="bd"><p class="row">Votre paiement a bien été pris en compte.</p></div>`);
+  const paid = dest && dest.statut_paiement === 'paye';
+  const titre = paid ? 'Paiement confirmé !' : 'Paiement reçu';
+  const texte = paid
+    ? `Merci ${escEmail(dest.contact_prenom || '')}, votre participation est confirmée et votre paiement enregistré. À très bientôt !`
+    : `Merci ${escEmail(dest && dest.contact_prenom || '')}, votre paiement est en cours de confirmation. Votre place est réservée — vous recevrez la validation d'ici quelques instants.`;
+  return _invPublicShell(escEmail(titre), `${_invHeader(inv, 'PARTICIPATION CONFIRMÉE')}<div class="bd"><h1 style="font-family:Georgia,serif;font-size:22px;margin:0 0 10px;color:#3A8264;">${escEmail(titre)}</h1><p class="row">${escEmail(texte)}</p>${_invDetailsRows(inv)}</div><div class="ft">Spacer's Toulouse Volley · Business Club</div>`);
 }
 
 // ---- Cron : relances & rappels automatiques ----
