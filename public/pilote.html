@@ -898,6 +898,11 @@ textarea.input { resize: vertical; min-height: 80px; }
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="inv-opt_liste_participants" checked> Demander « combien serez-vous ? »</label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="inv-opt_infos_complementaires"> Champ « informations complémentaires »</label>
         </div>
+        <div style="margin-top:14px;font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;">TARIF</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;align-items:end;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding-bottom:8px;"><input type="checkbox" id="inv-est_payant" onchange="document.getElementById('inv-prix-wrap').style.display=this.checked?'block':'none';"> Événement payant (paiement Stripe)</label>
+          <div id="inv-prix-wrap" style="display:none;"><label class="input-lbl">Prix par personne (€)</label><input id="inv-prix_personne" class="input" type="number" min="0" step="0.01" value="0" placeholder="35"></div>
+        </div>
       </div>
 
       <!-- Sous-onglet EMAIL (blocs) -->
@@ -952,7 +957,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V10 — Spacer's Business Club  (+ Invitations RSVP + PDF fiche emploi)
+//  PILOTE ADMIN V11 — Spacer's Business Club  (+ Invitations payantes + export CSV)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -3411,6 +3416,9 @@ function openInvFormModal(inv=null) {
   $('inv-afficher_places').checked = !!(inv && inv.afficher_places);
   $('inv-opt_liste_participants').checked = inv ? !!inv.opt_liste_participants : true;
   $('inv-opt_infos_complementaires').checked = !!(inv && inv.opt_infos_complementaires);
+  $('inv-est_payant').checked = !!(inv && inv.est_payant);
+  $('inv-prix_personne').value = inv?.prix_personne != null ? inv.prix_personne : 0;
+  $('inv-prix-wrap').style.display = (inv && inv.est_payant) ? 'block' : 'none';
   const pa = inv?.page_acceptation || {}; const pd = inv?.page_declinaison || {};
   g('inv-acc-titre', pa.titre); g('inv-acc-texte', pa.texte); g('inv-dec-titre', pd.titre); g('inv-dec-texte', pd.texte);
 
@@ -3444,6 +3452,8 @@ function invReadSettings() {
     afficher_places: $('inv-afficher_places').checked,
     opt_liste_participants: $('inv-opt_liste_participants').checked,
     opt_infos_complementaires: $('inv-opt_infos_complementaires').checked,
+    est_payant: $('inv-est_payant') ? $('inv-est_payant').checked : false,
+    prix_personne: parseFloat($('inv-prix_personne') ? $('inv-prix_personne').value : '0') || 0,
   };
 }
 function openInvEmailEditor() {
@@ -3528,14 +3538,22 @@ function renderInvDetail(data) {
     const rows = dests.filter(d => d.reponse).map(d => {
       const nom = `${d.contact_prenom || ''} ${d.contact_nom || ''}`.trim() || d.contact_email;
       const tag = d.reponse === 'present' ? `<span style="color:var(--green);font-weight:700;">✓ ${d.nb_personnes || 1} pers.</span>` : `<span style="color:var(--red);font-weight:700;">✕ Absent</span>`;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;"><div><b>${escapeHtml(nom)}</b>${d.partenaire_nom ? ` · <span style="color:var(--ink-soft);">${escapeHtml(d.partenaire_nom)}</span>` : ''}${d.commentaire ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;">${escapeHtml(d.commentaire)}</div>` : ''}</div>${tag}</div>`;
+      let pay = '';
+      if (inv.est_payant && d.reponse === 'present') {
+        const pmap = { paye: ['var(--green)','💳 Payé'], en_attente: ['var(--gold)','⏳ Paiement en attente'], rembourse: ['var(--ink-muted)','↩ Remboursé'], non_requis: ['var(--ink-muted)','—'] };
+        const [pc, pl] = pmap[d.statut_paiement || 'non_requis'] || pmap.non_requis;
+        pay = `<div style="font-size:11px;color:${pc};font-weight:600;">${pl}${d.montant_paye ? ' · ' + Number(d.montant_paye).toFixed(2) + ' €' : ''}</div>`;
+      }
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;"><div><b>${escapeHtml(nom)}</b>${d.partenaire_nom ? ` · <span style="color:var(--ink-soft);">${escapeHtml(d.partenaire_nom)}</span>` : ''}${d.commentaire ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;">${escapeHtml(d.commentaire)}</div>` : ''}${pay}</div>${tag}</div>`;
     }).join('');
+    const revenueHtml = inv.est_payant ? `<div style="background:var(--bg-soft);border-radius:10px;padding:10px 14px;margin:8px 0;font-size:13px;"><b style="color:var(--ink);">💳 Encaissé :</b> ${(Number(agg.encaisse)||0).toFixed(2)} € <span style="color:var(--ink-soft);">(${agg.payes || 0} paiement${(agg.payes||0)>1?'s':''} confirmé${(agg.payes||0)>1?'s':''})</span></div>` : '';
     responsesHtml = `
       <div style="display:flex;gap:8px;margin:14px 0;text-align:center;">
         <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-size:24px;color:var(--green);">${agg.present || 0}</div><div style="font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1px;">Présents (${agg.total_personnes || 0} pers.)</div></div>
         <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-size:24px;color:var(--red);">${agg.absent || 0}</div><div style="font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1px;">Absents</div></div>
         <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-size:24px;color:var(--ink-muted);">${agg.sans_reponse || 0}</div><div style="font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1px;">Sans réponse</div></div>
       </div>
+      ${revenueHtml}
       ${rows ? `<div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin:10px 0 4px;">RÉPONSES</div>${rows}` : '<div style="font-size:13px;color:var(--ink-soft);font-style:italic;text-align:center;padding:10px;">Aucune réponse pour le moment.</div>'}`;
   }
 
@@ -3550,6 +3568,7 @@ function renderInvDetail(data) {
     actions.push(`<button class="btn gold" onclick="invSend()">📣 Envoyer aux partenaires</button>`);
   } else if (inv.statut === 'envoye') {
     actions.push(`<button class="btn" onclick="invRelancer()">↻ Relancer les non-répondants</button>`);
+    actions.push(`<button class="btn" onclick="exportInvitationCSV()">⬇ Exporter (CSV)</button>`);
   }
 
   card.innerHTML = `
@@ -3567,6 +3586,7 @@ function renderInvDetail(data) {
       ${banner}
       <div style="background:var(--bg-soft);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--ink-soft);line-height:1.8;margin-bottom:6px;">
         <div><b style="color:var(--ink);">Sujet :</b> ${escapeHtml(inv.sujet)}</div>
+        ${inv.est_payant ? `<div><b style="color:var(--ink);">Tarif :</b> ${(Number(inv.prix_personne)||0).toFixed(2)} € / personne</div>` : `<div><b style="color:var(--ink);">Tarif :</b> Gratuit</div>`}
         ${inv.date_event ? `<div><b style="color:var(--ink);">Date :</b> ${escapeHtml(inv.date_event)}${inv.heure ? ' · ' + escapeHtml(inv.heure) : ''}</div>` : ''}
         ${lieu ? `<div><b style="color:var(--ink);">Lieu :</b> ${escapeHtml(lieu)}</div>` : ''}
         ${inv.reponse_avant ? `<div><b style="color:var(--ink);">Réponse avant :</b> ${escapeHtml(_invDateFrJs(inv.reponse_avant))}</div>` : ''}
@@ -3578,6 +3598,35 @@ function renderInvDetail(data) {
     </div>
     <div class="modal-foot">${actions.join('')}</div>
   `;
+}
+function exportInvitationCSV() {
+  if (!CURRENT_INV_DETAIL || !CURRENT_INV_DETAIL.invitation) return showToast('Aucune invitation', 'error');
+  const inv = CURRENT_INV_DETAIL.invitation;
+  const dests = CURRENT_INV_DETAIL.destinataires || [];
+  if (!dests.length) return showToast('Aucun destinataire à exporter', 'error');
+  const payMap = { paye: 'Payé', en_attente: 'En attente', rembourse: 'Remboursé', non_requis: '—' };
+  const headers = ['Entreprise', 'Nom', 'Prénom', 'Email', 'Réponse', 'Nb personnes', 'Commentaire', 'Paiement', 'Montant (€)', 'Répondu le'];
+  const esc = (v) => { const s = (v === null || v === undefined) ? '' : String(v); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const lines = [headers.join(';')];
+  dests.forEach(d => {
+    const rep = d.reponse === 'present' ? 'Présent' : d.reponse === 'absent' ? 'Absent' : 'Sans réponse';
+    lines.push([
+      d.partenaire_nom || '', d.contact_nom || '', d.contact_prenom || '', d.contact_email || '',
+      rep, d.reponse === 'present' ? (d.nb_personnes || 1) : '', d.commentaire || '',
+      inv.est_payant ? (payMap[d.statut_paiement || 'non_requis'] || '') : '—',
+      d.montant_paye != null ? Number(d.montant_paye).toFixed(2) : '',
+      d.repondu_le ? new Date(d.repondu_le).toLocaleString('fr-FR') : '',
+    ].map(esc).join(';'));
+  });
+  const csv = '\ufeff' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safe = (inv.sujet || 'invitation').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 40);
+  a.href = url; a.download = `participants_${safe}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇ Export CSV téléchargé', 'success');
 }
 function openInvEditFromDetail() {
   if (!CURRENT_INV_DETAIL || !CURRENT_INV_DETAIL.invitation) return;
