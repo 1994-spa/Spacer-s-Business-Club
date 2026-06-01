@@ -3652,7 +3652,7 @@ async function handleAdminInvitationDetail(token, invitationId, env) {
   const rows = await supabaseQuery('invitations', `id=eq.${invitationId}&select=*&limit=1`, env);
   if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Invitation introuvable' }, 404);
   const inv = rows[0];
-  const dests = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${invitationId}&select=contact_nom,contact_prenom,contact_email,partenaire_nom,reponse,nb_personnes,commentaire,repondu_le&order=repondu_le.desc.nullslast&limit=2000`, env);
+  const dests = await supabaseQuery('invitation_destinataires', `invitation_id=eq.${invitationId}&select=contact_nom,contact_prenom,contact_email,partenaire_nom,reponse,nb_personnes,commentaire,repondu_le,statut_paiement,montant_paye&order=repondu_le.desc.nullslast&limit=2000`, env);
   const present = (dests || []).filter(d => d.reponse === 'present');
   const absent = (dests || []).filter(d => d.reponse === 'absent');
   const sans = (dests || []).filter(d => !d.reponse);
@@ -3662,6 +3662,8 @@ async function handleAdminInvitationDetail(token, invitationId, env) {
     present: present.length, absent: absent.length, sans_reponse: sans.length,
     total_personnes: present.reduce((s, d) => s + (d.nb_personnes || 1), 0),
     places_max: places.max, places_used: places.used, places_restantes: places.restantes,
+    payes: (dests || []).filter(d => d.statut_paiement === 'paye').length,
+    encaisse: (dests || []).reduce((s, d) => s + (d.statut_paiement === 'paye' ? (Number(d.montant_paye) || 0) : 0), 0),
   };
   // estimation du nb de destinataires potentiels (si pas encore envoyé)
   let destinataires_estimes = inv.nb_destinataires || 0;
@@ -3690,6 +3692,9 @@ function _invInsertFromBody(body, admin, email) {
     expediteur_nom: body.expediteur_nom || "Le Spacer's Business Club",
     reply_to: body.reply_to || null,
     max_participants: intOr0(body.max_participants),
+    est_payant: !!body.est_payant,
+    prix_personne: (() => { const n = parseFloat(body.prix_personne); return (isNaN(n) || n < 0) ? 0 : Math.round(n * 100) / 100; })(),
+    devise: 'eur',
     afficher_places: !!body.afficher_places,
     opt_infos_complementaires: !!body.opt_infos_complementaires,
     opt_liste_participants: body.opt_liste_participants === undefined ? true : !!body.opt_liste_participants,
