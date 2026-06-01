@@ -3312,6 +3312,12 @@ function renderOneBlock(b) {
       const inner = b.link ? `<a href="${escEmail(b.link)}" target="_blank" style="text-decoration:none;">${img}</a>` : img;
       return wrap(inner, 'padding:8px 30px;');
     }
+    case 'banniere': {
+      if (!b.url) return '';
+      const img = `<img src="${escEmail(b.url)}" alt="${escEmail(b.alt || '')}" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;" />`;
+      const inner = b.link ? `<a href="${escEmail(b.link)}" target="_blank" style="text-decoration:none;">${img}</a>` : img;
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="padding:0;font-size:0;line-height:0;">${inner}</td></tr></table>`;
+    }
     case 'bouton': {
       if (!b.label || !b.url) return '';
       const align = _mailAlign(b.align || 'left');
