@@ -653,8 +653,11 @@
     </div>
     <label class="fiche-lbl">Secteur d'activité</label>
     <input id="fiche-secteur" class="fiche-in" placeholder="ex. Carburants & énergie">
-    <label class="fiche-lbl">N° SIRET</label>
-    <input id="fiche-siret" class="fiche-in" placeholder="14 chiffres" inputmode="numeric">
+    <label class="fiche-lbl">N° SIRET <span style="color:var(--ink-muted);font-weight:400;">— remplit secteur & adresse</span></label>
+    <div style="display:flex;gap:8px;">
+      <input id="fiche-siret" class="fiche-in" placeholder="14 chiffres" inputmode="numeric">
+      <button type="button" onclick="lookupFicheSiret()" style="white-space:nowrap;background:var(--gold-tint);border:1px solid var(--line);border-radius:10px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);">📡 Auto</button>
+    </div>
     <label class="fiche-lbl">Email société</label>
     <input id="fiche-email" class="fiche-in" type="email" placeholder="contact@entreprise.fr">
     <label class="fiche-lbl">Site web</label>
@@ -1795,6 +1798,22 @@ function onFicheLogoSelected(ev) {
 function onFichePhotoSelected(ev) {
   const file = ev.target.files && ev.target.files[0]; if (!file) return;
   compressImage(file, 320, (d) => { if (!d) return showToast('Image illisible', 'error'); FICHE_PHOTO_B64 = d; showFicheImg('fiche-photo-preview', d, '👤', true); });
+}
+
+async function lookupFicheSiret() {
+  const q = val('fiche-siret');
+  if (!q) return showToast("Saisis d'abord le SIRET", 'error');
+  showToast('Recherche en cours…');
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/siret-lookup?q=${encodeURIComponent(q)}`);
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || `Erreur ${res.status}`);
+    if (d.secteur) setVal('fiche-secteur', d.secteur);
+    if (d.adresse && !val('fiche-adresse')) setVal('fiche-adresse', d.adresse);
+    if (d.code_postal && !val('fiche-cp')) setVal('fiche-cp', d.code_postal);
+    if (d.ville && !val('fiche-ville')) setVal('fiche-ville', d.ville);
+    showToast('✓ Récupéré' + (d.secteur ? ' : ' + d.secteur : ''), 'success');
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
 
 async function saveFiche() {
