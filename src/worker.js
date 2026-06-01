@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.22-board
+ * Spacers Business Club — Worker V4.23-board
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -182,7 +182,7 @@ async function handleApi(request, env, path, ctx) {
 
       // Partenaire — répondre à une publication du board (Sprint B.3)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponse$/);
-      if (m) return await handlePartnerPublicationRespond(m[1], m[2], body || {}, env);
+      if (m) return await handlePartnerPublicationRespond(m[1], m[2], body || {}, env, ctx);
 
       // Public — soumission de candidature (Sprint C.1)
       m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})\/candidature$/);
@@ -267,7 +267,7 @@ async function handleApi(request, env, path, ctx) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.22-board — board + réponses + magic_token en mode session',
+        version: 'V4.23-board — board + réponses + notif email auteur',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -4055,26 +4055,28 @@ async function handlePartnerBoard(token, queryParams, env) {
   return jsonResponseNoCache({ publications, meta: { generated_at: nowIso } });
 }
 
-async function handlePartnerPublicationRespond(token, pubId, body, env) {
+async function handlePartnerPublicationRespond(token, pubId, body, env, ctx) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
 
   const message = String(body.message || '').trim();
   if (!message) return jsonResponseNoCache({ error: 'Le message est obligatoire' }, 400);
 
-  const rows = await supabaseQuery('publications', `id=eq.${pubId}&select=id,statut,contrat_id,titre&limit=1`, env);
+  const rows = await supabaseQuery('publications', `id=eq.${pubId}&select=id,statut,contrat_id,partenaire_id,titre,type,contact_email&limit=1`, env);
   if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Publication introuvable' }, 404);
   const pub = rows[0];
   if (pub.statut !== 'publie') return jsonResponseNoCache({ error: 'Cette annonce n\'est plus disponible' }, 400);
   if (pub.contrat_id === partner.contrat_id) return jsonResponseNoCache({ error: 'Vous ne pouvez pas répondre à votre propre annonce' }, 400);
 
+  const repNom = String(body.contact_nom || partner.representant || '').trim() || null;
+  const repEmail = String(body.contact_email || '').trim() || null;
   const insertData = {
     publication_id: pubId,
     contrat_id: partner.contrat_id,
     partenaire_id: partner.partenaire_id,
     partenaire_nom: partner.raison_sociale || null,
-    contact_nom: String(body.contact_nom || partner.representant || '').trim() || null,
-    contact_email: String(body.contact_email || '').trim() || null,
+    contact_nom: repNom,
+    contact_email: repEmail,
     message,
   };
   try {
@@ -4088,7 +4090,50 @@ async function handlePartnerPublicationRespond(token, pubId, body, env) {
     await supabasePatch_('publications', `id=eq.${pubId}`, { reponses_count: (all || []).length }, env);
   } catch (_) {}
 
+  // Notification email à l'auteur de l'annonce (non bloquant)
+  const notify = (async () => {
+    try {
+      let authorEmail = (pub.contact_email || '').trim();
+      if (!authorEmail && pub.partenaire_id) {
+        const contacts = await supabaseQuery('partenaire_contacts', `partenaire_id=eq.${pub.partenaire_id}&select=email&limit=5`, env);
+        const c = (contacts || []).find(x => x.email && x.email.includes('@'));
+        if (c) authorEmail = c.email.trim();
+      }
+      if (!authorEmail || !authorEmail.includes('@')) return;
+      await sendEmailViaResend(env, {
+        to: authorEmail,
+        from: EMAIL_FROM,
+        replyTo: repEmail || EMAIL_REPLY_TO_CLUB,
+        subject: `Nouvelle réponse à votre annonce — ${pub.titre}`,
+        html: renderReponseNotifEmail(pub, { partenaire_nom: partner.raison_sociale, contact_nom: repNom, contact_email: repEmail, message }),
+      });
+    } catch (_) {}
+  })();
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(notify); else await notify;
+
   return jsonResponseNoCache({ ok: true, message: 'Votre réponse a été transmise au partenaire.' });
+}
+
+function renderReponseNotifEmail(pub, rep) {
+  const typeLabel = { forum: 'Forum', proposition: 'Proposition', echange: 'Demande de service' }[pub.type] || 'Annonce';
+  const contactLine = [rep.contact_nom, rep.contact_email].filter(Boolean).map(escEmail).join(' · ');
+  return `<!doctype html><html><body style="margin:0;background:#FAF7F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#FAF7F2;padding:24px 0;"><tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background:#fff;border:1px solid #E5DED1;border-radius:16px;overflow:hidden;">
+      <tr><td style="background:linear-gradient(135deg,#11203a,#0A1628);padding:24px 30px;">
+        <div style="color:#E8C977;font-size:11px;font-weight:700;letter-spacing:2px;">NOUVELLE RÉPONSE · ${escEmail(typeLabel)}</div>
+        <div style="color:#fff;font-family:Georgia,serif;font-size:22px;margin-top:6px;">${escEmail(pub.titre)}</div>
+      </td></tr>
+      <tr><td style="padding:24px 30px;">
+        <p style="font-size:14px;color:#4A5568;line-height:1.7;margin:0 0 14px;"><strong style="color:#0A1628;">${escEmail(rep.partenaire_nom || 'Un partenaire')}</strong> a répondu à votre annonce sur le réseau partenaires :</p>
+        <div style="background:#FAF7F2;border-left:3px solid #C8932B;border-radius:8px;padding:14px 16px;font-size:14px;color:#0A1628;line-height:1.6;white-space:pre-wrap;">${escEmail(rep.message || '')}</div>
+        ${contactLine ? `<p style="font-size:13px;color:#C8932B;margin:14px 0 0;">Contact : ${contactLine}</p>` : ''}
+        <p style="font-size:13px;color:#8A8478;margin:18px 0 0;line-height:1.6;">Vous pouvez répondre directement à cet email pour entrer en contact${rep.contact_email ? '' : ' avec l\'équipe du club'}.</p>
+      </td></tr>
+      <tr><td style="background:#FAF7F2;border-top:1px solid #E5DED1;padding:14px 30px;text-align:center;font-size:11px;color:#8A8478;">Spacer's Toulouse Volley · Business Club</td></tr>
+    </table>
+  </td></tr></table>
+  </body></html>`;
 }
 
 async function handlePartnerPublicationReponses(token, pubId, env) {
