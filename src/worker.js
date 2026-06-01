@@ -1,20 +1,14 @@
 /**
- * Spacers Business Club — Worker V4.7.1
+ * Spacers Business Club — Worker V4.18-mails
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
  *   - SUPABASE_URL              (variable, ex: https://xxxxx.supabase.co)
  *   - SUPABASE_SERVICE_ROLE_KEY (secret, eyJhbGci...)
+ *   - SUPABASE_ANON_KEY         (variable, clé publique anon — pour l'auth partenaire)
+ *   - RESEND_API_KEY            (secret, envoi des emails)
  *
- * Routes :
- *   GET /                                  → public/index.html (PWA partenaire)
- *   GET /pilote                            → public/pilote.html (PWA admin)
- *   GET /api/ping                          → health check
- *   GET /api/partner-by-token/:token       → JSON partenaire complet
- *   GET /api/admin/auth/:token             → profil admin seul
- *   GET /api/admin/dashboard/:token        → profil admin + stats globales
- *
- * V4.7.1 — Fix : url is not defined dans handleApi pour routes avec query string
+ * V4.18-mails — Ajout du module "Mails" (campagnes email aux partenaires)
  */
 
 const CACHE_TTL = 30; // secondes
@@ -32,6 +26,18 @@ const CORS = {
 const EMAIL_FROM = "Spacer's Business Club <marketing@spacerstoulouse.fr>";
 const EMAIL_REPLY_TO_CLUB = 'marketing@spacerstoulouse.fr';
 const EMAIL_FALLBACK_PARTNER = 'spacersytb@gmail.com'; // si l'offre n'a pas de contact_email
+
+// ===== Sprint Mails — campagnes email partenaires =====
+const MAIL_STATUTS = ['brouillon', 'valide', 'envoye'];
+const MAIL_SENDER_EMAIL = 'marketing@spacerstoulouse.fr'; // domaine vérifié Resend
+const UNSUB_SALT = 'spacers-bc-unsub-2026';
+const PUBLIC_BASE_URL = 'https://business.spacerstoulouse.fr';
+
+// ⚠️ RECOLLE ICI ton base64 existant du template PDF "Minute de l'emploi".
+// Il n'était pas dans le fichier que tu m'as transmis. Laisse '' si tu ne l'as pas
+// sous la main : la route /minute_de_l_emploi_template.pdf renverra alors un 404
+// propre (au lieu de planter le worker). Le reste fonctionne normalement.
+const MINUTE_EMPLOI_TEMPLATE_B64 = '';
 
 export default {
   async fetch(request, env, ctx) {
@@ -65,6 +71,11 @@ export default {
       return env.ASSETS.fetch(new Request(new URL('/reset.html', request.url).toString(), request));
     }
 
+    // Sprint Mails — page publique de désinscription (RGPD)
+    if (path === '/desinscription' || path === '/desinscription/') {
+      return await handleDesinscription(url, env);
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
@@ -81,9 +92,7 @@ async function handleApi(request, env, path, ctx) {
     }, 500);
   }
 
-  // V4.7.1 FIX : url manquait, ce qui cassait toutes les routes utilisant url.searchParams
   const url = new URL(request.url);
-
   const method = request.method;
 
   try {
@@ -165,6 +174,22 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
       if (m) return await handleAdminCommunicationArchive(m[1], m[2], env);
 
+      // ===== Sprint Mails — campagnes email aux partenaires =====
+      m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/create$/);
+      if (m) return await handleAdminMailCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminMailUpdate(m[1], m[2], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/validate$/);
+      if (m) return await handleAdminMailValidate(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/test$/);
+      if (m) return await handleAdminMailTest(m[1], m[2], env, ctx);
+
+      m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/send$/);
+      if (m) return await handleAdminMailSend(m[1], m[2], env, ctx);
+
       // Sprint D — Communications (partenaire : RSVP)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/communication\/([0-9a-f-]{36})\/rsvp$/);
       if (m) return await handlePartnerCommunicationRsvp(m[1], m[2], body || {}, env);
@@ -195,7 +220,7 @@ async function handleApi(request, env, path, ctx) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.7.1 — Supabase + mutations + url fix',
+        version: 'V4.18-mails — Supabase + module mails',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -256,6 +281,13 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminCommunicationsList(m[1], url.searchParams, env);
 
+    // ===== Sprint Mails =====
+    m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminMailsList(m[1], env);
+
+    m = path.match(/^\/api\/admin\/mail\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
+    if (m) return await handleAdminMailDetail(m[1], m[2], env);
+
     // ===== Sprint E.4 — Auth partenaire (Supabase Auth) =====
     if (path === '/api/auth/config') return await handleAuthConfig(env);
 
@@ -288,6 +320,9 @@ async function handleApi(request, env, path, ctx) {
 
     // ===== Assets statiques (PDF Minute de l'emploi en fallback) =====
     if (path === '/assets/minute-emploi-template.pdf' || path === '/minute_de_l_emploi_template.pdf') {
+      if (!MINUTE_EMPLOI_TEMPLATE_B64) {
+        return jsonResponse({ error: 'Template PDF non configuré (MINUTE_EMPLOI_TEMPLATE_B64 vide)' }, 404);
+      }
       const binary = Uint8Array.from(atob(MINUTE_EMPLOI_TEMPLATE_B64), c => c.charCodeAt(0));
       return new Response(binary, {
         status: 200,
@@ -321,36 +356,14 @@ async function handleApi(request, env, path, ctx) {
         'GET  /api/partner-by-token/:token',
         'GET  /api/admin/auth/:token',
         'GET  /api/admin/dashboard/:token',
-        'GET  /api/admin/partners/:token',
-        'GET  /api/admin/partner/:token/:contractId',
-        'POST /api/admin/prestation-livrer/:token/:prestationId',
-        'POST /api/admin/pack-utiliser/:token/:packId',
-        'POST /api/admin/partner/:token/:contractId/create-tickie-customer',
-        'POST /api/admin/partner/:token/:contractId/send-tickie-login',
-        'POST /api/admin/partner/:token/:contractId/unlink-tickie',
-        'GET  /api/admin/offres/:token',
-        'GET  /api/admin/offre/:token/:offreId',
-        'POST /api/admin/offres/:token/create',
-        'POST /api/admin/offres/:token/:offreId/update',
-        'POST /api/admin/offres/:token/:offreId/publish',
-        'POST /api/admin/offres/:token/:offreId/reject',
-        'POST /api/admin/offres/:token/:offreId/archive',
-        'GET  /api/admin/candidatures/:token?statut=X&offre_id=Y',
-        'GET  /api/admin/candidature/:token/:candidatureId',
-        'POST /api/admin/candidature/:token/:candidatureId/update-statut',
-        'GET  /api/public/offres-emploi',
-        'GET  /api/public/offre/:offreId',
-        'POST /api/public/offre/:offreId/candidature',
-        'GET  /api/admin/publications/:token?type=X&statut=Y',
-        'GET  /api/admin/publication/:token/:id',
-        'POST /api/admin/publications/:token/create',
-        'POST /api/admin/publications/:token/:id/update',
-        'POST /api/admin/publications/:token/:id/publish',
-        'POST /api/admin/publications/:token/:id/reject',
-        'POST /api/admin/publications/:token/:id/archive',
+        'GET  /api/admin/mails/:token',
+        'GET  /api/admin/mail/:token/:id',
+        'POST /api/admin/mails/:token/create',
+        'POST /api/admin/mails/:token/:id/update',
+        'POST /api/admin/mails/:token/:id/validate',
+        'POST /api/admin/mails/:token/:id/test',
+        'POST /api/admin/mails/:token/:id/send',
         'GET  /api/admin/tickie/ping/:token',
-        'GET  /api/admin/tickie/customers/:token',
-        'GET  /api/admin/tickie/events/:token',
       ],
       path,
     }, 404);
@@ -364,11 +377,10 @@ async function handleApi(request, env, path, ctx) {
 }
 
 // ============================================================================
-//  PARTNER BY TOKEN — utilise Supabase relations imbriquées (1 requête)
+//  PARTNER BY TOKEN
 // ============================================================================
 
 async function handlePartnerByToken(token, env) {
-  // PostgREST permet de demander les FK relations en imbriqué via select=*,foreign(*)
   const query =
     `magic_token=eq.${token}` +
     `&select=*,partenaire:partenaires(*),prestations(*),packs_places(*)` +
@@ -383,8 +395,6 @@ async function handlePartnerByToken(token, env) {
   return jsonResponse(_buildPartnerDashboard(rows[0]));
 }
 
-// Construit le payload partenaire (format de sortie identique à l'ancien Apps Script,
-// compat index.html). Réutilisé par partner-by-token et partner-by-session (E.4).
 function _buildPartnerDashboard(c) {
   const p = c.partenaire || {};
   const prestations = (c.prestations || []).sort((a, b) => (a.id || '').localeCompare(b.id || ''));
@@ -433,7 +443,7 @@ function _buildPartnerDashboard(c) {
       seuil_alerte: Number(pack.seuil_alerte || 3),
       statut: computePackStatut(pack),
     } : null,
-    alertes: [], // À brancher quand on aura migré la table alertes
+    alertes: [],
     meta: {
       generated_at: new Date().toISOString(),
       version: 'V4-supabase',
@@ -452,7 +462,7 @@ function computePackStatut(p) {
 }
 
 // ============================================================================
-//  ADMIN AUTH — vérifie token et retourne profil
+//  ADMIN AUTH
 // ============================================================================
 
 async function handleAdminAuth(token, env) {
@@ -466,12 +476,11 @@ async function handleAdminAuth(token, env) {
     return jsonResponse({ error: 'Invalid admin token' }, 401);
   }
 
-  // Update derniere_connexion (fire-and-forget)
   fetch(`${env.SUPABASE_URL}/rest/v1/admins?magic_token=eq.${token}`, {
     method: 'PATCH',
     headers: supabaseHeaders(env),
     body: JSON.stringify({ derniere_connexion: new Date().toISOString() }),
-  }).catch(() => {}); // silent fail
+  }).catch(() => {});
 
   return jsonResponse({
     admin: admins[0],
@@ -480,11 +489,10 @@ async function handleAdminAuth(token, env) {
 }
 
 // ============================================================================
-//  ADMIN DASHBOARD — profil + stats globales
+//  ADMIN DASHBOARD
 // ============================================================================
 
 async function handleAdminDashboard(token, env) {
-  // 1. Auth admin
   const admins = await supabaseQuery(
     'admins',
     `magic_token=eq.${token}&actif=eq.true&select=id,prenom,nom,email,role&limit=1`,
@@ -495,9 +503,8 @@ async function handleAdminDashboard(token, env) {
   }
   const admin = admins[0];
 
-  const saisonActive = '2026-2027'; // TODO: rendre dynamique via une table config
+  const saisonActive = '2026-2027';
 
-  // 2. Stats en parallèle (Promise.all)
   const [contrats, packs, alertes] = await Promise.all([
     supabaseQuery('contrats',
       `saison=eq.${saisonActive}&statut=eq.${encodeURIComponent('Signé')}&select=id,montant_ht`,
@@ -567,11 +574,10 @@ function jsonResponse(data, status = 200) {
 }
 
 // ============================================================================
-//  ADMIN PARTNERS LIST — V4.1
+//  ADMIN PARTNERS LIST
 // ============================================================================
 
 async function handleAdminPartners(token, env) {
-  // Auth
   const admins = await supabaseQuery(
     'admins',
     `magic_token=eq.${token}&actif=eq.true&select=id&limit=1`,
@@ -583,7 +589,6 @@ async function handleAdminPartners(token, env) {
 
   const saisonActive = '2026-2027';
 
-  // Fetch contrats + relations (partenaire, prestations agrégées, packs agrégés)
   const contrats = await supabaseQuery(
     'contrats',
     `saison=eq.${saisonActive}` +
@@ -640,11 +645,10 @@ async function handleAdminPartners(token, env) {
 }
 
 // ============================================================================
-//  ADMIN PARTNER DETAIL — V4.1
+//  ADMIN PARTNER DETAIL
 // ============================================================================
 
 async function handleAdminPartnerDetail(token, contractId, env) {
-  // Auth
   const admins = await supabaseQuery(
     'admins',
     `magic_token=eq.${token}&actif=eq.true&select=id&limit=1`,
@@ -654,7 +658,6 @@ async function handleAdminPartnerDetail(token, contractId, env) {
     return jsonResponse({ error: 'Invalid admin token' }, 401);
   }
 
-  // Fetch contrat avec toutes les relations
   const rows = await supabaseQuery(
     'contrats',
     `id=eq.${contractId}` +
@@ -725,7 +728,7 @@ async function handleAdminPartnerDetail(token, contractId, env) {
 }
 
 // ============================================================================
-//  MUTATIONS — V4.2
+//  MUTATIONS
 // ============================================================================
 
 async function authAdmin_(token, env) {
@@ -766,7 +769,6 @@ async function supabasePost_(table, payload, env) {
 }
 
 async function logAudit_(adminId, action, table, recordId, changes, env) {
-  // Fire-and-forget : on ne bloque pas si le log échoue
   supabasePost_('audit_log', {
     admin_id: adminId,
     action: action,
@@ -775,8 +777,6 @@ async function logAudit_(adminId, action, table, recordId, changes, env) {
     changes: changes,
   }, env).catch(() => {});
 }
-
-// ----------- POST /api/admin/prestation-livrer/:token/:prestationId -----------
 
 async function handlePrestationLivrer(token, prestationId, body, env) {
   const admin = await authAdmin_(token, env);
@@ -814,8 +814,6 @@ async function handlePrestationLivrer(token, prestationId, body, env) {
   });
 }
 
-// ----------- POST /api/admin/pack-utiliser/:token/:packId -----------
-
 async function handlePackUtiliser(token, packId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -849,10 +847,6 @@ async function handlePackUtiliser(token, packId, body, env) {
   });
 }
 
-// ============================================================================
-//  Helper : réponse sans cache (pour mutations + lectures admin sensibles)
-// ============================================================================
-
 function jsonResponseNoCache(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
@@ -866,18 +860,7 @@ function jsonResponseNoCache(data, status = 200) {
 }
 
 // ============================================================================
-//  TICKIE (Vivenu) — Sprint Tickie 1 : exploration
-// ============================================================================
-//
-//  Variables d'environnement requises :
-//    - TICKIE_API_KEY : Bearer token Tickie (secret Cloudflare)
-//    - TICKIE_BASE_URL (optionnel) : "https://vivenu.com/api" par défaut
-//
-//  Endpoints exposés :
-//    - GET /api/admin/tickie/ping/:token       → test connexion + comptes
-//    - GET /api/admin/tickie/customers/:token  → liste customers Tickie
-//    - GET /api/admin/tickie/events/:token     → liste events (matchs)
-//
+//  TICKIE (Vivenu)
 // ============================================================================
 
 const TICKIE_DEFAULT_BASE = 'https://vivenu.com/api';
@@ -904,15 +887,11 @@ async function tickieRequest_(path, env, queryParams) {
   return text ? JSON.parse(text) : null;
 }
 
-// ----------- GET /api/admin/tickie/ping/:token -----------
-// Teste la connexion Tickie et retourne quelques stats minimales
-
 async function handleTickiePing(token, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
   try {
-    // Pull les 3 premiers events et 3 premiers customers pour valider la connexion
     const [eventsRes, customersRes] = await Promise.all([
       tickieRequest_('/events', env, { top: '3' }).catch(e => ({ error: e.message })),
       tickieRequest_('/customers/rich', env, { top: '3' }).catch(e => ({ error: e.message })),
@@ -937,19 +916,14 @@ async function handleTickiePing(token, env) {
   }
 }
 
-// ----------- GET /api/admin/tickie/customers/:token -----------
-// Liste tous les customers Tickie pour faire le mapping avec nos partenaires
-
 async function handleTickieCustomers(token, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
   try {
     const raw = await tickieRequest_('/customers/rich', env, { top: '500' });
-    // Vivenu retourne { rows: [...], total } OU { docs: [...] } selon endpoint
     const customers = raw.rows || raw.docs || (Array.isArray(raw) ? raw : []);
 
-    // On mappe seulement les champs utiles
     const simplified = customers.map(c => ({
       tickie_id: c._id || c.id,
       email: c.primaryEmail || c.email || '',
@@ -973,9 +947,6 @@ async function handleTickieCustomers(token, env) {
     return jsonResponseNoCache({ error: e.message }, 500);
   }
 }
-
-// ----------- GET /api/admin/tickie/events/:token -----------
-// Liste tous les events Tickie (matchs de la saison)
 
 async function handleTickieEvents(token, env) {
   const admin = await authAdmin_(token, env);
@@ -1005,19 +976,10 @@ async function handleTickieEvents(token, env) {
   }
 }
 
-// ============================================================================
-//  TICKIE — Sprint 2 : Mapping partenaires
-// ============================================================================
-
-// ----------- POST /api/admin/partner/:token/:contractId/create-tickie-customer -----------
-// Body attendu : { email, prenom, nom, telephone? }
-// Crée un customer Tickie pour ce partenaire et stocke le _id dans Supabase
-
 async function handleCreateTickieCustomer(token, contractId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
-  // Récup contrat + partenaire (via PostgREST embedding)
   const contrats = await supabaseQuery(
     'contrats',
     `id=eq.${contractId}&select=id,saison,partenaire_id,partenaires(id,raison_sociale,niveau,tickie_customer_id)&limit=1`,
@@ -1038,7 +1000,6 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
     }, 400);
   }
 
-  // Validation body
   const email = String(body.email || '').trim().toLowerCase();
   const prenom = String(body.prenom || '').trim();
   const nom = String(body.nom || '').trim();
@@ -1048,7 +1009,6 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
     return jsonResponseNoCache({ error: 'Email invalide', got: email }, 400);
   }
 
-  // Création customer Tickie — on ne met QUE les champs non-vides
   const tickiePayload = {
     primaryEmail: email,
     company: partenaire.raison_sociale,
@@ -1060,7 +1020,6 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
   if (nom) tickiePayload.lastname = nom;
   if (telephone) tickiePayload.phone = telephone;
 
-  // meta : uniquement les clés qui ont une valeur
   const meta = {
     supabase_partenaire_id: partenaire.id,
     saison: contrat.saison,
@@ -1102,7 +1061,6 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
     }, 502);
   }
 
-  // Update Supabase
   try {
     await supabasePatch_('partenaires', `id=eq.${partenaire.id}`, {
       tickie_customer_id: tickieId,
@@ -1115,12 +1073,11 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
     }, 500);
   }
 
-  // Audit
   await logAudit_(admin.id, 'partenaire.create_tickie_customer', 'partenaires', partenaire.id, {
     tickie_customer_id: tickieId,
     email,
     company: partenaire.raison_sociale,
-  }, env).catch(() => {});
+  }, env);
 
   return jsonResponseNoCache({
     ok: true,
@@ -1130,9 +1087,6 @@ async function handleCreateTickieCustomer(token, contractId, body, env) {
     next_step: 'Tu peux maintenant envoyer le login au partenaire',
   });
 }
-
-// ----------- POST /api/admin/partner/:token/:contractId/send-tickie-login -----------
-// Active le compte Tickie (envoie email de connexion au partenaire)
 
 async function handleSendTickieLogin(token, contractId, env) {
   const admin = await authAdmin_(token, env);
@@ -1179,7 +1133,7 @@ async function handleSendTickieLogin(token, contractId, env) {
 
   await logAudit_(admin.id, 'partenaire.send_tickie_login', 'partenaires', partenaire.id, {
     tickie_customer_id: partenaire.tickie_customer_id,
-  }, env).catch(() => {});
+  }, env);
 
   return jsonResponseNoCache({
     ok: true,
@@ -1187,9 +1141,6 @@ async function handleSendTickieLogin(token, contractId, env) {
     tickie_customer_id: partenaire.tickie_customer_id,
   });
 }
-
-// ----------- POST /api/admin/partner/:token/:contractId/unlink-tickie -----------
-// Délie le partenaire de son customer Tickie (ne supprime PAS le customer Tickie)
 
 async function handleUnlinkTickie(token, contractId, env) {
   const admin = await authAdmin_(token, env);
@@ -1216,7 +1167,7 @@ async function handleUnlinkTickie(token, contractId, env) {
 
   await logAudit_(admin.id, 'partenaire.unlink_tickie', 'partenaires', partenaire.id, {
     tickie_customer_id: { from: oldId, to: null },
-  }, env).catch(() => {});
+  }, env);
 
   return jsonResponseNoCache({
     ok: true,
@@ -1226,17 +1177,16 @@ async function handleUnlinkTickie(token, contractId, env) {
 }
 
 // ============================================================================
-//  OFFRES D'EMPLOI — Sprint Annonces Phase A : Admin CRUD + modération
+//  OFFRES D'EMPLOI
 // ============================================================================
 
 const OFFRE_STATUTS = ['en_attente', 'publie', 'refuse', 'expire', 'pourvue', 'archive'];
 
-// ----------- GET /api/admin/offres/:token?statut=... -----------
 async function handleAdminOffresList(token, queryParams, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
-  const statutFilter = queryParams.get('statut'); // optionnel
+  const statutFilter = queryParams.get('statut');
   let filter = 'select=*,contrats(id,partenaires(raison_sociale))&order=created_at.desc&limit=200';
   if (statutFilter && OFFRE_STATUTS.includes(statutFilter)) {
     filter = `statut=eq.${statutFilter}&` + filter;
@@ -1260,9 +1210,7 @@ async function handleAdminOffresList(token, queryParams, env) {
     created_by: o.created_by || '',
   }));
 
-  // Stats par statut (pour les onglets/badges)
   const stats = { en_attente: 0, publie: 0, refuse: 0, archive: 0, expire: 0, pourvue: 0, total: 0 };
-  // Si filtre actif, on doit aussi récupérer le count global. Pour simplifier, on fait un 2e query sans filtre.
   if (statutFilter) {
     const allRows = await supabaseQuery('offres_emploi', 'select=statut', env);
     (allRows || []).forEach(r => {
@@ -1284,7 +1232,6 @@ async function handleAdminOffresList(token, queryParams, env) {
   });
 }
 
-// ----------- GET /api/admin/offre/:token/:offreId -----------
 async function handleAdminOffreDetail(token, offreId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1323,14 +1270,11 @@ async function handleAdminOffreDetail(token, offreId, env) {
       created_by: o.created_by || '',
       created_at: o.created_at,
       updated_at: o.updated_at,
-      // V4.7.1 : on expose aussi metadata pour que le pilote puisse afficher logo_b64, date_match, les_plus
       metadata: o.metadata || {},
     },
   });
 }
 
-// ----------- POST /api/admin/offres/:token/create -----------
-// Body : { contrat_id, titre, description, type_contrat, lieu, ... }
 async function handleAdminOffreCreate(token, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1344,7 +1288,6 @@ async function handleAdminOffreCreate(token, body, env) {
     return jsonResponseNoCache({ error: 'Titre obligatoire' }, 400);
   }
 
-  // Default expiration : 60 jours
   const expirationDays = Math.max(1, Math.min(365, Number(body.expiration_days) || 60));
   const dateExpiration = new Date(Date.now() + expirationDays * 86400 * 1000).toISOString();
 
@@ -1378,12 +1321,11 @@ async function handleAdminOffreCreate(token, body, env) {
 
   await logAudit_(admin.id, 'offre.create', 'offres_emploi', created.id, {
     titre, contrat_id, statut: insertData.statut,
-  }, env).catch(() => {});
+  }, env);
 
   return jsonResponseNoCache({ ok: true, offre: created });
 }
 
-// ----------- POST /api/admin/offres/:token/:offreId/update -----------
 async function handleAdminOffreUpdate(token, offreId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1408,12 +1350,11 @@ async function handleAdminOffreUpdate(token, offreId, body, env) {
     return jsonResponseNoCache({ error: 'Erreur update', detail: e.message }, 500);
   }
 
-  await logAudit_(admin.id, 'offre.update', 'offres_emploi', offreId, updateData, env).catch(() => {});
+  await logAudit_(admin.id, 'offre.update', 'offres_emploi', offreId, updateData, env);
 
   return jsonResponseNoCache({ ok: true });
 }
 
-// ----------- POST /api/admin/offres/:token/:offreId/publish -----------
 async function handleAdminOffrePublish(token, offreId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1424,13 +1365,11 @@ async function handleAdminOffrePublish(token, offreId, env) {
     raison_refus: null,
   }, env);
 
-  await logAudit_(admin.id, 'offre.publish', 'offres_emploi', offreId, {}, env).catch(() => {});
+  await logAudit_(admin.id, 'offre.publish', 'offres_emploi', offreId, {}, env);
 
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
-// ----------- POST /api/admin/offres/:token/:offreId/reject -----------
-// Body : { raison }
 async function handleAdminOffreReject(token, offreId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1443,12 +1382,11 @@ async function handleAdminOffreReject(token, offreId, body, env) {
     date_publication: null,
   }, env);
 
-  await logAudit_(admin.id, 'offre.reject', 'offres_emploi', offreId, { raison }, env).catch(() => {});
+  await logAudit_(admin.id, 'offre.reject', 'offres_emploi', offreId, { raison }, env);
 
   return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
 }
 
-// ----------- POST /api/admin/offres/:token/:offreId/archive -----------
 async function handleAdminOffreArchive(token, offreId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1457,12 +1395,11 @@ async function handleAdminOffreArchive(token, offreId, env) {
     statut: 'archive',
   }, env);
 
-  await logAudit_(admin.id, 'offre.archive', 'offres_emploi', offreId, {}, env).catch(() => {});
+  await logAudit_(admin.id, 'offre.archive', 'offres_emploi', offreId, {}, env);
 
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
-// Helper supabaseInsert_ (si pas déjà défini ailleurs)
 async function supabaseInsert_(table, data, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Supabase credentials not configured');
@@ -1486,13 +1423,12 @@ async function supabaseInsert_(table, data, env) {
 }
 
 // ============================================================================
-//  PUBLICATIONS (forum / proposition / echange) — Sprint Publications Phase A
+//  PUBLICATIONS
 // ============================================================================
 
 const PUB_TYPES = ['forum', 'proposition', 'echange'];
 const PUB_STATUTS = ['en_attente', 'publie', 'refuse', 'expire', 'archive'];
 
-// ----------- GET /api/admin/publications/:token?type=X&statut=Y -----------
 async function handleAdminPublicationsList(token, queryParams, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1531,7 +1467,6 @@ async function handleAdminPublicationsList(token, queryParams, env) {
     created_at: p.created_at,
   }));
 
-  // Stats globales par type/statut (utile pour les badges sidebar)
   const allRows = await supabaseQuery('publications', 'select=type,statut', env);
   const stats = {};
   PUB_TYPES.forEach(t => {
@@ -1551,7 +1486,6 @@ async function handleAdminPublicationsList(token, queryParams, env) {
   });
 }
 
-// ----------- GET /api/admin/publication/:token/:id -----------
 async function handleAdminPublicationDetail(token, pubId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1592,7 +1526,6 @@ async function handleAdminPublicationDetail(token, pubId, env) {
   });
 }
 
-// ----------- POST /api/admin/publications/:token/create -----------
 async function handleAdminPublicationCreate(token, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1610,12 +1543,10 @@ async function handleAdminPublicationCreate(token, body, env) {
     if (!contrat_id.match(/^CON-\d+-\d+$/)) {
       return jsonResponseNoCache({ error: 'contrat_id invalide' }, 400);
     }
-    // Récupérer partenaire_id du contrat
     const contrats = await supabaseQuery('contrats', `id=eq.${contrat_id}&select=partenaire_id&limit=1`, env);
     if (contrats && contrats[0]) partenaire_id = contrats[0].partenaire_id;
   }
 
-  // Default expiration : 90 jours pour forum/echange, 180j pour proposition
   const defaultDays = type === 'proposition' ? 180 : 90;
   const expirationDays = Math.max(1, Math.min(365, Number(body.expiration_days) || defaultDays));
   const dateExpiration = new Date(Date.now() + expirationDays * 86400 * 1000).toISOString();
@@ -1649,12 +1580,11 @@ async function handleAdminPublicationCreate(token, body, env) {
 
   await logAudit_(admin.id, 'publication.create', 'publications', created.id, {
     type, titre, contrat_id, statut: insertData.statut,
-  }, env).catch(() => {});
+  }, env);
 
   return jsonResponseNoCache({ ok: true, publication: created });
 }
 
-// ----------- POST /api/admin/publications/:token/:id/update -----------
 async function handleAdminPublicationUpdate(token, pubId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1678,12 +1608,11 @@ async function handleAdminPublicationUpdate(token, pubId, body, env) {
     return jsonResponseNoCache({ error: 'Erreur update', detail: e.message }, 500);
   }
 
-  await logAudit_(admin.id, 'publication.update', 'publications', pubId, updateData, env).catch(() => {});
+  await logAudit_(admin.id, 'publication.update', 'publications', pubId, updateData, env);
 
   return jsonResponseNoCache({ ok: true });
 }
 
-// ----------- POST /api/admin/publications/:token/:id/publish -----------
 async function handleAdminPublicationPublish(token, pubId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1694,12 +1623,11 @@ async function handleAdminPublicationPublish(token, pubId, env) {
     raison_refus: null,
   }, env);
 
-  await logAudit_(admin.id, 'publication.publish', 'publications', pubId, {}, env).catch(() => {});
+  await logAudit_(admin.id, 'publication.publish', 'publications', pubId, {}, env);
 
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
-// ----------- POST /api/admin/publications/:token/:id/reject -----------
 async function handleAdminPublicationReject(token, pubId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -1712,27 +1640,25 @@ async function handleAdminPublicationReject(token, pubId, body, env) {
     date_publication: null,
   }, env);
 
-  await logAudit_(admin.id, 'publication.reject', 'publications', pubId, { raison }, env).catch(() => {});
+  await logAudit_(admin.id, 'publication.reject', 'publications', pubId, { raison }, env);
 
   return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
 }
 
-// ----------- POST /api/admin/publications/:token/:id/archive -----------
 async function handleAdminPublicationArchive(token, pubId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
   await supabasePatch_('publications', `id=eq.${pubId}`, { statut: 'archive' }, env);
-  await logAudit_(admin.id, 'publication.archive', 'publications', pubId, {}, env).catch(() => {});
+  await logAudit_(admin.id, 'publication.archive', 'publications', pubId, {}, env);
 
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
 // ============================================================================
-//  PARTNER — Phase B : Proposer publications et annonces emploi
+//  PARTNER — Phase B
 // ============================================================================
 
-// Auth helper : identifie le partenaire via le magic_token du contrat
 async function authPartner_(token, env) {
   const rows = await supabaseQuery(
     'contrats',
@@ -1749,7 +1675,6 @@ async function authPartner_(token, env) {
   };
 }
 
-// ----------- GET /api/partner/:token/publications?type=X -----------
 async function handlePartnerPublicationsList(token, queryParams, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
@@ -1770,8 +1695,6 @@ async function handlePartnerPublicationsList(token, queryParams, env) {
   });
 }
 
-// ----------- POST /api/partner/:token/publications -----------
-// Body : { type, titre, description, categorie, data, contact_nom, contact_email, contact_telephone }
 async function handlePartnerPublicationCreate(token, body, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
@@ -1797,7 +1720,7 @@ async function handlePartnerPublicationCreate(token, body, env) {
     contact_nom: body.contact_nom || partner.representant || null,
     contact_email: body.contact_email || null,
     contact_telephone: body.contact_telephone || null,
-    statut: 'en_attente',                    // toujours en attente quand créé par partenaire
+    statut: 'en_attente',
     date_expiration: dateExpiration,
     created_by: 'partenaire',
   };
@@ -1817,7 +1740,6 @@ async function handlePartnerPublicationCreate(token, body, env) {
   });
 }
 
-// ----------- GET /api/partner/:token/offres-emploi -----------
 async function handlePartnerOffresList(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
@@ -1832,7 +1754,6 @@ async function handlePartnerOffresList(token, env) {
   });
 }
 
-// ----------- POST /api/partner/:token/offres-emploi -----------
 async function handlePartnerOffreCreate(token, body, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
@@ -1861,10 +1782,10 @@ async function handlePartnerOffreCreate(token, body, env) {
     contact_nom: body.contact_nom || partner.representant || null,
     contact_email,
     contact_telephone: body.contact_telephone || null,
-    statut: 'en_attente',                    // toujours en attente
+    statut: 'en_attente',
     date_expiration: dateExpiration,
     created_by: 'partenaire',
-    metadata: body.metadata || {},           // logo_b64, date_match, les_plus, source
+    metadata: body.metadata || {},
   };
 
   let created;
@@ -1883,17 +1804,11 @@ async function handlePartnerOffreCreate(token, body, env) {
 }
 
 // ============================================================================
-//  PUBLIC ENDPOINTS — Sprint C.1 : tuyau emploi public + candidatures
-//  Pas d'auth (sauf rate limit éventuel via Cloudflare WAF en couche au-dessus)
-//  Consommé par l'app bénévole (cross-origin) et toute page publique future
+//  PUBLIC ENDPOINTS
 // ============================================================================
 
-// ----------- GET /api/public/offres-emploi -----------
-// Liste publique des annonces validées (statut=publie + non-expirées)
-// Pas de pagination V1 (limit 100), filtres côté client
 async function handlePublicOffresList(queryParams, env) {
   const nowIso = new Date().toISOString();
-  // Filtre : publie + non expirée (date_expiration null OU > now)
   const filter =
     `statut=eq.publie` +
     `&or=(date_expiration.is.null,date_expiration.gt.${encodeURIComponent(nowIso)})` +
@@ -1904,8 +1819,6 @@ async function handlePublicOffresList(queryParams, env) {
 
   const rows = await supabaseQuery('offres_emploi', filter, env);
 
-  // Normalisation pour matcher le format attendu par l'app bénévole
-  // (mêmes noms de champs que sa table annonces_emploi pour minimiser le code de merge)
   const offres = (rows || []).map(o => {
     const meta = o.metadata || {};
     return {
@@ -1920,7 +1833,7 @@ async function handlePublicOffresList(queryParams, env) {
       experience_requise: o.experience_requise || '',
       partenaire_nom: o.contrats?.partenaires?.raison_sociale || '',
       partenaire_niveau: o.contrats?.partenaires?.niveau || '',
-      partenaire_logo_url: meta.logo_b64 || null,  // base64 data URL, OK pour <img src>
+      partenaire_logo_url: meta.logo_b64 || null,
       contact_nom: o.contact_nom || '',
       contact_email: o.contact_email || '',
       contact_tel: o.contact_telephone || '',
@@ -1939,8 +1852,6 @@ async function handlePublicOffresList(queryParams, env) {
   });
 }
 
-// ----------- GET /api/public/offre/:id -----------
-// Détail d'une offre + incrémente vues_count (fire-and-forget)
 async function handlePublicOffreDetail(offreId, env) {
   const rows = await supabaseQuery(
     'offres_emploi',
@@ -1953,7 +1864,6 @@ async function handlePublicOffreDetail(offreId, env) {
   const o = rows[0];
   const meta = o.metadata || {};
 
-  // Increment vues_count en fire-and-forget (n'attend pas la réponse)
   fetch(`${env.SUPABASE_URL}/rest/v1/offres_emploi?id=eq.${offreId}`, {
     method: 'PATCH',
     headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
@@ -1985,10 +1895,7 @@ async function handlePublicOffreDetail(offreId, env) {
   });
 }
 
-// ----------- POST /api/public/offre/:id/candidature -----------
-// Body : { candidat_email, candidat_nom, candidat_prenom, candidat_telephone?, message?, cv_url?, source?, benevole_id?, benevole_pseudo? }
 async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
-  // 1. Vérifier que l'offre existe et est publiée + récupérer le nom du partenaire
   const offreRows = await supabaseQuery(
     'offres_emploi',
     `id=eq.${offreId}&statut=eq.publie` +
@@ -2002,7 +1909,6 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
   const offre = offreRows[0];
   const partenaireRaisonSociale = offre.contrats?.partenaires?.raison_sociale || 'le partenaire';
 
-  // 2. Validation body
   const candidat_email = String(body.candidat_email || '').trim().toLowerCase();
   const candidat_nom = String(body.candidat_nom || '').trim();
   const candidat_prenom = String(body.candidat_prenom || '').trim();
@@ -2017,7 +1923,6 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
     return jsonResponseNoCache({ error: 'Prénom du candidat obligatoire' }, 400);
   }
 
-  // 3. Insert candidature
   const candidat_telephone = String(body.candidat_telephone || '').trim() || null;
   const message = body.message ? String(body.message).trim() : null;
   const cv_url = body.cv_url ? String(body.cv_url).trim() : null;
@@ -2045,16 +1950,12 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
     return jsonResponseNoCache({ error: 'Erreur création candidature', detail: e.message }, 500);
   }
 
-  // 4. Incrémenter candidatures_count sur l'offre (fire-and-forget)
   fetch(`${env.SUPABASE_URL}/rest/v1/offres_emploi?id=eq.${offreId}`, {
     method: 'PATCH',
     headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
     body: JSON.stringify({ candidatures_count: (offre.candidatures_count || 0) + 1 }),
   }).catch(() => {});
 
-  // 5. Sprint C.2 — Envoi des 2 emails via Resend
-  //    ctx.waitUntil() = on dit à Cloudflare "garde le worker vivant jusqu'à la fin de ces promises"
-  //    Sans ça, le runtime tue les fetch après la response et les console.warn sont invisibles.
   const emailContext = {
     candidat_prenom,
     candidat_nom,
@@ -2070,7 +1971,6 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
 
   console.log(`[Candidature] Envoi emails — partenaire=${emailContext.partenaire_contact_email}, candidat=${candidat_email}`);
 
-  // Email 1 : notification au partenaire (reply-to = candidat pour réponse directe)
   const emailPartnerPromise = sendEmailViaResend(env, {
     to: emailContext.partenaire_contact_email,
     subject: `Nouvelle candidature reçue — ${offre.titre}`,
@@ -2082,7 +1982,6 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
     else console.error(`[Email partenaire] Failed:`, JSON.stringify(r));
   }).catch(e => console.error(`[Email partenaire] Exception:`, e.message));
 
-  // Email 2 : confirmation au candidat (reply-to = club)
   const emailCandidatePromise = sendEmailViaResend(env, {
     to: candidat_email,
     subject: `Confirmation de votre candidature — ${offre.titre}`,
@@ -2094,11 +1993,9 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
     else console.error(`[Email candidat] Failed:`, JSON.stringify(r));
   }).catch(e => console.error(`[Email candidat] Exception:`, e.message));
 
-  // ctx.waitUntil garde le worker vivant après la response pour terminer ces promises
   if (ctx && typeof ctx.waitUntil === 'function') {
     ctx.waitUntil(Promise.all([emailPartnerPromise, emailCandidatePromise]));
   } else {
-    // Fallback si ctx absent (ne devrait pas arriver) — await synchrone
     await Promise.all([emailPartnerPromise, emailCandidatePromise]);
   }
 
@@ -2115,7 +2012,7 @@ async function handlePublicCandidatureCreate(offreId, body, env, ctx) {
 }
 
 // ============================================================================
-//  RESEND EMAIL — Sprint C.2 : envoi transactionnel + templates HTML
+//  RESEND EMAIL
 // ============================================================================
 
 async function sendEmailViaResend(env, { to, subject, html, text, replyTo, from }) {
@@ -2157,7 +2054,6 @@ async function sendEmailViaResend(env, { to, subject, html, text, replyTo, from 
   }
 }
 
-// Échappement HTML sûr pour insertion dans templates email
 function escEmail(s) {
   if (s === null || s === undefined) return '';
   return String(s)
@@ -2168,7 +2064,6 @@ function escEmail(s) {
     .replace(/'/g, '&#039;');
 }
 
-// Layout commun (table-based, inline styles — compatibilité maximale clients mail)
 function emailLayout(headerEyebrow, headerTitle, headerSubtitle, bodyContent) {
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -2182,7 +2077,6 @@ function emailLayout(headerEyebrow, headerTitle, headerSubtitle, bodyContent) {
   <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#FFFFFF;border-radius:14px;border:1px solid #E5DED1;box-shadow:0 2px 10px rgba(10,22,40,0.06);">
 
-      <!-- HEADER navy + halo or -->
       <tr><td style="background:#11203a;background-image:linear-gradient(135deg,#11203a 0%,#0A1628 100%);padding:30px 30px 26px;border-radius:14px 14px 0 0;">
         <table cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
@@ -2202,12 +2096,10 @@ function emailLayout(headerEyebrow, headerTitle, headerSubtitle, bodyContent) {
         </div>
       </td></tr>
 
-      <!-- BODY -->
       <tr><td style="padding:30px 30px 24px;font-size:14px;line-height:1.65;color:#4A5568;">
         ${bodyContent}
       </td></tr>
 
-      <!-- FOOTER -->
       <tr><td style="background:#FAF7F2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;border-top:1px solid #E5DED1;border-radius:0 0 14px 14px;">
         Spacer's Toulouse Volley · Palais des Sports André Brouat<br>
         <a href="https://spacerstoulouse.fr" style="color:#C8932B;text-decoration:none;">spacerstoulouse.fr</a>
@@ -2222,7 +2114,6 @@ function emailLayout(headerEyebrow, headerTitle, headerSubtitle, bodyContent) {
 </html>`;
 }
 
-// Email 1 : notification au partenaire (nouvelle candidature reçue)
 function renderEmailPartnerNotification(ctx) {
   const eyebrow = 'NOUVELLE CANDIDATURE';
   const title = `${ctx.candidat_prenom} ${ctx.candidat_nom}`;
@@ -2250,13 +2141,10 @@ function renderEmailPartnerNotification(ctx) {
     <p style="margin:0 0 22px;font-size:14px;color:#4A5568;line-height:1.7;">
       Un(e) candidat(e) vient de postuler à votre annonce <strong style="color:#0A1628;">« ${escEmail(ctx.offre_titre)} »</strong> via le réseau Spacer's. Voici ses coordonnées :
     </p>
-
     <table cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#FAF7F2;border-radius:10px;border:1px solid #E5DED1;padding:6px 16px;margin-bottom:8px;">
       ${infoRows.join('')}
     </table>
-
     ${messageBlock}
-
     <div style="margin-top:28px;padding-top:18px;border-top:1px solid #E5DED1;font-size:12px;color:#8A8478;line-height:1.7;font-style:italic;">
       Pour répondre, cliquez simplement sur "Répondre" — votre message ira directement au candidat. La candidature reste aussi consultable dans votre espace partenaire.
     </div>
@@ -2265,7 +2153,6 @@ function renderEmailPartnerNotification(ctx) {
   return emailLayout(eyebrow, title, subtitle, body);
 }
 
-// Email 2 : confirmation au candidat
 function renderEmailCandidateConfirmation(ctx) {
   const eyebrow = 'CANDIDATURE BIEN REÇUE';
   const title = `Merci, ${ctx.candidat_prenom} !`;
@@ -2280,22 +2167,18 @@ function renderEmailCandidateConfirmation(ctx) {
     <p style="margin:0 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">
       Votre candidature a bien été transmise à <strong style="color:#0A1628;">${escEmail(ctx.partenaire_nom)}</strong>. Le partenaire vous contactera directement sur l'adresse email que vous avez fournie.
     </p>
-
     <div style="margin:24px 0;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#8A8478;font-weight:bold;margin-bottom:8px;">Récapitulatif</div>
       <table cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#FAF7F2;border-radius:10px;border:1px solid #E5DED1;padding:6px 16px;">
         ${recapRows.join('')}
       </table>
     </div>
-
     <p style="margin:24px 0 18px;font-size:14px;color:#4A5568;line-height:1.7;">
       ${ctx.message ? 'Votre message a été inclus dans la notification envoyée au partenaire. ' : ''}Pensez à surveiller votre boîte de réception (et le dossier <em>spam</em>) dans les prochains jours.
     </p>
-
     <p style="margin:24px 0 0;font-size:14px;color:#4A5568;line-height:1.7;">
       Bonne chance pour la suite — l'équipe Spacer's
     </p>
-
     <div style="margin-top:28px;padding-top:18px;border-top:1px solid #E5DED1;font-size:12px;color:#8A8478;line-height:1.7;font-style:italic;">
       Une question ? Répondez simplement à ce mail, l'équipe vous lit.
     </div>
@@ -2305,13 +2188,11 @@ function renderEmailCandidateConfirmation(ctx) {
 }
 
 // ============================================================================
-//  CANDIDATURES — Sprint C.3 (admin dashboard)
+//  CANDIDATURES — Sprint C.3
 // ============================================================================
 
 const CANDIDATURE_STATUTS = ['nouveau', 'vue', 'contactee', 'refusee', 'acceptee'];
 
-// ----------- GET /api/admin/candidatures/:token -----------
-// Query : ?statut=nouveau&offre_id=... (tous optionnels)
 async function handleAdminCandidaturesList(token, queryParams, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2319,7 +2200,6 @@ async function handleAdminCandidaturesList(token, queryParams, env) {
   const statutFilter = queryParams.get('statut');
   const offreFilter  = queryParams.get('offre_id');
 
-  // Join offre + partenaire pour avoir le contexte côté UI
   let filter =
     'select=*,offres_emploi(id,titre,type_contrat,lieu,contrats(id,partenaires(raison_sociale)))' +
     '&order=created_at.desc&limit=500';
@@ -2359,7 +2239,6 @@ async function handleAdminCandidaturesList(token, queryParams, env) {
     updated_at: c.updated_at,
   }));
 
-  // Stats : si filtre offre actif, stats de cette offre ; sinon stats globales
   let statsRows;
   if (offreFilter && /^[0-9a-f-]{36}$/.test(offreFilter)) {
     statsRows = await supabaseQuery('candidatures', `offre_id=eq.${offreFilter}&select=statut`, env);
@@ -2375,7 +2254,6 @@ async function handleAdminCandidaturesList(token, queryParams, env) {
   return jsonResponseNoCache({ candidatures, stats });
 }
 
-// ----------- GET /api/admin/candidature/:token/:id -----------
 async function handleAdminCandidatureDetail(token, candidatureId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2422,8 +2300,6 @@ async function handleAdminCandidatureDetail(token, candidatureId, env) {
   });
 }
 
-// ----------- POST /api/admin/candidature/:token/:id/update-statut -----------
-// Body : { statut: 'vue'|'contactee'|'refusee'|'acceptee', pilote_notes?: string }
 async function handleAdminCandidatureUpdateStatut(token, candidatureId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2433,7 +2309,6 @@ async function handleAdminCandidatureUpdateStatut(token, candidatureId, body, en
     return jsonResponseNoCache({ error: `Statut invalide. Valeurs : ${CANDIDATURE_STATUTS.join(', ')}` }, 400);
   }
 
-  // Vérifier que la candidature existe
   const existing = await supabaseQuery(
     'candidatures',
     `id=eq.${candidatureId}&select=id,statut&limit=1`,
@@ -2470,13 +2345,12 @@ async function handleAdminCandidatureUpdateStatut(token, candidatureId, body, en
 }
 
 // ============================================================================
-//  COMMUNICATIONS — Sprint D (invitations + annonces, RSVP)
+//  COMMUNICATIONS — Sprint D
 // ============================================================================
 
 const COM_TYPES = ['invitation', 'annonce'];
 const COM_STATUTS = ['brouillon', 'publie', 'archive'];
 
-// ----------- GET /api/admin/communications/:token?type=X&statut=Y -----------
 async function handleAdminCommunicationsList(token, queryParams, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2492,7 +2366,6 @@ async function handleAdminCommunicationsList(token, queryParams, env) {
 
   const rows = await supabaseQuery('communications', baseQuery, env);
 
-  // Comptage des réponses par communication (présents + total personnes)
   const ids = (rows || []).map(r => r.id);
   let reponsesByCom = {};
   if (ids.length) {
@@ -2513,7 +2386,6 @@ async function handleAdminCommunicationsList(token, queryParams, env) {
     reponses: reponsesByCom[c.id] || { present: 0, absent: 0, total_personnes: 0 },
   }));
 
-  // Stats par type/statut
   const allRows = await supabaseQuery('communications', 'select=type,statut', env);
   const stats = { invitation: { brouillon:0, publie:0, archive:0, total:0 }, annonce: { brouillon:0, publie:0, archive:0, total:0 } };
   (allRows || []).forEach(r => {
@@ -2525,7 +2397,6 @@ async function handleAdminCommunicationsList(token, queryParams, env) {
   return jsonResponseNoCache({ communications, stats });
 }
 
-// ----------- GET /api/admin/communication/:token/:id -----------
 async function handleAdminCommunicationDetail(token, comId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2534,7 +2405,6 @@ async function handleAdminCommunicationDetail(token, comId, env) {
   if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Communication introuvable' }, 404);
   const c = rows[0];
 
-  // Réponses RSVP détaillées + nom du partenaire
   const reps = await supabaseQuery(
     'communication_reponses',
     `communication_id=eq.${comId}&select=*,contrats(id,partenaires(raison_sociale))&order=created_at.desc`,
@@ -2567,8 +2437,6 @@ async function handleAdminCommunicationDetail(token, comId, env) {
   });
 }
 
-// ----------- POST /api/admin/communications/:token/create -----------
-// Body : { type, titre, message, categorie, data, publish_now? }
 async function handleAdminCommunicationCreate(token, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2599,7 +2467,6 @@ async function handleAdminCommunicationCreate(token, body, env) {
   return jsonResponseNoCache({ ok: true, communication: created });
 }
 
-// ----------- POST /api/admin/communications/:token/:id/publish -----------
 async function handleAdminCommunicationPublish(token, comId, env, ctx) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2613,7 +2480,6 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
     date_publication: new Date().toISOString(),
   }, env);
 
-  // Emails Resend vers tous les partenaires (best-effort, fire-and-forget via waitUntil)
   const emailJob = (async () => {
     try {
       const contrats = await supabaseQuery(
@@ -2622,8 +2488,6 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
         env
       );
 
-      // Construit la liste des destinataires. Si l'email partenaire est invalide
-      // (données CRM non nettoyées), on bascule sur le fallback de test.
       const seen = new Set();
       const recipients = [];
       let nbValid = 0, nbFallback = 0;
@@ -2632,7 +2496,7 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
         const valid = rawEmail.includes('@');
         const email = valid ? rawEmail : EMAIL_FALLBACK_PARTNER;
         if (valid) nbValid++; else nbFallback++;
-        if (seen.has(email)) return;       // déduplication
+        if (seen.has(email)) return;
         seen.add(email);
         recipients.push({
           email,
@@ -2664,7 +2528,6 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
-// ----------- POST /api/admin/communications/:token/:id/archive -----------
 async function handleAdminCommunicationArchive(token, comId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2672,19 +2535,16 @@ async function handleAdminCommunicationArchive(token, comId, env) {
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
-// ----------- GET /api/partner/:token/communications -----------
 async function handlePartnerCommunicationsList(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
 
-  // Communications publiées (non archivées)
   const rows = await supabaseQuery(
     'communications',
     `statut=eq.publie&select=id,type,titre,message,categorie,data,date_publication,created_at&order=date_publication.desc&limit=100`,
     env
   );
 
-  // Réponses RSVP de CE partenaire
   const myReps = await supabaseQuery(
     'communication_reponses',
     `contrat_id=eq.${partner.contrat_id}&select=communication_id,reponse,nb_personnes,commentaire`,
@@ -2705,8 +2565,6 @@ async function handlePartnerCommunicationsList(token, env) {
   });
 }
 
-// ----------- POST /api/partner/:token/communication/:id/rsvp -----------
-// Body : { reponse: 'present'|'absent', nb_personnes?, commentaire? }
 async function handlePartnerCommunicationRsvp(token, comId, body, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
@@ -2716,7 +2574,6 @@ async function handlePartnerCommunicationRsvp(token, comId, body, env) {
     return jsonResponseNoCache({ error: 'reponse invalide (present|absent)' }, 400);
   }
 
-  // Vérifier que la communication existe, est publiée et est une invitation
   const comRows = await supabaseQuery('communications', `id=eq.${comId}&select=id,type,statut&limit=1`, env);
   if (!comRows || comRows.length === 0) return jsonResponseNoCache({ error: 'Communication introuvable' }, 404);
   if (comRows[0].type !== 'invitation') return jsonResponseNoCache({ error: 'Cette communication n\'attend pas de réponse' }, 400);
@@ -2734,7 +2591,6 @@ async function handlePartnerCommunicationRsvp(token, comId, body, env) {
     commentaire: body.commentaire ? String(body.commentaire).trim().slice(0, 500) : null,
   };
 
-  // Upsert sur (communication_id, contrat_id) — index unique
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/communication_reponses?on_conflict=communication_id,contrat_id`, {
     method: 'POST',
     headers: { ...supabaseHeaders(env), Prefer: 'resolution=merge-duplicates,return=representation' },
@@ -2748,7 +2604,6 @@ async function handlePartnerCommunicationRsvp(token, comId, body, env) {
   return jsonResponseNoCache({ ok: true, reponse: Array.isArray(saved) ? saved[0] : saved });
 }
 
-// ----------- Templates email (Sprint D) -----------
 function renderEmailInvitation(com, recipient) {
   const d = com.data || {};
   const eyebrow = 'INVITATION';
@@ -2780,13 +2635,11 @@ function renderEmailAnnonce(com, recipient) {
 }
 
 // ============================================================================
-//  CONTACTS PARTENAIRES — Sprint E.2 (multi-contacts + invitation Supabase Auth)
+//  CONTACTS PARTENAIRES — Sprint E.2
 // ============================================================================
 
 const CONTACT_STATUTS = ['a_inviter', 'invite', 'active', 'inactif'];
 
-// ----------- GET /api/admin/partenaires/:token -----------
-// Liste TOUTES les sociétés partenaires avec leurs contacts (count + stats statuts)
 async function handleAdminPartenairesList(token, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2797,7 +2650,6 @@ async function handleAdminPartenairesList(token, env) {
     env
   );
 
-  // Compter les contacts par statut pour chaque partenaire
   const contacts = await supabaseQuery(
     'partenaire_contacts',
     'select=partenaire_id,statut',
@@ -2826,12 +2678,10 @@ async function handleAdminPartenairesList(token, env) {
   });
 }
 
-// ----------- GET /api/admin/partenaire/:token/:partenaireId/contacts -----------
 async function handleAdminContactsList(token, partenaireId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
-  // Vérifier que le partenaire existe
   const pRows = await supabaseQuery('partenaires', `id=eq.${partenaireId}&select=id,raison_sociale&limit=1`, env);
   if (!pRows || pRows.length === 0) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
 
@@ -2847,8 +2697,6 @@ async function handleAdminContactsList(token, partenaireId, env) {
   });
 }
 
-// ----------- POST /api/admin/partenaire/:token/:partenaireId/contacts/create -----------
-// Body : { nom, prenom?, email, telephone?, fonction? }
 async function handleAdminContactCreate(token, partenaireId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2858,11 +2706,9 @@ async function handleAdminContactCreate(token, partenaireId, body, env) {
   if (!nom) return jsonResponseNoCache({ error: 'Le nom est obligatoire' }, 400);
   if (!email || !email.includes('@')) return jsonResponseNoCache({ error: 'Email invalide' }, 400);
 
-  // Vérifier que le partenaire existe
   const pRows = await supabaseQuery('partenaires', `id=eq.${partenaireId}&select=id&limit=1`, env);
   if (!pRows || pRows.length === 0) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
 
-  // Vérifier que l'email n'est pas déjà utilisé (l'index unique le ferait aussi, mais message d'erreur plus clair)
   const existing = await supabaseQuery('partenaire_contacts', `email=ilike.${encodeURIComponent(email)}&select=id&limit=1`, env);
   if (existing && existing.length > 0) {
     return jsonResponseNoCache({ error: 'Un contact avec cet email existe déjà' }, 400);
@@ -2888,7 +2734,6 @@ async function handleAdminContactCreate(token, partenaireId, body, env) {
   }
 }
 
-// ----------- POST /api/admin/partenaire/:token/contact/:contactId/update -----------
 async function handleAdminContactUpdate(token, contactId, body, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
@@ -2899,7 +2744,6 @@ async function handleAdminContactUpdate(token, contactId, body, env) {
   if (body.telephone !== undefined) payload.telephone = body.telephone ? String(body.telephone).trim() : null;
   if (body.fonction !== undefined) payload.fonction = body.fonction ? String(body.fonction).trim() : null;
   if (body.statut !== undefined && CONTACT_STATUTS.includes(body.statut)) payload.statut = body.statut;
-  // L'email n'est pas modifiable une fois créé (sinon désynchro avec auth.users)
 
   if (Object.keys(payload).length === 0) return jsonResponseNoCache({ error: 'Rien à modifier' }, 400);
 
@@ -2911,18 +2755,14 @@ async function handleAdminContactUpdate(token, contactId, body, env) {
   }
 }
 
-// ----------- POST /api/admin/partenaire/:token/contact/:contactId/delete -----------
-// Supprime le contact + le user Supabase Auth associé (si existant)
 async function handleAdminContactDelete(token, contactId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
-  // Récupérer le contact pour savoir s'il a un auth_user_id
   const rows = await supabaseQuery('partenaire_contacts', `id=eq.${contactId}&select=*&limit=1`, env);
   if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Contact introuvable' }, 404);
   const contact = rows[0];
 
-  // Supprimer le user Supabase Auth si présent
   if (contact.auth_user_id) {
     try {
       await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${contact.auth_user_id}`, {
@@ -2934,7 +2774,6 @@ async function handleAdminContactDelete(token, contactId, env) {
     }
   }
 
-  // Supprimer le contact (la FK auth_user_id est ON DELETE SET NULL, donc OK)
   try {
     await fetch(`${env.SUPABASE_URL}/rest/v1/partenaire_contacts?id=eq.${contactId}`, {
       method: 'DELETE',
@@ -2946,14 +2785,10 @@ async function handleAdminContactDelete(token, contactId, env) {
   }
 }
 
-// ----------- POST /api/admin/partenaire/:token/contact/:contactId/invite -----------
-// Crée le user Supabase Auth (statut 'invited') et déclenche l'email d'invitation.
-// L'email part via le SMTP Resend configuré dans Supabase Auth.
 async function handleAdminContactInvite(token, contactId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
 
-  // Récupérer le contact + le nom de la société
   const rows = await supabaseQuery(
     'partenaire_contacts',
     `id=eq.${contactId}&select=*,partenaires(raison_sociale)&limit=1`,
@@ -2966,9 +2801,6 @@ async function handleAdminContactInvite(token, contactId, env) {
     return jsonResponseNoCache({ error: 'Ce contact a déjà un compte actif. Pour réinviter, utilise le reset password.' }, 400);
   }
 
-  // Appel API Supabase Auth pour générer une invitation
-  // Endpoint correct : POST /auth/v1/invite (avec service_role en Authorization)
-  // L'email d'invitation est envoyé automatiquement par Supabase via le SMTP Resend configuré
   const redirectTo = encodeURIComponent('https://business.spacerstoulouse.fr/activate');
   const inviteUrl = `${env.SUPABASE_URL}/auth/v1/invite?redirect_to=${redirectTo}`;
   const inviteBody = {
@@ -2997,7 +2829,6 @@ async function handleAdminContactInvite(token, contactId, env) {
     const errTxt = await inviteRes.text();
     let errMsg = errTxt;
     try { const errJson = JSON.parse(errTxt); errMsg = errJson.msg || errJson.message || errJson.error_description || errTxt; } catch {}
-    // Cas connu : l'user existe déjà (re-invitation ou collision)
     if (inviteRes.status === 422 || /already.*registered|exists/i.test(errMsg)) {
       return jsonResponseNoCache({ error: 'Cet email a déjà un compte Auth associé. Utilise la fonction reset password.', detail: errMsg }, 409);
     }
@@ -3010,7 +2841,6 @@ async function handleAdminContactInvite(token, contactId, env) {
     return jsonResponseNoCache({ error: 'Réponse Auth inattendue (id manquant)', detail: JSON.stringify(inviteJson).slice(0, 200) }, 500);
   }
 
-  // Mettre à jour le contact : statut = 'invite', auth_user_id, invitation_envoyee_at
   try {
     await supabasePatch_('partenaire_contacts', `id=eq.${contactId}`, {
       auth_user_id: authUserId,
@@ -3029,12 +2859,9 @@ async function handleAdminContactInvite(token, contactId, env) {
 }
 
 // ============================================================================
-//  AUTH PARTENAIRE — Sprint E.4 (Supabase Auth : config + session + activation)
+//  AUTH PARTENAIRE — Sprint E.4
 // ============================================================================
 
-// ----------- GET /api/auth/config -----------
-// Expose l'URL Supabase et la clé publique anon aux pages frontend.
-// Aucune authentification requise (la anon key est publique par design).
 async function handleAuthConfig(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
     return jsonResponseNoCache({
@@ -3048,9 +2875,6 @@ async function handleAuthConfig(env) {
   });
 }
 
-// ----------- Helper : vérifier un JWT Supabase et retourner le user -----------
-// Appelle l'endpoint Supabase Auth /auth/v1/user avec le Bearer du client.
-// Si la session est valide, retourne le user object. Sinon, retourne null.
 async function verifySupabaseSession_(request, env) {
   const authHeader = request.headers.get('Authorization') || '';
   const m = authHeader.match(/^Bearer\s+(.+)$/i);
@@ -3072,15 +2896,10 @@ async function verifySupabaseSession_(request, env) {
   }
 }
 
-// ----------- GET /api/partner-by-session -----------
-// Le partenaire est authentifié via Supabase Auth (Bearer JWT dans Authorization).
-// On retrouve son contact via auth_user_id → sa société (partenaire_id)
-// → son contrat actif → on construit le même payload que /api/partner-by-token.
 async function handlePartnerBySession(request, env) {
   const user = await verifySupabaseSession_(request, env);
   if (!user || !user.id) return jsonResponseNoCache({ error: 'Session invalide' }, 401);
 
-  // Chercher le contact lié à ce user
   const contacts = await supabaseQuery(
     'partenaire_contacts',
     `auth_user_id=eq.${user.id}&select=id,partenaire_id&limit=1`,
@@ -3091,7 +2910,6 @@ async function handlePartnerBySession(request, env) {
   }
   const contact = contacts[0];
 
-  // Récupérer le contrat le plus récent de cette société (avec ses relations complètes)
   const rows = await supabaseQuery(
     'contrats',
     `partenaire_id=eq.${contact.partenaire_id}` +
@@ -3103,36 +2921,28 @@ async function handlePartnerBySession(request, env) {
     return jsonResponseNoCache({ error: 'Aucun contrat actif pour votre société.' }, 404);
   }
 
-  // Mettre à jour la dernière connexion (best-effort)
   try {
     await supabasePatch_('partenaire_contacts', `id=eq.${contact.id}`, {
       derniere_connexion_at: new Date().toISOString(),
     }, env);
   } catch (_) {}
 
-  // Construire le payload (même format que partner-by-token, compat index.html)
   const dashboard = _buildPartnerDashboard(rows[0]);
   dashboard.auth_mode = 'session';
   dashboard.contact = { email: user.email || '' };
   return jsonResponseNoCache(dashboard);
 }
 
-// ----------- POST /api/partner/confirm-activation -----------
-// Appelé par la page /activate après que le partenaire a défini son mot de passe.
-// Met à jour partenaire_contacts.statut = 'active' et derniere_connexion_at.
 async function handlePartnerConfirmActivation(request, env) {
   const user = await verifySupabaseSession_(request, env);
   if (!user || !user.id) return jsonResponseNoCache({ error: 'Session invalide' }, 401);
 
-  // Trouver le contact
   const contacts = await supabaseQuery(
     'partenaire_contacts',
     `auth_user_id=eq.${user.id}&select=id,statut&limit=1`,
     env
   );
   if (!contacts || contacts.length === 0) {
-    // Cas rare : l'auth user existe mais pas (encore) lié au contact.
-    // Tente une liaison via l'email.
     if (user.email) {
       const byEmail = await supabaseQuery(
         'partenaire_contacts',
@@ -3160,26 +2970,9 @@ async function handlePartnerConfirmActivation(request, env) {
 }
 
 // ============================================================================
-//  COMPTE UNIFIÉ — Sprint G (résolution des rôles depuis le JWT Supabase Auth)
+//  COMPTE UNIFIÉ — Sprint G
 // ============================================================================
-//
-// GET /api/me/roles
-// Authent : Bearer JWT Supabase dans le header Authorization
-// Réponse : {
-//   is_admin: bool,
-//   admin_token: string | null,            // magic_token si admin (pour switch vers /pilote)
-//   is_partner: bool,
-//   partenaire_id: uuid | null,
-//   raison_sociale: string | null,         // pour afficher dans le menu
-//   contact_id: uuid | null,
-//   email: string,
-//   prenom: string | null,
-//   nom: string | null
-// }
-//
-// Effet de bord : si l'utilisateur est un admin identifié par email mais que
-// son auth_user_id n'est pas encore lié, on le lie automatiquement (1ère connexion).
-// ============================================================================
+
 async function handleMeRoles(request, env) {
   const user = await verifySupabaseSession_(request, env);
   if (!user || !user.id) return jsonResponseNoCache({ error: 'Session invalide' }, 401);
@@ -3188,14 +2981,12 @@ async function handleMeRoles(request, env) {
   let isAdmin = false;
   let adminToken = null;
 
-  // 1. Chercher admin par auth_user_id (lien déjà fait)
   let admins = await supabaseQuery(
     'admins',
     `auth_user_id=eq.${user.id}&select=id,magic_token,email&limit=1`,
     env
   );
 
-  // 2. Sinon par email, et lier auth_user_id si match
   if ((!admins || admins.length === 0) && userEmail) {
     admins = await supabaseQuery(
       'admins',
@@ -3214,7 +3005,6 @@ async function handleMeRoles(request, env) {
     adminToken = admins[0].magic_token;
   }
 
-  // 3. Chercher contact partenaire lié à ce user
   const contacts = await supabaseQuery(
     'partenaire_contacts',
     `auth_user_id=eq.${user.id}&select=id,prenom,nom,partenaire_id,derniere_connexion_at,partenaires(raison_sociale)&limit=1`,
@@ -3245,4 +3035,237 @@ async function handleMeRoles(request, env) {
     nom,
     derniere_connexion_at: derniereConnexion,
   });
+}
+
+// ============================================================================
+//  MAILS — campagnes email aux partenaires (Sprint Mails)
+//  Provider : Resend (réutilise sendEmailViaResend + emailLayout).
+//  Destinataires v1 : tous les partenaire_contacts valides, hors désinscrits.
+// ============================================================================
+
+async function unsubKey_(email) {
+  const data = new TextEncoder().encode(UNSUB_SALT + ':' + String(email).toLowerCase());
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 24);
+}
+
+async function unsubLink_(email) {
+  const k = await unsubKey_(email);
+  return `${PUBLIC_BASE_URL}/desinscription?e=${encodeURIComponent(email)}&k=${k}`;
+}
+
+function _mailFrom(mail) {
+  const nom = (mail.expediteur_nom || 'Le Spacer\'s Business Club').replace(/[<>]/g, '');
+  return `${nom} <${MAIL_SENDER_EMAIL}>`;
+}
+
+async function handleAdminMailsList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery('mails', 'select=*&order=created_at.desc&limit=200', env);
+  const mails = (rows || []).map(m => ({
+    id: m.id, sujet: m.sujet, pre_header: m.pre_header || '', titre: m.titre || '',
+    statut: m.statut, nb_destinataires: m.nb_destinataires || 0,
+    envoye_le: m.envoye_le, cree_par_nom: m.cree_par_nom || '', created_at: m.created_at,
+  }));
+  const stats = { brouillon: 0, valide: 0, envoye: 0, total: 0 };
+  mails.forEach(m => { stats[m.statut] = (stats[m.statut] || 0) + 1; stats.total++; });
+  return jsonResponseNoCache({ mails, stats });
+}
+
+async function handleAdminMailDetail(token, mailId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('mails', `id=eq.${mailId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Mail introuvable' }, 404);
+  const contacts = await supabaseQuery('partenaire_contacts', 'select=email,statut&limit=1000', env);
+  const validCount = (contacts || []).filter(c => c.email && c.email.includes('@') && c.statut !== 'inactif').length;
+  return jsonResponseNoCache({ mail: rows[0], destinataires_count: validCount });
+}
+
+async function handleAdminMailCreate(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const sujet = String(body.sujet || '').trim();
+  if (!sujet) return jsonResponseNoCache({ error: 'Le sujet est obligatoire' }, 400);
+
+  let email = '';
+  try {
+    const a = await supabaseQuery('admins', `magic_token=eq.${token}&select=email&limit=1`, env);
+    if (a && a[0]) email = a[0].email || '';
+  } catch (_) {}
+
+  const insertData = {
+    sujet,
+    pre_header: body.pre_header || null,
+    expediteur_nom: body.expediteur_nom || 'Le Spacer\'s Business Club',
+    titre: body.titre || null,
+    corps: body.corps || null,
+    image_url: body.image_url || null,
+    bouton_label: body.bouton_label || null,
+    bouton_url: body.bouton_url || null,
+    destinataires_type: 'partenaires',
+    statut: 'brouillon',
+    cree_par_admin_id: admin.id,
+    cree_par_nom: `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null,
+    cree_par_email: email || null,
+  };
+  try {
+    const arr = await supabaseInsert_('mails', insertData, env);
+    const created = Array.isArray(arr) ? arr[0] : arr;
+    logAudit_(admin.id, 'mail.create', 'mails', created.id, { sujet }, env);
+    return jsonResponseNoCache({ ok: true, mail: created });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500);
+  }
+}
+
+async function handleAdminMailUpdate(token, mailId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const cur = await supabaseQuery('mails', `id=eq.${mailId}&select=statut&limit=1`, env);
+  if (!cur || cur.length === 0) return jsonResponseNoCache({ error: 'Mail introuvable' }, 404);
+  if (cur[0].statut === 'envoye') return jsonResponseNoCache({ error: 'Mail déjà envoyé, non modifiable' }, 400);
+
+  const allowed = ['sujet','pre_header','expediteur_nom','titre','corps','image_url','bouton_label','bouton_url'];
+  const patch = {};
+  for (const k of allowed) if (body[k] !== undefined) patch[k] = body[k] || null;
+  patch.statut = 'brouillon';
+  patch.updated_at = new Date().toISOString();
+
+  try {
+    await supabasePatch_('mails', `id=eq.${mailId}`, patch, env);
+    return jsonResponseNoCache({ ok: true });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur update', detail: e.message }, 500);
+  }
+}
+
+async function handleAdminMailValidate(token, mailId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('mails', `id=eq.${mailId}&select=statut&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Mail introuvable' }, 404);
+  if (rows[0].statut === 'envoye') return jsonResponseNoCache({ error: 'Mail déjà envoyé' }, 400);
+  await supabasePatch_('mails', `id=eq.${mailId}`, { statut: 'valide', updated_at: new Date().toISOString() }, env);
+  logAudit_(admin.id, 'mail.validate', 'mails', mailId, {}, env);
+  return jsonResponseNoCache({ ok: true, statut: 'valide' });
+}
+
+async function handleAdminMailTest(token, mailId, env, ctx) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('mails', `id=eq.${mailId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Mail introuvable' }, 404);
+  const mail = rows[0];
+
+  let toEmail = mail.cree_par_email || '';
+  if (!toEmail) {
+    const a = await supabaseQuery('admins', `magic_token=eq.${token}&select=email&limit=1`, env);
+    if (a && a[0]) toEmail = a[0].email || '';
+  }
+  if (!toEmail || !toEmail.includes('@')) return jsonResponseNoCache({ error: 'Aucune adresse de test disponible' }, 400);
+
+  const unsub = await unsubLink_(toEmail);
+  const job = sendEmailViaResend(env, {
+    to: toEmail, from: _mailFrom(mail), subject: `[TEST] ${mail.sujet}`,
+    html: renderEmailMail(mail, { nom: admin.prenom || '' }, unsub),
+    replyTo: mail.cree_par_email || EMAIL_REPLY_TO_CLUB,
+  });
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+  return jsonResponseNoCache({ ok: true, sent_to: toEmail });
+}
+
+async function handleAdminMailSend(token, mailId, env, ctx) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('mails', `id=eq.${mailId}&select=*&limit=1`, env);
+  if (!rows || rows.length === 0) return jsonResponseNoCache({ error: 'Mail introuvable' }, 404);
+  const mail = rows[0];
+  if (mail.statut === 'envoye') return jsonResponseNoCache({ error: 'Ce mail a déjà été envoyé' }, 400);
+  if (mail.statut !== 'valide') return jsonResponseNoCache({ error: 'Le mail doit être validé avant envoi' }, 400);
+
+  const contacts = await supabaseQuery('partenaire_contacts', 'select=email,nom,prenom,statut&limit=1000', env);
+  const unsubs = await supabaseQuery('mail_desinscriptions', 'select=email&limit=2000', env);
+  const blocked = new Set((unsubs || []).map(u => (u.email || '').toLowerCase()));
+
+  const seen = new Set();
+  const recipients = [];
+  (contacts || []).forEach(c => {
+    const email = (c.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@') || c.statut === 'inactif') return;
+    if (blocked.has(email) || seen.has(email)) return;
+    seen.add(email);
+    recipients.push({ email, nom: c.nom || '', prenom: c.prenom || '' });
+  });
+  if (recipients.length === 0) return jsonResponseNoCache({ error: 'Aucun destinataire valide (liste vide ou tous désinscrits)' }, 400);
+
+  const from = _mailFrom(mail);
+  const replyTo = mail.cree_par_email || EMAIL_REPLY_TO_CLUB;
+
+  const job = (async () => {
+    let ok = 0, fail = 0;
+    for (const r of recipients) {
+      try {
+        const unsub = await unsubLink_(r.email);
+        const res = await sendEmailViaResend(env, { to: r.email, from, subject: mail.sujet, html: renderEmailMail(mail, r, unsub), replyTo });
+        if (res && res.ok) ok++; else fail++;
+      } catch (_) { fail++; }
+      await new Promise(rs => setTimeout(rs, 120));
+    }
+    console.log(`[Mail ${mailId}] ${ok} OK / ${fail} échecs / ${recipients.length}`);
+  })();
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+
+  await supabasePatch_('mails', `id=eq.${mailId}`, {
+    statut: 'envoye', envoye_le: new Date().toISOString(),
+    nb_destinataires: recipients.length, updated_at: new Date().toISOString(),
+  }, env);
+  logAudit_(admin.id, 'mail.send', 'mails', mailId, { nb: recipients.length }, env);
+  return jsonResponseNoCache({ ok: true, statut: 'envoye', nb_destinataires: recipients.length });
+}
+
+function renderEmailMail(mail, recipient, unsubUrl) {
+  const titre = mail.titre || mail.sujet || '';
+  let body = '';
+  if (mail.image_url) body += `<img src="${escEmail(mail.image_url)}" alt="" width="540" style="display:block;width:100%;max-width:540px;height:auto;border-radius:10px;margin:0 0 22px;" />`;
+  if (mail.corps)     body += `<div style="font-size:14px;color:#4A5568;line-height:1.7;white-space:pre-wrap;margin:0 0 22px;">${escEmail(mail.corps)}</div>`;
+  if (mail.bouton_label && mail.bouton_url) {
+    body += `<table cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 8px;"><tr>
+      <td style="background:#C8932B;border-radius:999px;">
+        <a href="${escEmail(mail.bouton_url)}" target="_blank" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:bold;color:#0A1628;text-decoration:none;">${escEmail(mail.bouton_label)}</a>
+      </td></tr></table>`;
+  }
+  body += `<div style="margin-top:26px;padding-top:16px;border-top:1px solid #E5DED1;font-size:11px;color:#8A8478;line-height:1.6;">
+      Vous recevez cet email en tant que partenaire du Spacer's Business Club.
+      ${unsubUrl ? `<a href="${escEmail(unsubUrl)}" style="color:#8A8478;text-decoration:underline;">Se désinscrire</a>.` : ''}
+    </div>`;
+  return emailLayout('LE BUSINESS CLUB', titre, mail.pre_header || '', body);
+}
+
+async function handleDesinscription(url, env) {
+  const email = (url.searchParams.get('e') || '').trim().toLowerCase();
+  const k = (url.searchParams.get('k') || '').trim();
+  const page = (title, msg) => new Response(
+    `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+    <style>body{margin:0;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#FAF7F2;color:#0A1628;display:grid;place-items:center;min-height:100vh;padding:24px}
+    .c{background:#fff;border:1px solid #E5DED1;border-radius:16px;max-width:440px;padding:36px 32px;text-align:center;box-shadow:0 8px 24px rgba(10,22,40,.06)}
+    .s{width:44px;height:44px;border-radius:11px;background:#C8932B;color:#0A1628;display:grid;place-items:center;font-family:Georgia,serif;font-weight:700;font-size:22px;margin:0 auto 16px}
+    h1{font-family:Georgia,serif;font-weight:500;font-size:24px;margin:0 0 8px}p{color:#4A5568;font-size:14px;line-height:1.6;margin:0}</style></head>
+    <body><div class="c"><div class="s">S</div><h1>${title}</h1><p>${msg}</p></div></body></html>`,
+    { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+  );
+
+  if (!email || !email.includes('@') || !k) return page('Lien invalide', 'Ce lien de désinscription est incomplet.');
+  const expected = await unsubKey_(email);
+  if (k !== expected) return page('Lien invalide', 'Ce lien de désinscription n\'est pas valide.');
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/mail_desinscriptions?on_conflict=email`, {
+      method: 'POST',
+      headers: { ...supabaseHeaders(env), Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ email }),
+    });
+  } catch (_) {}
+  return page('Désinscription confirmée', `L'adresse ${escEmail(email)} ne recevra plus les emails du Spacer's Business Club.`);
 }
