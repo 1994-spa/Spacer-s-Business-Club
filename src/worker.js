@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.23-board
+ * Spacers Business Club — Worker V4.24-bridge (CORS POST pour candidatures cross-origin app bénévoles)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -15,7 +15,7 @@ const CACHE_TTL = 30; // secondes
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
 };
