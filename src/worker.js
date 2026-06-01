@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.21-board
+ * Spacers Business Club — Worker V4.22-board
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -267,7 +267,7 @@ async function handleApi(request, env, path, ctx) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.21-board — + board partenaires partagé + réponses publications',
+        version: 'V4.22-board — board + réponses + magic_token en mode session',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -472,6 +472,7 @@ function _buildPartnerDashboard(c) {
   const pack = packsArr.length > 0 ? packsArr[0] : null;
 
   return {
+    magic_token: c.magic_token || '',
     partenaire: {
       raison_sociale: p.raison_sociale || '',
       siren: p.siren || '',
@@ -2996,6 +2997,18 @@ async function handlePartnerBySession(request, env) {
       derniere_connexion_at: new Date().toISOString(),
     }, env);
   } catch (_) {}
+
+  // En mode session, le partenaire n'a pas de magic_token dans l'URL : on s'assure
+  // que le contrat en possède un (généré au besoin) pour que les endpoints d'écriture
+  // partenaire (/api/partner/:token/...) fonctionnent aussi en mode session.
+  if (!rows[0].magic_token) {
+    const newTok = (crypto.randomUUID && crypto.randomUUID().replace(/-/g, '')) ||
+      (Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+    try {
+      await supabasePatch_('contrats', `id=eq.${rows[0].id}`, { magic_token: newTok }, env);
+      rows[0].magic_token = newTok;
+    } catch (_) {}
+  }
 
   const dashboard = _buildPartnerDashboard(rows[0]);
   dashboard.auth_mode = 'session';
