@@ -30,7 +30,7 @@ SUPABASE_URL = "https://goaviqaevdkvptejrreo.supabase.co"
 # Clé publique "anon" — Supabase → Project Settings → API → Project API keys → "anon public".
 # C'est une clé PUBLIQUE (sans danger à committer) ET OBLIGATOIRE pour la connexion email/mot de passe.
 # ⚠️ Remplace la valeur ci-dessous par ta vraie clé anon, sinon /login restera cassé.
-SUPABASE_ANON_KEY = "COLLE_ICI_TA_CLE_ANON_PUBLIQUE"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvYXZpcWFldmRrdnB0ZWpycmVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzgxMjMsImV4cCI6MjA5NDg1NDEyM30.I_KY72kLksYb4iRk9Y_Q3E_gcaK6xtm1zjb5qGaqpc4"
 
 # -----------------------------------------------------------------------------
 #  Cron — relances & rappels automatiques des invitations
