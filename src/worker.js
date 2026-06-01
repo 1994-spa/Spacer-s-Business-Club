@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.20-invitations
+ * Spacers Business Club — Worker V4.21-board
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -180,6 +180,10 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
       if (m) return await handlePartnerOffreCreate(m[1], body || {}, env);
 
+      // Partenaire — répondre à une publication du board (Sprint B.3)
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponse$/);
+      if (m) return await handlePartnerPublicationRespond(m[1], m[2], body || {}, env);
+
       // Public — soumission de candidature (Sprint C.1)
       m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})\/candidature$/);
       if (m) return await handlePublicCandidatureCreate(m[1], body || {}, env, ctx);
@@ -263,7 +267,7 @@ async function handleApi(request, env, path, ctx) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.20-invitations — Supabase + mails par blocs + invitations RSVP + cron',
+        version: 'V4.21-board — + board partenaires partagé + réponses publications',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -308,6 +312,13 @@ async function handleApi(request, env, path, ctx) {
     // Partner — ses publications & annonces emploi
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publications$/);
     if (m) return await handlePartnerPublicationsList(m[1], url.searchParams, env);
+
+    // Partner — board partagé (toutes les publications publiées) + réponses (Sprint B.3)
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/board$/);
+    if (m) return await handlePartnerBoard(m[1], url.searchParams, env);
+
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponses$/);
+    if (m) return await handlePartnerPublicationReponses(m[1], m[2], env);
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
     if (m) return await handlePartnerOffresList(m[1], env);
@@ -3994,4 +4005,88 @@ async function runInvitationRelances(env) {
       }
     } catch (e) { console.log('[Cron invitation]', inv.id, e.message); }
   }
+}
+
+// ============================================================================
+//  SPRINT B.3 — Board partagé entre partenaires + réponses aux publications
+// ============================================================================
+async function handlePartnerBoard(token, queryParams, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const typeFilter = queryParams.get('type');
+  const nowIso = new Date().toISOString();
+  let filters = ['statut=eq.publie'];
+  if (typeFilter && PUB_TYPES.includes(typeFilter)) filters.push(`type=eq.${typeFilter}`);
+  filters.push(`or=(date_expiration.is.null,date_expiration.gt.${nowIso})`);
+  filters.push('select=id,type,titre,description,categorie,data,date_publication,date_expiration,reponses_count,contrat_id,partenaire_id,created_at,partenaires(raison_sociale)');
+  filters.push('order=date_publication.desc.nullslast');
+  filters.push('limit=150');
+
+  const rows = await supabaseQuery('publications', filters.join('&'), env);
+
+  let mesReponses = new Set();
+  try {
+    const reps = await supabaseQuery('reponses_publications', `contrat_id=eq.${partner.contrat_id}&select=publication_id&limit=500`, env);
+    (reps || []).forEach(r => mesReponses.add(r.publication_id));
+  } catch (_) {}
+
+  const publications = (rows || []).map(p => ({
+    id: p.id, type: p.type, titre: p.titre, description: p.description || '',
+    categorie: p.categorie || '', data: p.data || {},
+    partenaire: (p.partenaires && p.partenaires.raison_sociale) || 'Partenaire',
+    date_publication: p.date_publication, reponses_count: p.reponses_count || 0,
+    is_mine: p.contrat_id === partner.contrat_id,
+    deja_repondu: mesReponses.has(p.id),
+  }));
+  return jsonResponseNoCache({ publications, meta: { generated_at: nowIso } });
+}
+
+async function handlePartnerPublicationRespond(token, pubId, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const message = String(body.message || '').trim();
+  if (!message) return jsonResponseNoCache({ error: 'Le message est obligatoire' }, 400);
+
+  const rows = await supabaseQuery('publications', `id=eq.${pubId}&select=id,statut,contrat_id,titre&limit=1`, env);
+  if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Publication introuvable' }, 404);
+  const pub = rows[0];
+  if (pub.statut !== 'publie') return jsonResponseNoCache({ error: 'Cette annonce n\'est plus disponible' }, 400);
+  if (pub.contrat_id === partner.contrat_id) return jsonResponseNoCache({ error: 'Vous ne pouvez pas répondre à votre propre annonce' }, 400);
+
+  const insertData = {
+    publication_id: pubId,
+    contrat_id: partner.contrat_id,
+    partenaire_id: partner.partenaire_id,
+    partenaire_nom: partner.raison_sociale || null,
+    contact_nom: String(body.contact_nom || partner.representant || '').trim() || null,
+    contact_email: String(body.contact_email || '').trim() || null,
+    message,
+  };
+  try {
+    await supabaseInsert_('reponses_publications', insertData, env);
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur enregistrement', detail: e.message }, 500);
+  }
+
+  try {
+    const all = await supabaseQuery('reponses_publications', `publication_id=eq.${pubId}&select=id`, env);
+    await supabasePatch_('publications', `id=eq.${pubId}`, { reponses_count: (all || []).length }, env);
+  } catch (_) {}
+
+  return jsonResponseNoCache({ ok: true, message: 'Votre réponse a été transmise au partenaire.' });
+}
+
+async function handlePartnerPublicationReponses(token, pubId, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+
+  const rows = await supabaseQuery('publications', `id=eq.${pubId}&select=id,contrat_id,titre,type&limit=1`, env);
+  if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Publication introuvable' }, 404);
+  const pub = rows[0];
+  if (pub.contrat_id !== partner.contrat_id) return jsonResponseNoCache({ error: 'Accès refusé' }, 403);
+
+  const reps = await supabaseQuery('reponses_publications', `publication_id=eq.${pubId}&select=partenaire_nom,contact_nom,contact_email,message,created_at&order=created_at.desc&limit=200`, env);
+  return jsonResponseNoCache({ publication: { id: pub.id, titre: pub.titre, type: pub.type }, reponses: reps || [] });
 }
