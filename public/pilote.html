@@ -744,7 +744,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <!-- ===== MODAL : Création / édition d'un mail (Sprint Mails) ===== -->
 <div id="modal-mail-form" class="modal-ov" hidden onclick="if(event.target.id==='modal-mail-form')closeMailFormModal()">
-  <div class="modal-card" id="modal-mail-form-card" style="max-width:880px;">
+  <div class="modal-card" id="modal-mail-form-card" style="max-width:1040px;">
     <div class="modal-head">
       <div class="row">
         <div>
@@ -755,21 +755,32 @@ textarea.input { resize: vertical; min-height: 80px; }
       </div>
     </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div><label class="input-lbl">Sujet du mail *</label><input id="mail-sujet" class="input" type="text" placeholder="Vos places pour les play-offs" oninput="updateMailPreview()"></div>
-        <div><label class="input-lbl">Pré-header</label><input id="mail-preheader" class="input" type="text" placeholder="Aperçu dans la boîte de réception" oninput="updateMailPreview()"></div>
+      <!-- Réglages -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div><label class="input-lbl">Sujet du mail *</label><input id="mail-sujet" class="input" type="text" placeholder="Vos places pour les play-offs"></div>
+        <div><label class="input-lbl">Pré-header</label><input id="mail-preheader" class="input" type="text" placeholder="Aperçu boîte de réception"></div>
+        <div><label class="input-lbl">Nom expéditeur</label><input id="mail-expediteur" class="input" type="text" placeholder="Le Spacer's Business Club"></div>
       </div>
-      <div style="margin-bottom:12px;"><label class="input-lbl">Nom de l'expéditeur</label><input id="mail-expediteur" class="input" type="text" placeholder="Le Spacer's Business Club" oninput="updateMailPreview()"></div>
-      <div style="margin-bottom:12px;"><label class="input-lbl">Titre (dans le mail)</label><input id="mail-titre" class="input" type="text" placeholder="Vos places sont disponibles" oninput="updateMailPreview()"></div>
-      <div style="margin-bottom:12px;"><label class="input-lbl">Message</label><textarea id="mail-corps" class="input" rows="6" placeholder="Votre texte… (les sauts de ligne sont conservés)" oninput="updateMailPreview()"></textarea></div>
-      <div style="margin-bottom:12px;"><label class="input-lbl">Image (URL, optionnel)</label><input id="mail-image" class="input" type="url" placeholder="https://…/visuel.jpg" oninput="updateMailPreview()"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div><label class="input-lbl">Bouton — libellé (optionnel)</label><input id="mail-btn-label" class="input" type="text" placeholder="Réserver mes places" oninput="updateMailPreview()"></div>
-        <div><label class="input-lbl">Bouton — lien</label><input id="mail-btn-url" class="input" type="url" placeholder="https://…" oninput="updateMailPreview()"></div>
+
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start;">
+        <!-- Palette de blocs -->
+        <div>
+          <div class="input-lbl" style="margin-bottom:8px;">Ajouter un bloc</div>
+          <div id="mail-palette" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <!-- Canevas -->
+        <div>
+          <div class="input-lbl" style="margin-bottom:8px;">Contenu du mail</div>
+          <div id="mail-editor" style="display:flex;flex-direction:column;gap:10px;min-height:120px;"></div>
+        </div>
       </div>
-      <div class="input-lbl" style="margin-top:6px;">Aperçu</div>
+
+      <div class="input-lbl" style="margin-top:18px;">Aperçu du rendu réel</div>
       <div id="mail-preview" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAF7F2;"></div>
       <div id="mail-form-status" style="font-size:12px;text-align:center;min-height:18px;margin:8px 0 0;"></div>
+
+      <!-- input fichier caché réutilisé pour tous les uploads d'image -->
+      <input type="file" id="mail-file-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;" onchange="mailHandleFileChosen(this)">
     </div>
     <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
       <button class="btn ghost" onclick="closeMailFormModal()">Annuler</button>
@@ -814,7 +825,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V7 — Spacer's Business Club  (+ module Mails)
+//  PILOTE ADMIN V8 — Spacer's Business Club  (+ Mails par blocs + upload images)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -2541,7 +2552,61 @@ function renderMailsList() {
   }).join('');
 }
 
-// ---- Création / édition ----
+// ---- Composeur par BLOCS ----
+let MAIL_BLOCKS = [];
+let MAIL_UPLOAD_TARGET = null; // { idx, field }
+
+const MAIL_BLOCK_DEFS = {
+  entete:               { label: 'En-tête Spacers', ico: '▦' },
+  titre:                { label: 'Titre', ico: 'H' },
+  paragraphe:           { label: 'Paragraphe', ico: '¶' },
+  image:                { label: 'Image', ico: '▣' },
+  bouton:               { label: 'Bouton', ico: '⬭' },
+  separateur:           { label: 'Séparateur', ico: '—' },
+  deux_colonnes_texte:  { label: '2 colonnes texte', ico: '▥' },
+  deux_colonnes_image:  { label: '2 colonnes image', ico: '▤' },
+  image_texte:          { label: 'Image + texte', ico: '◧' },
+  texte_image:          { label: 'Texte + image', ico: '◨' },
+  menu:                 { label: 'Menu de liens', ico: '≡' },
+  reseaux:              { label: 'Réseaux sociaux', ico: '✦' },
+  adresse:              { label: 'Adresse', ico: '⌂' },
+  pied:                 { label: 'Pied de page', ico: '▁' },
+  html:                 { label: 'HTML libre', ico: '⟨⟩' },
+};
+const MAIL_PALETTE_ORDER = ['entete','titre','paragraphe','image','bouton','separateur','deux_colonnes_texte','deux_colonnes_image','image_texte','texte_image','menu','reseaux','adresse','pied','html'];
+
+function mailUid() { return 'b' + Math.random().toString(36).slice(2, 9); }
+function mailNewBlock(type) {
+  const defaults = {
+    entete: { marque: "SPACER'S BUSINESS CLUB", sous_marque: 'Toulouse Volley · Saison 2026–2027', eyebrow: 'LE BUSINESS CLUB', titre: '', sous_titre: '' },
+    titre: { text: '', align: 'left' },
+    paragraphe: { text: '', align: 'left' },
+    image: { url: '', alt: '', link: '' },
+    bouton: { label: 'Réserver mes places', url: '', align: 'left' },
+    separateur: {},
+    deux_colonnes_texte: { gauche: '', droite: '' },
+    deux_colonnes_image: { img_gauche: '', img_droite: '', link_gauche: '', link_droite: '' },
+    image_texte: { url: '', text: '', link: '' },
+    texte_image: { text: '', url: '', link: '' },
+    menu: { items: [{ label: 'Accueil', url: 'https://spacerstoulouse.fr' }] },
+    reseaux: { instagram: '', linkedin: '', facebook: '', site: 'https://spacerstoulouse.fr' },
+    adresse: { text: "Spacer's Toulouse Volley · Palais des Sports André Brouat" },
+    pied: { ligne1: "Spacer's Toulouse Volley · Palais des Sports André Brouat", site: 'spacerstoulouse.fr', site_url: 'https://spacerstoulouse.fr', email: 'marketing@spacerstoulouse.fr' },
+    html: { code: '' },
+  };
+  return Object.assign({ _id: mailUid(), type }, defaults[type] || {});
+}
+function mailDefaultBlocks() { return [ mailNewBlock('entete'), mailNewBlock('paragraphe'), mailNewBlock('pied') ]; }
+function mailBlocksFromLegacy(mail) {
+  const arr = [];
+  const ent = mailNewBlock('entete'); ent.titre = mail.titre || ''; arr.push(ent);
+  if (mail.image_url) { const im = mailNewBlock('image'); im.url = mail.image_url; arr.push(im); }
+  if (mail.corps) { const p = mailNewBlock('paragraphe'); p.text = mail.corps; arr.push(p); }
+  if (mail.bouton_label && mail.bouton_url) { const b = mailNewBlock('bouton'); b.label = mail.bouton_label; b.url = mail.bouton_url; arr.push(b); }
+  arr.push(mailNewBlock('pied'));
+  return arr;
+}
+
 function openMailFormModal(mail=null) {
   CURRENT_MAIL_EDIT = mail;
   $('mail-form-eyebrow').textContent = mail ? 'Modifier le mail' : 'Nouveau mail';
@@ -2549,76 +2614,240 @@ function openMailFormModal(mail=null) {
   $('mail-sujet').value = mail?.sujet || '';
   $('mail-preheader').value = mail?.pre_header || '';
   $('mail-expediteur').value = mail?.expediteur_nom || "Le Spacer's Business Club";
-  $('mail-titre').value = mail?.titre || '';
-  $('mail-corps').value = mail?.corps || '';
-  $('mail-image').value = mail?.image_url || '';
-  $('mail-btn-label').value = mail?.bouton_label || '';
-  $('mail-btn-url').value = mail?.bouton_url || '';
+
+  let blocks = mail?.blocks;
+  if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = null; } }
+  if (Array.isArray(blocks) && blocks.length) {
+    MAIL_BLOCKS = blocks.map(b => Object.assign({ _id: mailUid() }, b));
+  } else if (mail && (mail.corps || mail.titre || mail.image_url)) {
+    MAIL_BLOCKS = mailBlocksFromLegacy(mail);
+  } else {
+    MAIL_BLOCKS = mailDefaultBlocks();
+  }
+
   $('mail-form-status').textContent = '';
   $('mail-form-submit').textContent = mail ? 'Enregistrer' : 'Enregistrer le brouillon';
   $('mail-form-submit').disabled = false;
+  ['mail-sujet','mail-preheader','mail-expediteur'].forEach(id => { $(id).oninput = updateMailPreview; });
+  renderMailPalette();
+  renderMailEditor();
   updateMailPreview();
   $('modal-mail-form').hidden = false;
 }
-function closeMailFormModal() { $('modal-mail-form').hidden = true; CURRENT_MAIL_EDIT = null; }
+function closeMailFormModal() { $('modal-mail-form').hidden = true; CURRENT_MAIL_EDIT = null; MAIL_BLOCKS = []; MAIL_UPLOAD_TARGET = null; }
 
-function updateMailPreview() {
-  const titre = $('mail-titre').value.trim();
-  const corps = $('mail-corps').value;
-  const img = $('mail-image').value.trim();
-  const btnLabel = $('mail-btn-label').value.trim();
-  const btnUrl = $('mail-btn-url').value.trim();
-  const preheader = $('mail-preheader').value.trim();
-  const exp = $('mail-expediteur').value.trim() || "Le Spacer's Business Club";
-  const corpsHtml = escapeHtml(corps).replace(/\n/g, '<br>');
-  $('mail-preview').innerHTML = `
-    <div style="background:#0A1628;padding:18px 22px;text-align:center;">
-      <div style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;background:#C8932B;color:#0A1628;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">S</div>
-      <div style="color:rgba(255,255,255,.55);font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-top:8px;">Le Business Club</div>
-    </div>
-    <div style="padding:24px 22px;">
-      ${preheader ? `<div style="font-size:11px;color:#8A8478;margin-bottom:12px;font-style:italic;">${escapeHtml(preheader)}</div>` : ''}
-      ${img ? `<img src="${escapeHtml(img)}" style="width:100%;border-radius:10px;margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
-      ${titre ? `<div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:#0A1628;margin-bottom:12px;letter-spacing:-.01em;">${escapeHtml(titre)}</div>` : ''}
-      <div style="font-size:14px;color:#11203a;line-height:1.7;">${corpsHtml || '<span style="color:#B8B2A4;font-style:italic;">Votre message apparaîtra ici…</span>'}</div>
-      ${btnLabel ? `<div style="margin-top:20px;"><span style="display:inline-block;background:#C8932B;color:#fff;font-weight:700;font-size:13px;padding:11px 22px;border-radius:999px;text-decoration:none;">${escapeHtml(btnLabel)}</span>${btnUrl ? '' : '<div style="font-size:10px;color:#B23A48;margin-top:4px;">⚠ Ajoute le lien du bouton</div>'}</div>` : ''}
-    </div>
-    <div style="padding:14px 22px;background:#F1ECE2;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;">
-      Envoyé par ${escapeHtml(exp)} · Spacer's Toulouse Volley<br>
-      <span style="text-decoration:underline;">Se désinscrire</span>
+function renderMailPalette() {
+  $('mail-palette').innerHTML = MAIL_PALETTE_ORDER.map(t => {
+    const d = MAIL_BLOCK_DEFS[t];
+    return `<button class="btn ghost" style="justify-content:flex-start;border:1px solid var(--line);background:#fff;font-size:12px;padding:7px 10px;" onclick="mailAddBlock('${t}')"><span style="display:inline-block;width:20px;text-align:center;color:var(--gold);font-weight:700;">${d.ico}</span>&nbsp;${d.label}</button>`;
+  }).join('');
+}
+function mailAddBlock(type) {
+  MAIL_BLOCKS.push(mailNewBlock(type));
+  renderMailEditor(); updateMailPreview();
+  const ed = $('mail-editor'); if (ed) ed.scrollTop = ed.scrollHeight;
+}
+function mailMoveBlock(idx, dir) {
+  const j = idx + dir;
+  if (j < 0 || j >= MAIL_BLOCKS.length) return;
+  const tmp = MAIL_BLOCKS[idx]; MAIL_BLOCKS[idx] = MAIL_BLOCKS[j]; MAIL_BLOCKS[j] = tmp;
+  renderMailEditor(); updateMailPreview();
+}
+function mailDeleteBlock(idx) { MAIL_BLOCKS.splice(idx, 1); renderMailEditor(); updateMailPreview(); }
+function mailBlockSet(idx, field, value) { if (MAIL_BLOCKS[idx]) { MAIL_BLOCKS[idx][field] = value; updateMailPreview(); } }
+function mailMenuSet(idx, value) {
+  const items = String(value).split('\n').map(l => {
+    const parts = l.split('|'); const label = (parts[0]||'').trim(); const url = (parts[1]||'').trim();
+    return label ? { label, url } : null;
+  }).filter(Boolean);
+  if (MAIL_BLOCKS[idx]) { MAIL_BLOCKS[idx].items = items; updateMailPreview(); }
+}
+
+// -- champs d'édition --
+function _fIn(idx, field, val, ph, type) {
+  return `<input class="input" type="${type||'text'}" placeholder="${escapeHtml(ph||'')}" value="${escapeHtml(val||'')}" oninput="mailBlockSet(${idx},'${field}',this.value)">`;
+}
+function _fTa(idx, field, val, ph, rows) {
+  return `<textarea class="input" rows="${rows||3}" placeholder="${escapeHtml(ph||'')}" oninput="mailBlockSet(${idx},'${field}',this.value)">${escapeHtml(val||'')}</textarea>`;
+}
+function _fAlign(idx, val) {
+  const o = (v,l) => `<option value="${v}" ${val===v?'selected':''}>${l}</option>`;
+  return `<select class="input" style="max-width:150px;" onchange="mailBlockSet(${idx},'align',this.value)">${o('left','⬅ Gauche')}${o('center','⬌ Centre')}${o('right','➡ Droite')}</select>`;
+}
+function _fImage(idx, field, val) {
+  return `<div style="display:flex;gap:6px;align-items:center;">
+    <input class="input" type="url" placeholder="https://… ou téléverse →" value="${escapeHtml(val||'')}" oninput="mailBlockSet(${idx},'${field}',this.value)" style="flex:1;">
+    <button class="btn sm" type="button" onclick="mailPickImage(${idx},'${field}')">⬆ Téléverser</button>
+  </div>${val ? `<img src="${escapeHtml(val)}" style="max-height:64px;margin-top:6px;border-radius:6px;border:1px solid var(--line);" onerror="this.style.display='none'">` : ''}`;
+}
+function mailBlockFields(b, idx) {
+  const L = (t) => `<label class="input-lbl" style="margin-top:8px;">${t}</label>`;
+  const L0 = (t) => `<label class="input-lbl">${t}</label>`;
+  switch (b.type) {
+    case 'entete':
+      return `${L0('Marque')}${_fIn(idx,'marque',b.marque,"SPACER'S BUSINESS CLUB")}
+        ${L('Sous-marque')}${_fIn(idx,'sous_marque',b.sous_marque,'Toulouse Volley · Saison…')}
+        ${L('Eyebrow (petit titre or)')}${_fIn(idx,'eyebrow',b.eyebrow,'LE BUSINESS CLUB')}
+        ${L('Grand titre')}${_fIn(idx,'titre',b.titre,'Vos places sont disponibles')}
+        ${L('Sous-titre')}${_fIn(idx,'sous_titre',b.sous_titre,'')}`;
+    case 'titre':
+      return `${_fIn(idx,'text',b.text,'Votre titre')}<div style="margin-top:8px;">${_fAlign(idx,b.align)}</div>`;
+    case 'paragraphe':
+      return `${_fTa(idx,'text',b.text,'Votre texte… (sauts de ligne conservés)',4)}<div style="margin-top:8px;">${_fAlign(idx,b.align)}</div>`;
+    case 'image':
+      return `${L0('Image')}${_fImage(idx,'url',b.url)}${L('Texte alternatif')}${_fIn(idx,'alt',b.alt,'description')}${L('Lien au clic (optionnel)')}${_fIn(idx,'link',b.link,'https://…','url')}`;
+    case 'bouton':
+      return `${L0('Libellé')}${_fIn(idx,'label',b.label,'Réserver mes places')}${L('Lien')}${_fIn(idx,'url',b.url,'https://…','url')}<div style="margin-top:8px;">${_fAlign(idx,b.align)}</div>`;
+    case 'separateur':
+      return `<div style="font-size:12px;color:var(--ink-muted);font-style:italic;">Ligne de séparation horizontale.</div>`;
+    case 'deux_colonnes_texte':
+      return `${L0('Colonne gauche')}${_fTa(idx,'gauche',b.gauche,'',3)}${L('Colonne droite')}${_fTa(idx,'droite',b.droite,'',3)}`;
+    case 'deux_colonnes_image':
+      return `${L0('Image gauche')}${_fImage(idx,'img_gauche',b.img_gauche)}${L('Lien gauche')}${_fIn(idx,'link_gauche',b.link_gauche,'https://…','url')}${L('Image droite')}${_fImage(idx,'img_droite',b.img_droite)}${L('Lien droite')}${_fIn(idx,'link_droite',b.link_droite,'https://…','url')}`;
+    case 'image_texte':
+      return `${L0('Image (gauche)')}${_fImage(idx,'url',b.url)}${L('Texte (droite)')}${_fTa(idx,'text',b.text,'',3)}${L('Lien image')}${_fIn(idx,'link',b.link,'https://…','url')}`;
+    case 'texte_image':
+      return `${L0('Texte (gauche)')}${_fTa(idx,'text',b.text,'',3)}${L('Image (droite)')}${_fImage(idx,'url',b.url)}${L('Lien image')}${_fIn(idx,'link',b.link,'https://…','url')}`;
+    case 'menu': {
+      const txt = (b.items||[]).map(i => `${i.label||''} | ${i.url||''}`).join('\n');
+      return `${L0('Liens (un par ligne : Libellé | https://url)')}<textarea class="input" rows="3" placeholder="Accueil | https://spacerstoulouse.fr" oninput="mailMenuSet(${idx},this.value)">${escapeHtml(txt)}</textarea>`;
+    }
+    case 'reseaux':
+      return `${L0('Instagram (URL)')}${_fIn(idx,'instagram',b.instagram,'https://instagram.com/…','url')}${L('LinkedIn (URL)')}${_fIn(idx,'linkedin',b.linkedin,'https://linkedin.com/…','url')}${L('Facebook (URL)')}${_fIn(idx,'facebook',b.facebook,'https://facebook.com/…','url')}${L('Site web (URL)')}${_fIn(idx,'site',b.site,'https://…','url')}`;
+    case 'adresse':
+      return _fTa(idx,'text',b.text,"Spacer's Toulouse Volley · Palais des Sports André Brouat",2);
+    case 'pied':
+      return `${L0('Ligne 1')}${_fIn(idx,'ligne1',b.ligne1,"Spacer's Toulouse Volley · …")}${L('Texte du lien site')}${_fIn(idx,'site',b.site,'spacerstoulouse.fr')}${L('URL du site')}${_fIn(idx,'site_url',b.site_url,'https://spacerstoulouse.fr','url')}${L('Email contact')}${_fIn(idx,'email',b.email,'marketing@spacerstoulouse.fr')}`;
+    case 'html':
+      return `${L0('Code HTML')}${_fTa(idx,'code',b.code,'<table>…</table>',4)}`;
+    default: return '';
+  }
+}
+function renderMailEditor() {
+  const ed = $('mail-editor');
+  if (!MAIL_BLOCKS.length) {
+    ed.innerHTML = `<div style="border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--ink-muted);font-size:13px;">Ajoute un bloc depuis la palette ←</div>`;
+    return;
+  }
+  ed.innerHTML = MAIL_BLOCKS.map((b, idx) => {
+    const d = MAIL_BLOCK_DEFS[b.type] || { label: b.type, ico: '•' };
+    return `<div style="border:1px solid var(--line);border-radius:10px;background:#fff;">
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg-soft);border-radius:10px 10px 0 0;border-bottom:1px solid var(--line);">
+        <span style="color:var(--gold);font-weight:700;width:22px;text-align:center;">${d.ico}</span>
+        <b style="font-size:12px;flex:1;">${escapeHtml(d.label)}</b>
+        <button class="btn sm ghost" title="Monter" onclick="mailMoveBlock(${idx},-1)" ${idx===0?'disabled':''}>↑</button>
+        <button class="btn sm ghost" title="Descendre" onclick="mailMoveBlock(${idx},1)" ${idx===MAIL_BLOCKS.length-1?'disabled':''}>↓</button>
+        <button class="btn sm ghost" title="Supprimer" style="color:var(--red);" onclick="mailDeleteBlock(${idx})">🗑</button>
+      </div>
+      <div style="padding:12px;">${mailBlockFields(b, idx)}</div>
     </div>`;
+  }).join('');
+}
+
+// -- upload image (input fichier unique réutilisé) --
+function mailPickImage(idx, field) {
+  MAIL_UPLOAD_TARGET = { idx, field };
+  const fi = $('mail-file-input'); fi.value = ''; fi.click();
+}
+async function mailHandleFileChosen(input) {
+  const file = input.files && input.files[0];
+  if (!file || !MAIL_UPLOAD_TARGET) return;
+  const { idx, field } = MAIL_UPLOAD_TARGET;
+  if (file.size > 3 * 1024 * 1024) { showToast('Image trop lourde (max 3 Mo)', 'error'); MAIL_UPLOAD_TARGET = null; return; }
+  showToast('Upload de l\'image…', 'success');
+  try {
+    const fd = new FormData(); fd.append('file', file);
+    const res = await fetch(`/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/upload-image`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    if (MAIL_BLOCKS[idx]) MAIL_BLOCKS[idx][field] = data.url;
+    renderMailEditor(); updateMailPreview();
+    showToast('✓ Image ajoutée', 'success');
+  } catch (e) { showToast('Erreur upload : ' + e.message, 'error'); }
+  MAIL_UPLOAD_TARGET = null;
+}
+
+// -- aperçu (miroir du rendu worker) --
+function _pNl2br(s) { return escapeHtml(s || '').replace(/\n/g, '<br>'); }
+function _pAlign(a) { return (a === 'center' || a === 'right') ? a : 'left'; }
+function mailPreviewBlockHtml(b) {
+  if (!b || !b.type) return '';
+  const SIDE = 'padding:6px 30px;';
+  const wrap = (inner, pad) => `<div style="${pad}">${inner}</div>`;
+  const imgOr = (u, h) => u ? `<img src="${escapeHtml(u)}" style="width:100%;border-radius:6px;display:block;" onerror="this.style.display='none'">` : `<div style="background:#EFE9DC;border-radius:6px;height:${h||70}px;"></div>`;
+  switch (b.type) {
+    case 'entete': {
+      const eyebrow = b.eyebrow ? `<div style="color:#C8932B;font-size:10px;font-weight:700;letter-spacing:2px;margin-bottom:8px;">${escapeHtml(b.eyebrow)}</div>` : '';
+      const titre = b.titre ? `<div style="color:#fff;font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:500;line-height:1.15;">${escapeHtml(b.titre)}</div>` : '';
+      const sous = b.sous_titre ? `<div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:6px;">${escapeHtml(b.sous_titre)}</div>` : '';
+      const bloc = (eyebrow || titre || sous) ? `<div style="margin-top:20px;">${eyebrow}${titre}${sous}</div>` : '';
+      return `<div style="background:linear-gradient(135deg,#11203a,#0A1628);padding:26px 30px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:10px;background:#C8932B;color:#0A1628;display:grid;place-items:center;font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:22px;">S</div>
+          <div><div style="color:#E8C977;font-size:10px;font-weight:700;letter-spacing:2px;">${escapeHtml(b.marque || "SPACER'S BUSINESS CLUB")}</div><div style="color:rgba(255,255,255,.55);font-size:11px;margin-top:4px;">${escapeHtml(b.sous_marque || 'Toulouse Volley · Saison 2026–2027')}</div></div>
+        </div>${bloc}
+      </div>`;
+    }
+    case 'titre': return wrap(`<div style="font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:500;color:#0A1628;line-height:1.25;text-align:${_pAlign(b.align)};">${escapeHtml(b.text || '') || '<span style="color:#B8B2A4;font-style:italic;">Titre…</span>'}</div>`, SIDE);
+    case 'paragraphe': return wrap(`<div style="font-size:14px;color:#4A5568;line-height:1.7;text-align:${_pAlign(b.align)};">${_pNl2br(b.text) || '<span style="color:#B8B2A4;font-style:italic;">Texte…</span>'}</div>`, SIDE);
+    case 'image': return wrap(b.url ? `<img src="${escapeHtml(b.url)}" style="width:100%;border-radius:8px;display:block;" onerror="this.style.display='none'">` : '<div style="background:#EFE9DC;border-radius:8px;height:90px;display:grid;place-items:center;color:#B8B2A4;font-size:12px;">Image</div>', 'padding:8px 30px;');
+    case 'bouton': { if (!b.label) return ''; return wrap(`<span style="display:inline-block;background:#C8932B;color:#0A1628;font-weight:700;font-size:14px;padding:12px 26px;border-radius:999px;">${escapeHtml(b.label)}</span>`, `padding:10px 30px;text-align:${_pAlign(b.align)};`); }
+    case 'separateur': return wrap('<div style="border-top:1px solid #E5DED1;"></div>', 'padding:12px 30px;');
+    case 'deux_colonnes_texte': return wrap(`<div style="display:flex;gap:20px;"><div style="flex:1;font-size:14px;color:#4A5568;line-height:1.7;">${_pNl2br(b.gauche)}</div><div style="flex:1;font-size:14px;color:#4A5568;line-height:1.7;">${_pNl2br(b.droite)}</div></div>`, SIDE);
+    case 'deux_colonnes_image': return wrap(`<div style="display:flex;gap:16px;"><div style="flex:1;">${imgOr(b.img_gauche)}</div><div style="flex:1;">${imgOr(b.img_droite)}</div></div>`, 'padding:8px 30px;');
+    case 'image_texte': return wrap(`<div style="display:flex;gap:16px;align-items:flex-start;"><div style="width:40%;">${imgOr(b.url,80)}</div><div style="width:60%;font-size:14px;color:#4A5568;line-height:1.7;">${_pNl2br(b.text)}</div></div>`, SIDE);
+    case 'texte_image': return wrap(`<div style="display:flex;gap:16px;align-items:flex-start;"><div style="width:60%;font-size:14px;color:#4A5568;line-height:1.7;">${_pNl2br(b.text)}</div><div style="width:40%;">${imgOr(b.url,80)}</div></div>`, SIDE);
+    case 'menu': { const items = (b.items || []).filter(i => i && i.label); if (!items.length) return ''; return wrap(`<div style="text-align:center;">${items.map(i => `<span style="color:#0A1628;font-size:13px;font-weight:600;padding:0 10px;">${escapeHtml(i.label)}</span>`).join('<span style="color:#C8932B;">·</span>')}</div>`, 'padding:10px 30px;'); }
+    case 'reseaux': { const p = []; if (b.instagram) p.push('Instagram'); if (b.linkedin) p.push('LinkedIn'); if (b.facebook) p.push('Facebook'); if (b.site) p.push('Site web'); if (!p.length) return ''; return wrap(`<div style="text-align:center;">${p.map(x => `<span style="color:#C8932B;font-size:12px;font-weight:600;padding:0 8px;">${x}</span>`).join('<span style="color:#E5DED1;">|</span>')}</div>`, 'padding:10px 30px;'); }
+    case 'adresse': return wrap(`<div style="text-align:center;font-size:11px;color:#8A8478;line-height:1.6;">${_pNl2br(b.text)}</div>`, 'padding:10px 30px;');
+    case 'pied': { const site = b.site ? `<span style="color:#C8932B;">${escapeHtml(b.site)}</span>` : ''; const email = b.email ? `<span style="color:#C8932B;">${escapeHtml(b.email)}</span>` : ''; const sep = (site && email) ? ' · ' : ''; return `<div style="background:#F1ECE2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">${escapeHtml(b.ligne1 || "Spacer's Toulouse Volley · Palais des Sports André Brouat")}<br>${site}${sep}${email}</div>`; }
+    case 'html': return wrap(b.code || '', 'padding:6px 30px;');
+    default: return '';
+  }
+}
+function renderMailPreviewFromBlocks(blocks, preheader) {
+  const inner = (blocks || []).map(mailPreviewBlockHtml).join('');
+  return `<div style="background:#fff;">
+    ${preheader ? `<div style="font-size:11px;color:#8A8478;font-style:italic;padding:10px 30px 0;">${escapeHtml(preheader)}</div>` : ''}
+    ${inner || '<div style="padding:40px;text-align:center;color:#B8B2A4;font-size:13px;">Aucun bloc — ajoute du contenu</div>'}
+    <div style="background:#FAF7F2;padding:14px 30px;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">Vous recevez cet email en tant que partenaire du Spacer's Business Club. <span style="text-decoration:underline;">Se désinscrire</span>.</div>
+  </div>`;
+}
+function updateMailPreview() {
+  const preheader = $('mail-preheader') ? $('mail-preheader').value.trim() : '';
+  $('mail-preview').innerHTML = renderMailPreviewFromBlocks(MAIL_BLOCKS, preheader);
 }
 
 async function submitMail() {
   const sujet = $('mail-sujet').value.trim();
   const status = $('mail-form-status');
   if (!sujet) { status.textContent = '⚠ Le sujet est obligatoire'; status.style.color = '#993556'; return; }
+  if (!MAIL_BLOCKS.length) { status.textContent = '⚠ Ajoute au moins un bloc'; status.style.color = '#993556'; return; }
+  const blocks = MAIL_BLOCKS.map(b => { const c = Object.assign({}, b); delete c._id; return c; });
+  const editId = CURRENT_MAIL_EDIT ? CURRENT_MAIL_EDIT.id : null;
   const payload = {
     sujet,
     pre_header: $('mail-preheader').value.trim() || null,
     expediteur_nom: $('mail-expediteur').value.trim() || "Le Spacer's Business Club",
-    titre: $('mail-titre').value.trim() || null,
-    corps: $('mail-corps').value || null,
-    image_url: $('mail-image').value.trim() || null,
-    bouton_label: $('mail-btn-label').value.trim() || null,
-    bouton_url: $('mail-btn-url').value.trim() || null,
+    blocks,
   };
   const btn = $('mail-form-submit');
   btn.disabled = true; btn.textContent = '⏳…';
   try {
-    let url;
-    if (CURRENT_MAIL_EDIT) url = `/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(CURRENT_MAIL_EDIT.id)}/update`;
-    else url = `/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/create`;
+    const url = editId
+      ? `/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(editId)}/update`
+      : `/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/create`;
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast(CURRENT_MAIL_EDIT ? '✓ Brouillon mis à jour' : '✓ Brouillon créé', 'success');
+    showToast(editId ? '✓ Brouillon mis à jour' : '✓ Brouillon créé', 'success');
     closeMailFormModal();
     await loadMails();
-    if (data.mail && data.mail.id) openMailDetail(data.mail.id);
+    const openId = (data.mail && data.mail.id) ? data.mail.id : editId;
+    if (openId) openMailDetail(openId);
   } catch (e) {
     status.textContent = '❌ ' + e.message; status.style.color = '#993556';
-    btn.disabled = false; btn.textContent = CURRENT_MAIL_EDIT ? 'Enregistrer' : 'Enregistrer le brouillon';
+    btn.disabled = false; btn.textContent = editId ? 'Enregistrer' : 'Enregistrer le brouillon';
   }
 }
 
@@ -2642,7 +2871,6 @@ function renderMailDetail(m, destinatairesCount) {
   const card = $('modal-mail-card');
   const tone = MAIL_STATUT_TONE[m.statut] || '';
   const label = MAIL_STATUT_LABEL[m.statut] || m.statut;
-  const corpsHtml = escapeHtml(m.corps || '').replace(/\n/g, '<br>');
   const nbDest = (destinatairesCount !== undefined && destinatairesCount !== null) ? destinatairesCount : (m.nb_destinataires || null);
 
   let banner = '';
@@ -2650,21 +2878,27 @@ function renderMailDetail(m, destinatairesCount) {
   else if (m.statut === 'valide') banner = `<div class="banner success"><b>Validé.</b>&nbsp;Prêt à être envoyé${nbDest !== null ? ' à ' + nbDest + ' partenaire' + (nbDest>1?'s':'') : ''}. L'envoi est définitif.</div>`;
   else if (m.statut === 'envoye') banner = `<div class="banner info"><b>Envoyé${m.envoye_le ? ' le ' + formatDate(m.envoye_le) : ''}</b>${m.nb_destinataires ? ' à ' + m.nb_destinataires + ' destinataire' + (m.nb_destinataires>1?'s':'') : ''}.</div>`;
 
-  const preview = `
-    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAF7F2;">
-      <div style="background:#0A1628;padding:18px 22px;text-align:center;">
-        <div style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;background:#C8932B;color:#0A1628;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">S</div>
-        <div style="color:rgba(255,255,255,.55);font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-top:8px;">Le Business Club</div>
-      </div>
-      <div style="padding:24px 22px;">
-        ${m.pre_header ? `<div style="font-size:11px;color:#8A8478;margin-bottom:12px;font-style:italic;">${escapeHtml(m.pre_header)}</div>` : ''}
-        ${m.image_url ? `<img src="${escapeHtml(m.image_url)}" style="width:100%;border-radius:10px;margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
-        ${m.titre ? `<div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:#0A1628;margin-bottom:12px;">${escapeHtml(m.titre)}</div>` : ''}
-        <div style="font-size:14px;color:#11203a;line-height:1.7;">${corpsHtml || '<span style="color:#B8B2A4;font-style:italic;">(pas de message)</span>'}</div>
-        ${m.bouton_label ? `<div style="margin-top:20px;"><span style="display:inline-block;background:#C8932B;color:#fff;font-weight:700;font-size:13px;padding:11px 22px;border-radius:999px;">${escapeHtml(m.bouton_label)}</span></div>` : ''}
-      </div>
-      <div style="padding:14px 22px;background:#F1ECE2;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;">Envoyé par ${escapeHtml(m.expediteur_nom || "Le Spacer's Business Club")} · Spacer's Toulouse Volley<br><span style="text-decoration:underline;">Se désinscrire</span></div>
-    </div>`;
+  // Aperçu : blocs si présents, sinon repli sur l'ancien format simple
+  let blocks = m.blocks;
+  if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = null; } }
+  let previewInner;
+  if (Array.isArray(blocks) && blocks.length) {
+    previewInner = renderMailPreviewFromBlocks(blocks, m.pre_header || '');
+  } else {
+    const corpsHtml = escapeHtml(m.corps || '').replace(/\n/g, '<br>');
+    previewInner = `<div style="background:#fff;">
+        <div style="background:linear-gradient(135deg,#11203a,#0A1628);padding:22px 30px;"><div style="display:flex;align-items:center;gap:12px;"><div style="width:38px;height:38px;border-radius:9px;background:#C8932B;color:#0A1628;display:grid;place-items:center;font-family:'Fraunces',serif;font-weight:700;font-size:18px;">S</div><div style="color:#E8C977;font-size:10px;font-weight:700;letter-spacing:2px;">SPACER'S BUSINESS CLUB</div></div></div>
+        <div style="padding:24px 30px;">
+          ${m.pre_header ? `<div style="font-size:11px;color:#8A8478;margin-bottom:12px;font-style:italic;">${escapeHtml(m.pre_header)}</div>` : ''}
+          ${m.image_url ? `<img src="${escapeHtml(m.image_url)}" style="width:100%;border-radius:10px;margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
+          ${m.titre ? `<div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:#0A1628;margin-bottom:12px;">${escapeHtml(m.titre)}</div>` : ''}
+          <div style="font-size:14px;color:#11203a;line-height:1.7;">${corpsHtml || '<span style="color:#B8B2A4;font-style:italic;">(pas de message)</span>'}</div>
+          ${m.bouton_label ? `<div style="margin-top:20px;"><span style="display:inline-block;background:#C8932B;color:#fff;font-weight:700;font-size:13px;padding:11px 22px;border-radius:999px;">${escapeHtml(m.bouton_label)}</span></div>` : ''}
+        </div>
+        <div style="padding:14px 30px;background:#FAF7F2;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">Vous recevez cet email en tant que partenaire du Spacer's Business Club. <span style="text-decoration:underline;">Se désinscrire</span>.</div>
+      </div>`;
+  }
+  const preview = `<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;">${previewInner}</div>`;
 
   const actions = [`<button class="btn ghost" onclick="closeMailDetailModal()">Fermer</button>`];
   if (m.statut === 'brouillon') {
