@@ -879,6 +879,9 @@ let SESSION_ACCESS_TOKEN = null; // Bearer pour les calls /api/*
       showError(data.error || `Erreur ${r.status}`, data.detail || `Mode : ${AUTH_MODE}`);
       return;
     }
+    // En mode session, on récupère le magic_token du contrat renvoyé par le worker
+    // pour que toutes les actions partenaire (board, publications, réponses, RSVP) fonctionnent.
+    if (data.magic_token) MAGIC_TOKEN = data.magic_token;
     renderDashboard(data);
     if (AUTH_MODE === 'session') injectLogoutButton();
   } catch (e) {
