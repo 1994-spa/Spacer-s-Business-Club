@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.18-mails
+ * Spacers Business Club — Worker V4.19-mails-blocs
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -32,6 +32,9 @@ const MAIL_STATUTS = ['brouillon', 'valide', 'envoye'];
 const MAIL_SENDER_EMAIL = 'marketing@spacerstoulouse.fr'; // domaine vérifié Resend
 const UNSUB_SALT = 'spacers-bc-unsub-2026';
 const PUBLIC_BASE_URL = 'https://business.spacerstoulouse.fr';
+const MAIL_ASSETS_BUCKET = 'mail-assets'; // bucket Supabase Storage public (images des mails)
+const MAIL_IMG_MAX_BYTES = 3 * 1024 * 1024; // 3 Mo
+const MAIL_IMG_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
 
 // ⚠️ RECOLLE ICI ton base64 existant du template PDF "Minute de l'emploi".
 // Il n'était pas dans le fichier que tu m'as transmis. Laisse '' si tu ne l'as pas
@@ -98,6 +101,10 @@ async function handleApi(request, env, path, ctx) {
   try {
     // ===== POST : mutations admin =====
     if (method === 'POST') {
+      // Upload image (multipart/form-data) — traité AVANT le parse JSON
+      let mUp = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/upload-image$/);
+      if (mUp) return await handleAdminMailUploadImage(mUp[1], request, env);
+
       let body = null;
       try { body = await request.json(); } catch {}
 
@@ -220,7 +227,7 @@ async function handleApi(request, env, path, ctx) {
     if (path === '/api/ping') {
       return jsonResponse({
         status: 'ok',
-        version: 'V4.18-mails — Supabase + module mails',
+        version: 'V4.19-mails-blocs — Supabase + mails par blocs + upload images',
         backend: 'supabase',
         timestamp: new Date().toISOString(),
       });
@@ -359,6 +366,7 @@ async function handleApi(request, env, path, ctx) {
         'GET  /api/admin/mails/:token',
         'GET  /api/admin/mail/:token/:id',
         'POST /api/admin/mails/:token/create',
+        'POST /api/admin/mails/:token/upload-image',
         'POST /api/admin/mails/:token/:id/update',
         'POST /api/admin/mails/:token/:id/validate',
         'POST /api/admin/mails/:token/:id/test',
@@ -3105,6 +3113,7 @@ async function handleAdminMailCreate(token, body, env) {
     image_url: body.image_url || null,
     bouton_label: body.bouton_label || null,
     bouton_url: body.bouton_url || null,
+    blocks: Array.isArray(body.blocks) ? body.blocks : [],
     destinataires_type: 'partenaires',
     statut: 'brouillon',
     cree_par_admin_id: admin.id,
@@ -3131,6 +3140,7 @@ async function handleAdminMailUpdate(token, mailId, body, env) {
   const allowed = ['sujet','pre_header','expediteur_nom','titre','corps','image_url','bouton_label','bouton_url'];
   const patch = {};
   for (const k of allowed) if (body[k] !== undefined) patch[k] = body[k] || null;
+  if (body.blocks !== undefined) patch.blocks = Array.isArray(body.blocks) ? body.blocks : [];
   patch.statut = 'brouillon';
   patch.updated_at = new Date().toISOString();
 
@@ -3227,6 +3237,14 @@ async function handleAdminMailSend(token, mailId, env, ctx) {
 }
 
 function renderEmailMail(mail, recipient, unsubUrl) {
+  // Mode blocs (nouveau) : si le mail contient des blocs, on rend la version modulaire
+  let blocks = mail.blocks;
+  if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = []; } }
+  if (Array.isArray(blocks) && blocks.length > 0) {
+    return emailShellBlocks(mail, renderBlocksToHtml(blocks), unsubUrl);
+  }
+
+  // Mode simple (repli / ancien) — comportement historique inchangé
   const titre = mail.titre || mail.sujet || '';
   let body = '';
   if (mail.image_url) body += `<img src="${escEmail(mail.image_url)}" alt="" width="540" style="display:block;width:100%;max-width:540px;height:auto;border-radius:10px;margin:0 0 22px;" />`;
@@ -3242,6 +3260,202 @@ function renderEmailMail(mail, recipient, unsubUrl) {
       ${unsubUrl ? `<a href="${escEmail(unsubUrl)}" style="color:#8A8478;text-decoration:underline;">Se désinscrire</a>.` : ''}
     </div>`;
   return emailLayout('LE BUSINESS CLUB', titre, mail.pre_header || '', body);
+}
+
+// ============================================================================
+//  MAILS — moteur de rendu BLOCS -> HTML email-safe
+//  Chaque bloc se rend en <table width=100%> autonome (gère son propre padding).
+// ============================================================================
+function _mailAlign(a) { return (a === 'center' || a === 'right' || a === 'left') ? a : 'left'; }
+function _nl2br(s) { return escEmail(s).replace(/\r?\n/g, '<br/>'); }
+
+function renderBlockImageTag(url, alt, width) {
+  if (!url) return '';
+  return `<img src="${escEmail(url)}" alt="${escEmail(alt || '')}" width="${width}" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;border-radius:8px;" />`;
+}
+
+function renderOneBlock(b) {
+  if (!b || !b.type) return '';
+  const type = b.type;
+  const wrap = (inner, pad) => `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="${pad}">${inner}</td></tr></table>`;
+  const SIDE = 'padding:6px 30px;'; // padding latéral standard pour le contenu texte
+
+  switch (type) {
+    case 'entete': {
+      const marque = escEmail(b.marque || "SPACER'S BUSINESS CLUB");
+      const sousMarque = escEmail(b.sous_marque || 'Toulouse Volley · Saison 2026–2027');
+      const eyebrow = b.eyebrow ? `<div style="color:#C8932B;font-size:10px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;">${escEmail(b.eyebrow)}</div>` : '';
+      const titrePrincipal = b.titre ? `<div style="color:#FFFFFF;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:1.15;font-weight:500;">${escEmail(b.titre)}</div>` : '';
+      const sousTitre = b.sous_titre ? `<div style="color:rgba(255,255,255,0.55);font-size:13px;margin-top:6px;">${escEmail(b.sous_titre)}</div>` : '';
+      const bloc = (eyebrow || titrePrincipal || sousTitre) ? `<div style="margin-top:20px;">${eyebrow}${titrePrincipal}${sousTitre}</div>` : '';
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="background:#11203a;background-image:linear-gradient(135deg,#11203a 0%,#0A1628 100%);padding:26px 30px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td style="width:48px;vertical-align:top;"><div style="background:#C8932B;color:#0A1628;width:42px;height:42px;border-radius:10px;text-align:center;line-height:42px;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;">S</div></td>
+          <td style="padding-left:14px;vertical-align:middle;"><div style="color:#E8C977;font-size:10px;font-weight:bold;letter-spacing:2px;line-height:1;">${marque}</div><div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:4px;">${sousMarque}</div></td>
+        </tr></table>${bloc}
+      </td></tr></table>`;
+    }
+    case 'titre': {
+      const align = _mailAlign(b.align);
+      return wrap(`<div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.25;font-weight:500;color:#0A1628;text-align:${align};margin:6px 0;">${escEmail(b.text || '')}</div>`, SIDE);
+    }
+    case 'paragraphe': {
+      const align = _mailAlign(b.align);
+      return wrap(`<div style="font-size:14px;line-height:1.7;color:#4A5568;text-align:${align};">${_nl2br(b.text || '')}</div>`, SIDE);
+    }
+    case 'image': {
+      const img = renderBlockImageTag(b.url, b.alt, 540);
+      if (!img) return '';
+      const inner = b.link ? `<a href="${escEmail(b.link)}" target="_blank" style="text-decoration:none;">${img}</a>` : img;
+      return wrap(inner, 'padding:8px 30px;');
+    }
+    case 'bouton': {
+      if (!b.label || !b.url) return '';
+      const align = _mailAlign(b.align || 'left');
+      return wrap(`<table cellpadding="0" cellspacing="0" border="0" role="presentation" align="${align}" style="margin:${align === 'center' ? '0 auto' : '0'};"><tr>
+        <td style="background:#C8932B;border-radius:999px;"><a href="${escEmail(b.url)}" target="_blank" style="display:inline-block;padding:13px 28px;font-size:14px;font-weight:bold;color:#0A1628;text-decoration:none;">${escEmail(b.label)}</a></td>
+      </tr></table>`, `padding:10px 30px;text-align:${align};`);
+    }
+    case 'separateur':
+      return wrap(`<div style="border-top:1px solid #E5DED1;font-size:0;line-height:0;">&nbsp;</div>`, 'padding:12px 30px;');
+    case 'deux_colonnes_texte': {
+      return wrap(`<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr>
+        <td width="50%" valign="top" style="padding-right:10px;font-size:14px;line-height:1.7;color:#4A5568;">${_nl2br(b.gauche || '')}</td>
+        <td width="50%" valign="top" style="padding-left:10px;font-size:14px;line-height:1.7;color:#4A5568;">${_nl2br(b.droite || '')}</td>
+      </tr></table>`, SIDE);
+    }
+    case 'deux_colonnes_image': {
+      const g = renderBlockImageTag(b.img_gauche, b.alt_gauche, 260);
+      const d = renderBlockImageTag(b.img_droite, b.alt_droite, 260);
+      const cell = (img, link, padSide) => `<td width="50%" valign="top" style="${padSide}">${link && img ? `<a href="${escEmail(link)}" target="_blank">${img}</a>` : img}</td>`;
+      return wrap(`<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr>${cell(g, b.link_gauche, 'padding-right:8px;')}${cell(d, b.link_droite, 'padding-left:8px;')}</tr></table>`, 'padding:8px 30px;');
+    }
+    case 'image_texte': {
+      const img = renderBlockImageTag(b.url, b.alt, 220);
+      const imgCell = b.link && img ? `<a href="${escEmail(b.link)}" target="_blank">${img}</a>` : img;
+      return wrap(`<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr>
+        <td width="40%" valign="top" style="padding-right:14px;">${imgCell}</td>
+        <td width="60%" valign="top" style="font-size:14px;line-height:1.7;color:#4A5568;">${_nl2br(b.text || '')}</td>
+      </tr></table>`, SIDE);
+    }
+    case 'texte_image': {
+      const img = renderBlockImageTag(b.url, b.alt, 220);
+      const imgCell = b.link && img ? `<a href="${escEmail(b.link)}" target="_blank">${img}</a>` : img;
+      return wrap(`<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr>
+        <td width="60%" valign="top" style="font-size:14px;line-height:1.7;color:#4A5568;padding-right:14px;">${_nl2br(b.text || '')}</td>
+        <td width="40%" valign="top">${imgCell}</td>
+      </tr></table>`, SIDE);
+    }
+    case 'menu': {
+      const items = Array.isArray(b.items) ? b.items.filter(i => i && i.label) : [];
+      if (!items.length) return '';
+      const links = items.map(i => `<a href="${escEmail(i.url || '#')}" target="_blank" style="color:#0A1628;text-decoration:none;font-size:13px;font-weight:600;padding:0 10px;">${escEmail(i.label)}</a>`).join('<span style="color:#C8932B;">·</span>');
+      return wrap(`<div style="text-align:center;">${links}</div>`, 'padding:10px 30px;');
+    }
+    case 'reseaux': {
+      const parts = [];
+      if (b.instagram) parts.push(`<a href="${escEmail(b.instagram)}" target="_blank" style="color:#C8932B;text-decoration:none;font-size:12px;font-weight:600;padding:0 8px;">Instagram</a>`);
+      if (b.linkedin)  parts.push(`<a href="${escEmail(b.linkedin)}" target="_blank" style="color:#C8932B;text-decoration:none;font-size:12px;font-weight:600;padding:0 8px;">LinkedIn</a>`);
+      if (b.facebook)  parts.push(`<a href="${escEmail(b.facebook)}" target="_blank" style="color:#C8932B;text-decoration:none;font-size:12px;font-weight:600;padding:0 8px;">Facebook</a>`);
+      if (b.site)      parts.push(`<a href="${escEmail(b.site)}" target="_blank" style="color:#C8932B;text-decoration:none;font-size:12px;font-weight:600;padding:0 8px;">Site web</a>`);
+      if (!parts.length) return '';
+      return wrap(`<div style="text-align:center;">${parts.join('<span style="color:#E5DED1;">|</span>')}</div>`, 'padding:10px 30px;');
+    }
+    case 'adresse':
+      return wrap(`<div style="text-align:center;font-size:11px;color:#8A8478;line-height:1.6;">${_nl2br(b.text || "Spacer's Toulouse Volley · Palais des Sports André Brouat")}</div>`, 'padding:10px 30px;');
+    case 'pied': {
+      const ligne1 = escEmail(b.ligne1 || "Spacer's Toulouse Volley · Palais des Sports André Brouat");
+      const site = b.site ? `<a href="${escEmail(b.site_url || 'https://spacerstoulouse.fr')}" style="color:#C8932B;text-decoration:none;">${escEmail(b.site)}</a>` : '';
+      const email = b.email ? `<a href="mailto:${escEmail(b.email)}" style="color:#C8932B;text-decoration:none;">${escEmail(b.email)}</a>` : '';
+      const sep = (site && email) ? '&nbsp;·&nbsp;' : '';
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="background:#FAF7F2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;border-top:1px solid #E5DED1;">${ligne1}<br/>${site}${sep}${email}</td></tr></table>`;
+    }
+    case 'html':
+      // Bloc HTML libre (admin de confiance) — inséré tel quel
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="padding:6px 30px;">${b.code || ''}</td></tr></table>`;
+    default:
+      return '';
+  }
+}
+
+function renderBlocksToHtml(blocks) {
+  return (blocks || []).map(renderOneBlock).join('\n');
+}
+
+// Coquille email pour le mode blocs : carte 600px + ligne de désinscription RGPD forcée.
+function emailShellBlocks(mail, innerHtml, unsubUrl) {
+  const preheader = mail.pre_header
+    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escEmail(mail.pre_header)}</div>`
+    : '';
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escEmail(mail.sujet || '')}</title>
+</head>
+<body style="margin:0;padding:0;background:#FAF7F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#0A1628;">
+${preheader}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAF7F2;padding:30px 12px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#FFFFFF;border-radius:14px;border:1px solid #E5DED1;box-shadow:0 2px 10px rgba(10,22,40,0.06);overflow:hidden;">
+      <tr><td style="padding:0;">
+        ${innerHtml}
+      </td></tr>
+      <tr><td style="background:#FAF7F2;padding:14px 30px;text-align:center;font-size:11px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;border-radius:0 0 14px 14px;">
+        Vous recevez cet email en tant que partenaire du Spacer's Business Club.
+        ${unsubUrl ? `<a href="${escEmail(unsubUrl)}" style="color:#8A8478;text-decoration:underline;">Se désinscrire</a>.` : ''}
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+// ============================================================================
+//  MAILS — upload d'image vers Supabase Storage (bucket public mail-assets)
+// ============================================================================
+async function handleAdminMailUploadImage(token, request, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  let form;
+  try { form = await request.formData(); } catch (_) {
+    return jsonResponseNoCache({ error: 'Requête multipart invalide' }, 400);
+  }
+  const file = form.get('file');
+  if (!file || typeof file === 'string') return jsonResponseNoCache({ error: 'Aucun fichier reçu' }, 400);
+
+  const type = (file.type || '').toLowerCase();
+  if (!MAIL_IMG_TYPES.includes(type)) {
+    return jsonResponseNoCache({ error: 'Format non supporté (png, jpg, gif, webp uniquement)' }, 400);
+  }
+  const buf = await file.arrayBuffer();
+  if (buf.byteLength > MAIL_IMG_MAX_BYTES) {
+    return jsonResponseNoCache({ error: 'Image trop lourde (max 3 Mo)' }, 400);
+  }
+  const ext = type === 'image/png' ? 'png' : type === 'image/gif' ? 'gif' : type === 'image/webp' ? 'webp' : 'jpg';
+  const rand = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) || Math.random().toString(36).slice(2, 10);
+  const objectPath = `mails/${Date.now()}-${rand}.${ext}`;
+
+  const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${MAIL_ASSETS_BUCKET}/${objectPath}`, {
+    method: 'POST',
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': type,
+      'x-upsert': 'true',
+    },
+    body: buf,
+  });
+  if (!up.ok) {
+    const t = await up.text().catch(() => '');
+    return jsonResponseNoCache({ error: 'Upload Supabase Storage échoué', detail: t.slice(0, 300) }, 502);
+  }
+  const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${MAIL_ASSETS_BUCKET}/${objectPath}`;
+  logAudit_(admin.id, 'mail.upload_image', 'storage', null, { path: objectPath }, env);
+  return jsonResponseNoCache({ ok: true, url: publicUrl });
 }
 
 async function handleDesinscription(url, env) {
