@@ -70,7 +70,11 @@ let sb = null;
 
 async function init() {
   try {
-    const cfg = await (await fetch('/api/auth/config')).json();
+    const res = await fetch('/api/auth/config');
+    const cfg = await res.json();
+    if (!res.ok || cfg.error || !cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase) {
+      throw new Error(cfg.detail || cfg.error || 'Service de connexion indisponible.');
+    }
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
     // Si déjà connecté, redirection directe vers l'espace partenaire
@@ -78,6 +82,7 @@ async function init() {
     if (session) window.location.href = '/';
   } catch (e) {
     console.error('Init error:', e);
+    showError('Connexion momentanément indisponible. Réessaie dans un instant.');
   }
 }
 
@@ -98,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     errEl.style.display = 'none';
 
     if (!email || !password) return showError('Email et mot de passe requis.');
+    if (!sb) return showError('Service de connexion indisponible — réessaie dans un instant.');
 
     const btn = document.getElementById('submit-btn');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Connexion…';
