@@ -445,6 +445,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">✦</span><span class="label">Communications</span>
         <span class="badge" id="sb-badge-com-brouillon" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="mails" onclick="switchTab('mails')">
+        <span class="ico">✉</span><span class="label">Mails</span>
+        <span class="badge" id="sb-badge-mail-brouillon" hidden>0</span>
+      </button>
       <button class="sb-link soon" data-tab="tickie" onclick="switchTab('tickie')">
         <span class="ico">⌬</span><span class="label">Tickie</span>
       </button>
@@ -471,7 +475,6 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
         <button class="refresh-btn" onclick="loadDashboard(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
-
       <div id="dash-content">
         <div class="stats-grid">
           <div class="stat-card"><div class="label">Chargement…</div></div>
@@ -488,7 +491,6 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
         <button class="refresh-btn" onclick="loadOffres(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
-
       <div class="toolbar">
         <div class="segs" id="offres-segs">
           <button class="seg on" data-statut="all" onclick="setOffreFilter('all',this)">Tous <span class="count" id="cnt-all">·</span></button>
@@ -498,7 +500,6 @@ textarea.input { resize: vertical; min-height: 80px; }
           <button class="seg" data-statut="archive" onclick="setOffreFilter('archive',this)">Archivées <span class="count" id="cnt-archive">·</span></button>
         </div>
       </div>
-
       <div id="offres-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
@@ -513,7 +514,6 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
         <button class="refresh-btn" onclick="loadCandidatures(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
-
       <div class="toolbar">
         <div class="segs" id="cands-segs">
           <button class="seg on" data-statut="all" onclick="setCandidatureFilter('all',this)">Toutes <span class="count" id="cnt-cand-all">·</span></button>
@@ -524,13 +524,12 @@ textarea.input { resize: vertical; min-height: 80px; }
           <button class="seg danger" data-statut="refusee" onclick="setCandidatureFilter('refusee',this)">Refusées <span class="count" id="cnt-cand-refusee">·</span></button>
         </div>
       </div>
-
       <div id="cands-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
     </section>
 
-    <!-- ===== TAB : Partenaires (placeholder) ===== -->
+    <!-- ===== TAB : Partenaires ===== -->
     <section id="tab-partenaires" class="tab-section">
       <div class="page-head">
         <div>
@@ -539,17 +538,15 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
         <button class="refresh-btn" onclick="loadPartenaires(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
-
       <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
         <input type="text" id="part-search" placeholder="🔍 Rechercher une société…" class="input" oninput="filterPartenaires()" style="max-width:380px;">
       </div>
-
       <div id="partenaires-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
     </section>
 
-    <!-- ===== TAB : Publications (placeholder) ===== -->
+    <!-- ===== TAB : Publications ===== -->
     <section id="tab-publications" class="tab-section">
       <div class="page-head">
         <div>
@@ -558,7 +555,6 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
         <button class="refresh-btn" onclick="loadPublications(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
-
       <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
         <div class="segs" id="pubs-type-segs">
           <button class="seg on" data-type="all" onclick="setPubTypeFilter('all',this)">Tous types <span class="count" id="cnt-pub-all">·</span></button>
@@ -574,7 +570,6 @@ textarea.input { resize: vertical; min-height: 80px; }
           <button class="seg" data-statut="archive" onclick="setPubStatutFilter('archive',this)">Archivées</button>
         </div>
       </div>
-
       <div id="pubs-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
@@ -592,7 +587,6 @@ textarea.input { resize: vertical; min-height: 80px; }
           <button class="refresh-btn" onclick="loadCommunications(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
         </div>
       </div>
-
       <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
         <div class="segs" id="coms-type-segs">
           <button class="seg on" data-type="all" onclick="setComTypeFilter('all',this)">Tout <span class="count" id="cnt-com-all">·</span></button>
@@ -606,8 +600,32 @@ textarea.input { resize: vertical; min-height: 80px; }
           <button class="seg" data-statut="archive" onclick="setComStatutFilter('archive',this)">Archivées</button>
         </div>
       </div>
-
       <div id="coms-list" class="list">
+        <div class="list-empty">Chargement…</div>
+      </div>
+    </section>
+
+    <!-- ===== TAB : Mails (Sprint Mails) ===== -->
+    <section id="tab-mails" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">En<em>vois</em> mails</h1>
+          <p class="desc">Composer et envoyer un email à tous les partenaires</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn primary" onclick="openMailFormModal()"><span class="ico">+</span>&nbsp;Créer un mail</button>
+          <button class="refresh-btn" onclick="loadMails(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="segs" id="mails-segs">
+          <button class="seg on" data-statut="all" onclick="setMailFilter('all',this)">Tous <span class="count" id="cnt-mail-all">·</span></button>
+          <button class="seg warn" data-statut="brouillon" onclick="setMailFilter('brouillon',this)">Brouillons <span class="count" id="cnt-mail-brouillon">·</span></button>
+          <button class="seg success" data-statut="valide" onclick="setMailFilter('valide',this)">Validés <span class="count" id="cnt-mail-valide">·</span></button>
+          <button class="seg" data-statut="envoye" onclick="setMailFilter('envoye',this)">Envoyés <span class="count" id="cnt-mail-envoye">·</span></button>
+        </div>
+      </div>
+      <div id="mails-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
     </section>
@@ -632,26 +650,20 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <!-- ===== MODAL : Detail offre ===== -->
 <div id="modal-offre" class="modal-ov" hidden onclick="if(event.target.id==='modal-offre')closeOffreModal()">
-  <div class="modal-card" id="modal-offre-card">
-    <!-- injected -->
-  </div>
+  <div class="modal-card" id="modal-offre-card"></div>
 </div>
 
-<!-- ===== MODAL : Detail candidature (Sprint C.3) — placé AVANT modal-confirm pour z-stack correct ===== -->
+<!-- ===== MODAL : Detail candidature ===== -->
 <div id="modal-cand" class="modal-ov" hidden onclick="if(event.target.id==='modal-cand')closeCandidatureModal()">
-  <div class="modal-card" id="modal-cand-card">
-    <!-- injected by renderCandidatureModalContent() -->
-  </div>
+  <div class="modal-card" id="modal-cand-card"></div>
 </div>
 
-<!-- ===== MODAL : Detail publication (Sprint B.1) ===== -->
+<!-- ===== MODAL : Detail publication ===== -->
 <div id="modal-pub" class="modal-ov" hidden onclick="if(event.target.id==='modal-pub')closePublicationModal()">
-  <div class="modal-card" id="modal-pub-card">
-    <!-- injected by renderPublicationModalContent() -->
-  </div>
+  <div class="modal-card" id="modal-pub-card"></div>
 </div>
 
-<!-- ===== MODAL : Création communication (Sprint D.2) ===== -->
+<!-- ===== MODAL : Création communication ===== -->
 <div id="modal-com-create" class="modal-ov" hidden onclick="if(event.target.id==='modal-com-create')closeComCreateModal()">
   <div class="modal-card" id="modal-com-create-card">
     <div class="modal-head">
@@ -667,37 +679,20 @@ textarea.input { resize: vertical; min-height: 80px; }
           <button class="seg" data-ctype="annonce" onclick="setComCreateType('annonce',this)">◇ Annonce (info)</button>
         </div>
       </div>
-
       <label class="input-lbl" for="com-titre">Titre *</label>
       <input id="com-titre" class="input" type="text" placeholder="ex: Soirée VIP match Spacers vs Nantes" style="margin-bottom:12px;">
-
       <label class="input-lbl" for="com-message">Message</label>
       <textarea id="com-message" class="input" rows="4" placeholder="Le corps du message…" style="margin-bottom:12px;"></textarea>
-
-      <!-- Champs spécifiques invitation -->
       <div id="com-invit-fields">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div>
-            <label class="input-lbl" for="com-date">Date de l'événement</label>
-            <input id="com-date" class="input" type="text" placeholder="14/03/2026">
-          </div>
-          <div>
-            <label class="input-lbl" for="com-heure">Heure</label>
-            <input id="com-heure" class="input" type="text" placeholder="19h00">
-          </div>
+          <div><label class="input-lbl" for="com-date">Date de l'événement</label><input id="com-date" class="input" type="text" placeholder="14/03/2026"></div>
+          <div><label class="input-lbl" for="com-heure">Heure</label><input id="com-heure" class="input" type="text" placeholder="19h00"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div>
-            <label class="input-lbl" for="com-lieu">Lieu</label>
-            <input id="com-lieu" class="input" type="text" placeholder="Palais des Sports André Brouat">
-          </div>
-          <div>
-            <label class="input-lbl" for="com-deadline">Réponse souhaitée avant</label>
-            <input id="com-deadline" class="input" type="text" placeholder="10/03/2026">
-          </div>
+          <div><label class="input-lbl" for="com-lieu">Lieu</label><input id="com-lieu" class="input" type="text" placeholder="Palais des Sports André Brouat"></div>
+          <div><label class="input-lbl" for="com-deadline">Réponse souhaitée avant</label><input id="com-deadline" class="input" type="text" placeholder="10/03/2026"></div>
         </div>
       </div>
-
       <div id="com-create-status" style="font-size:12px;text-align:center;min-height:18px;margin:6px 0;"></div>
     </div>
     <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
@@ -707,17 +702,17 @@ textarea.input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
-<!-- ===== MODAL : Détail communication + RSVP (Sprint D.2) ===== -->
+<!-- ===== MODAL : Détail communication + RSVP ===== -->
 <div id="modal-com" class="modal-ov" hidden onclick="if(event.target.id==='modal-com')closeCommunicationModal()">
   <div class="modal-card" id="modal-com-card"></div>
 </div>
 
-<!-- ===== MODAL : Contacts d'une société (Sprint E.3) ===== -->
+<!-- ===== MODAL : Contacts d'une société ===== -->
 <div id="modal-partenaire" class="modal-ov" hidden onclick="if(event.target.id==='modal-partenaire')closePartenaireModal()">
   <div class="modal-card" id="modal-partenaire-card" style="max-width:720px;"></div>
 </div>
 
-<!-- ===== MODAL : Création / édition d'un contact (Sprint E.3) ===== -->
+<!-- ===== MODAL : Création / édition d'un contact ===== -->
 <div id="modal-contact-form" class="modal-ov" hidden onclick="if(event.target.id==='modal-contact-form')closeContactFormModal()">
   <div class="modal-card">
     <div class="modal-head">
@@ -729,30 +724,15 @@ textarea.input { resize: vertical; min-height: 80px; }
     </div>
     <div class="modal-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div>
-          <label class="input-lbl">Prénom</label>
-          <input id="ctc-prenom" class="input" type="text" placeholder="Thomas">
-        </div>
-        <div>
-          <label class="input-lbl">Nom *</label>
-          <input id="ctc-nom" class="input" type="text" placeholder="BOZEC">
-        </div>
+        <div><label class="input-lbl">Prénom</label><input id="ctc-prenom" class="input" type="text" placeholder="Thomas"></div>
+        <div><label class="input-lbl">Nom *</label><input id="ctc-nom" class="input" type="text" placeholder="BOZEC"></div>
       </div>
-
       <label class="input-lbl">Email *</label>
       <input id="ctc-email" class="input" type="email" placeholder="thomas.bozec@picoty.fr" style="margin-bottom:12px;">
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div>
-          <label class="input-lbl">Téléphone</label>
-          <input id="ctc-tel" class="input" type="tel" placeholder="06 12 34 56 78">
-        </div>
-        <div>
-          <label class="input-lbl">Fonction</label>
-          <input id="ctc-fonction" class="input" type="text" placeholder="Directeur commercial">
-        </div>
+        <div><label class="input-lbl">Téléphone</label><input id="ctc-tel" class="input" type="tel" placeholder="06 12 34 56 78"></div>
+        <div><label class="input-lbl">Fonction</label><input id="ctc-fonction" class="input" type="text" placeholder="Directeur commercial"></div>
       </div>
-
       <div id="contact-form-status" style="font-size:12px;text-align:center;min-height:18px;margin:6px 0;"></div>
     </div>
     <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
@@ -760,6 +740,47 @@ textarea.input { resize: vertical; min-height: 80px; }
       <button class="btn primary" id="contact-form-submit" onclick="submitContactForm()">Ajouter</button>
     </div>
   </div>
+</div>
+
+<!-- ===== MODAL : Création / édition d'un mail (Sprint Mails) ===== -->
+<div id="modal-mail-form" class="modal-ov" hidden onclick="if(event.target.id==='modal-mail-form')closeMailFormModal()">
+  <div class="modal-card" id="modal-mail-form-card" style="max-width:880px;">
+    <div class="modal-head">
+      <div class="row">
+        <div>
+          <div class="eyebrow" id="mail-form-eyebrow">Nouveau mail</div>
+          <h2 class="display" id="mail-form-title" style="margin:4px 0 0;">Composer un mail</h2>
+        </div>
+        <button class="modal-close" onclick="closeMailFormModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div><label class="input-lbl">Sujet du mail *</label><input id="mail-sujet" class="input" type="text" placeholder="Vos places pour les play-offs" oninput="updateMailPreview()"></div>
+        <div><label class="input-lbl">Pré-header</label><input id="mail-preheader" class="input" type="text" placeholder="Aperçu dans la boîte de réception" oninput="updateMailPreview()"></div>
+      </div>
+      <div style="margin-bottom:12px;"><label class="input-lbl">Nom de l'expéditeur</label><input id="mail-expediteur" class="input" type="text" placeholder="Le Spacer's Business Club" oninput="updateMailPreview()"></div>
+      <div style="margin-bottom:12px;"><label class="input-lbl">Titre (dans le mail)</label><input id="mail-titre" class="input" type="text" placeholder="Vos places sont disponibles" oninput="updateMailPreview()"></div>
+      <div style="margin-bottom:12px;"><label class="input-lbl">Message</label><textarea id="mail-corps" class="input" rows="6" placeholder="Votre texte… (les sauts de ligne sont conservés)" oninput="updateMailPreview()"></textarea></div>
+      <div style="margin-bottom:12px;"><label class="input-lbl">Image (URL, optionnel)</label><input id="mail-image" class="input" type="url" placeholder="https://…/visuel.jpg" oninput="updateMailPreview()"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div><label class="input-lbl">Bouton — libellé (optionnel)</label><input id="mail-btn-label" class="input" type="text" placeholder="Réserver mes places" oninput="updateMailPreview()"></div>
+        <div><label class="input-lbl">Bouton — lien</label><input id="mail-btn-url" class="input" type="url" placeholder="https://…" oninput="updateMailPreview()"></div>
+      </div>
+      <div class="input-lbl" style="margin-top:6px;">Aperçu</div>
+      <div id="mail-preview" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAF7F2;"></div>
+      <div id="mail-form-status" style="font-size:12px;text-align:center;min-height:18px;margin:8px 0 0;"></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
+      <button class="btn ghost" onclick="closeMailFormModal()">Annuler</button>
+      <button class="btn primary" id="mail-form-submit" onclick="submitMail()">Enregistrer le brouillon</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL : Détail / envoi d'un mail (Sprint Mails) ===== -->
+<div id="modal-mail" class="modal-ov" hidden onclick="if(event.target.id==='modal-mail')closeMailDetailModal()">
+  <div class="modal-card" id="modal-mail-card" style="max-width:760px;"></div>
 </div>
 
 <!-- ===== MODAL : Confirm (reject avec raison) ===== -->
@@ -793,16 +814,10 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V7 — Spacer's Business Club
-//  Auth via ?t=TOKEN_ADMIN, consume /api/admin/* routes
+//  PILOTE ADMIN V7 — Spacer's Business Club  (+ module Mails)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
-// Sprint F (PWA pilote) — Token persisté en localStorage pour permettre l'usage
-// depuis l'app installée (start_url=/pilote sans paramètres). À la 1ère ouverture
-// avec ?t=TOKEN, on mémorise. Aux suivantes, on relit depuis le storage.
-// Sprint G — En plus, on accepte une session Supabase Auth (compte unifié)
-//           qui résout l'admin_token via GET /api/me/roles.
 const _urlToken = new URLSearchParams(location.search).get('t');
 if (_urlToken && _urlToken.length >= 16) {
   try { localStorage.setItem('bc_pilote_token', _urlToken); } catch (_) {}
@@ -811,14 +826,9 @@ let ADMIN_TOKEN = _urlToken || (function() {
   try { return localStorage.getItem('bc_pilote_token'); } catch (_) { return null; }
 })();
 
-// Sprint G — Variables session Supabase (renseignées si l'utilisateur est connecté en mode partenaire ET admin)
 let SUPABASE_CLIENT_PILOTE = null;
-let SESSION_ROLES = null; // { is_admin, admin_token, is_partner, raison_sociale, ... }
+let SESSION_ROLES = null;
 
-// Si pas de magic_token URL/localStorage : tenter une session Supabase.
-// Cette fonction peuple AUSSI SESSION_ROLES pour que le menu compte
-// puisse afficher le bouton "→ Espace partenaire" même quand l'admin
-// est venu via le magic_token URL (donc cumul des deux modes d'auth).
 async function resolveAdminTokenFromSession_() {
   try {
     const cfg = await (await fetch('/api/auth/config')).json();
@@ -837,19 +847,19 @@ async function resolveAdminTokenFromSession_() {
   } catch (_) {}
   return null;
 }
-let CURRENT_ADMIN = null;        // profil admin connecté
-let DASH_DATA = null;             // dashboard data en cache
-let OFFRES_CACHE = [];            // liste offres en cache
-let OFFRES_STATS = {};            // stats par statut
-let CURRENT_OFFRE_FILTER = 'all'; // filtre statut actif
-let CURRENT_OFFRE_DETAIL = null;  // offre actuellement ouverte dans la modale
+let CURRENT_ADMIN = null;
+let DASH_DATA = null;
+let OFFRES_CACHE = [];
+let OFFRES_STATS = {};
+let CURRENT_OFFRE_FILTER = 'all';
+let CURRENT_OFFRE_DETAIL = null;
 
 // Sprint C.3 — Candidatures
 let CANDS_CACHE = [];
 let CANDS_STATS = {};
 let CURRENT_CAND_FILTER = 'all';
 let CURRENT_CAND_DETAIL = null;
-let CURRENT_CAND_OFFRE = null; // { id, titre } — filtre par annonce (Sprint C.4)
+let CURRENT_CAND_OFFRE = null;
 
 // Sprint B.1 — Publications
 let PUBS_CACHE = [];
@@ -868,9 +878,16 @@ let COM_CREATE_TYPE = 'invitation';
 
 // Sprint E.3 — Partenaires / Contacts
 let PARTENAIRES_CACHE = [];
-let CURRENT_PARTENAIRE = null;       // société ouverte dans la modale
-let CURRENT_PARTENAIRE_CONTACTS = []; // contacts de la société ouverte
-let CURRENT_CONTACT_EDIT = null;     // contact en cours d'édition (ou null = création)
+let CURRENT_PARTENAIRE = null;
+let CURRENT_PARTENAIRE_CONTACTS = [];
+let CURRENT_CONTACT_EDIT = null;
+
+// Sprint Mails
+let MAILS_CACHE = [];
+let MAILS_STATS = {};
+let CURRENT_MAIL_FILTER = 'all';
+let CURRENT_MAIL_DETAIL = null;
+let CURRENT_MAIL_EDIT = null;
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -935,10 +952,9 @@ function showError(msg, detail) {
 }
 
 // ============================================================================
-//  AUTH — Vérification du token admin
+//  AUTH
 // ============================================================================
 async function init() {
-  // Sprint G — si pas de magic_token, tenter résolution via session Supabase Auth
   if (!ADMIN_TOKEN || ADMIN_TOKEN.length < 16) {
     const resolved = await resolveAdminTokenFromSession_();
     if (!resolved) {
@@ -946,11 +962,8 @@ async function init() {
       return;
     }
   } else {
-    // On a un magic_token : on tente quand même la session pour peupler SESSION_ROLES
-    // (best-effort, mais on attend la fin pour que le menu compte ait l'info)
     await resolveAdminTokenFromSession_();
   }
-
   try {
     const res = await fetch(`/api/admin/auth/${encodeURIComponent(ADMIN_TOKEN)}`);
     const data = await res.json();
@@ -966,25 +979,15 @@ async function init() {
   }
 }
 
-// Sprint G+polish — Menu compte façon avatar avec dropdown,
-// badge MODE "Admin" en header, toast de bienvenue 1ère connexion, titre dynamique.
 function injectAccountMenu_() {
   if (document.getElementById('account-menu-container')) return;
-  if (!SESSION_ROLES) {
-    // Pas de session : on injecte juste le badge "Mode admin" (l'utilisateur est venu via magic_token URL pur)
-    injectModeBadge_();
-    return;
-  }
-
+  if (!SESSION_ROLES) { injectModeBadge_(); return; }
   const r = SESSION_ROLES;
-  const initials = (((r.prenom || '').charAt(0) || '') + ((r.nom || '').charAt(0) || '')).toUpperCase()
+  const ini = (((r.prenom || '').charAt(0) || '') + ((r.nom || '').charAt(0) || '')).toUpperCase()
                    || (r.email || '?').charAt(0).toUpperCase();
   const fullName = [r.prenom, r.nom].filter(Boolean).join(' ').trim() || r.email || '';
-
-  // Mettre à jour le titre d'onglet
   document.title = `Pilote · Spacer's Business Club`;
 
-  // Injecter le style (une seule fois)
   if (!document.getElementById('account-menu-style')) {
     const st = document.createElement('style');
     st.id = 'account-menu-style';
@@ -1010,21 +1013,16 @@ function injectAccountMenu_() {
       #welcome-toast { position: fixed; top: 70px; right: 14px; max-width: 320px; background: white; border-left: 3px solid var(--gold,#C8932B); border-radius: 10px; box-shadow: 0 8px 24px rgba(10,22,40,.12); padding: 14px 16px; font-family: 'Manrope', sans-serif; font-size: 13px; line-height: 1.5; color: var(--ink,#0A1628); z-index: 1499; opacity: 0; transform: translateX(20px); transition: opacity .25s ease-out, transform .25s ease-out; pointer-events: none; }
       #welcome-toast.show { opacity: 1; transform: translateX(0); pointer-events: auto; }
       #welcome-toast strong { font-family: 'Fraunces', Georgia, serif; font-weight: 500; }
-      @media (max-width: 640px) {
-        #mode-badge { left: 14px; top: 64px; }
-        #account-dropdown { min-width: 260px; right: -4px; }
-      }
+      @media (max-width: 640px) { #mode-badge { left: 14px; top: 64px; } #account-dropdown { min-width: 260px; right: -4px; } }
     `;
     document.head.appendChild(st);
   }
 
-  // Format date dernière connexion (du contact partenaire, si disponible)
   let lastSeenLabel = '';
   if (r.derniere_connexion_at) {
     try {
       const d = new Date(r.derniere_connexion_at);
-      const now = new Date();
-      const diffH = (now - d) / 3600000;
+      const diffH = (new Date() - d) / 3600000;
       if (diffH < 1) lastSeenLabel = 'connecté il y a quelques minutes';
       else if (diffH < 24) lastSeenLabel = `dernière connexion il y a ${Math.round(diffH)} h`;
       else lastSeenLabel = `dernière connexion le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
@@ -1038,7 +1036,7 @@ function injectAccountMenu_() {
   const container = document.createElement('div');
   container.id = 'account-menu-container';
   container.innerHTML = `
-    <button id="account-avatar-btn" title="${escapeHtml(fullName)}" aria-label="Menu compte"><span>${escapeHtml(initials)}</span></button>
+    <button id="account-avatar-btn" title="${escapeHtml(fullName)}" aria-label="Menu compte"><span>${escapeHtml(ini)}</span></button>
     <div id="account-dropdown">
       <div class="account-header">
         <div class="account-name">${escapeHtml(fullName)}</div>
@@ -1070,10 +1068,8 @@ function injectAccountMenu_() {
     });
   });
 
-  // Badge MODE
   injectModeBadge_();
 
-  // Toast bienvenue (flag distinct du partenaire)
   try {
     if (!localStorage.getItem('bc_welcome_seen_pilote')) {
       setTimeout(() => {
@@ -1082,21 +1078,16 @@ function injectAccountMenu_() {
         toast.innerHTML = `<strong>Bienvenue ${escapeHtml(r.prenom || '')} ✦</strong><br>${r.is_partner ? 'Vous êtes en mode administrateur. Pour voir votre espace partenaire, ouvrez le menu avatar →' : 'Vous êtes en mode administrateur du Business Club.'}`;
         document.body.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
-        setTimeout(() => {
-          toast.classList.remove('show');
-          setTimeout(() => toast.remove(), 400);
-        }, 6500);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 6500);
         localStorage.setItem('bc_welcome_seen_pilote', '1');
       }, 800);
     }
   } catch (_) {}
 }
 
-// Badge "Mode admin" (visible même sans session, quand pilote est ouvert via magic_token URL pur)
 function injectModeBadge_() {
   if (document.getElementById('mode-badge')) return;
   if (!document.getElementById('account-menu-style')) {
-    // injecter le minimum de CSS pour le badge si pas déjà fait
     const st = document.createElement('style');
     st.id = 'mode-badge-style';
     st.textContent = `
@@ -1123,7 +1114,7 @@ function renderApp() {
 }
 
 // ============================================================================
-//  NAVIGATION (onglets)
+//  NAVIGATION
 // ============================================================================
 function switchTab(tab) {
   const link = document.querySelector(`.sb-link[data-tab="${tab}"]`);
@@ -1142,15 +1133,15 @@ function switchTab(tab) {
   if (tab === 'publications' && PUBS_CACHE.length === 0) loadPublications();
   if (tab === 'communications' && COMS_CACHE.length === 0) loadCommunications();
   if (tab === 'partenaires' && PARTENAIRES_CACHE.length === 0) loadPartenaires();
+  if (tab === 'mails' && MAILS_CACHE.length === 0) loadMails();
 }
 
 // ============================================================================
-//  DASHBOARD — Stats globales
+//  DASHBOARD
 // ============================================================================
 async function loadDashboard(force=false) {
   const btn = document.querySelector('#tab-dashboard .refresh-btn');
   if (btn) btn.classList.add('spinning');
-
   try {
     const res = await fetch(`/api/admin/dashboard/${encodeURIComponent(ADMIN_TOKEN)}`);
     const data = await res.json();
@@ -1169,52 +1160,25 @@ function renderDashboard(data) {
   const s = data.stats || {};
   const cn = $('dash-content');
   const name = `${CURRENT_ADMIN.prenom || ''}`.trim() || 'pilote';
-
   cn.innerHTML = `
     <div class="hero-card">
       <div class="eyebrow">Bonjour ${escapeHtml(name)}</div>
       <h2 class="display">Saison <em>${escapeHtml(data.saison || '—')}</em></h2>
       <p>Voici l'état du Business Club côté partenariats, billetterie et candidatures. Les chiffres se rafraîchissent à chaque visite.</p>
     </div>
-
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="label">Partenaires actifs</div>
-        <div class="value">${s.partenaires_actifs ?? 0}</div>
-        <div class="sub">Contrats signés cette saison</div>
-      </div>
-      <div class="stat-card accent-gold">
-        <div class="label">Chiffre signé</div>
-        <div class="value">${formatEUR(s.chiffre_signe)}</div>
-        <div class="sub">Hors taxes, cumulé</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Packs VIP configurés</div>
-        <div class="value">${s.packs_configures ?? 0}</div>
-        <div class="sub">Avec places allouées</div>
-      </div>
-      <div class="stat-card ${(s.alertes_total||0) > 0 ? 'accent-red' : ''}">
-        <div class="label">Alertes ouvertes</div>
-        <div class="value">${s.alertes_total ?? 0}</div>
-        <div class="sub">À traiter</div>
-      </div>
+      <div class="stat-card"><div class="label">Partenaires actifs</div><div class="value">${s.partenaires_actifs ?? 0}</div><div class="sub">Contrats signés cette saison</div></div>
+      <div class="stat-card accent-gold"><div class="label">Chiffre signé</div><div class="value">${formatEUR(s.chiffre_signe)}</div><div class="sub">Hors taxes, cumulé</div></div>
+      <div class="stat-card"><div class="label">Packs VIP configurés</div><div class="value">${s.packs_configures ?? 0}</div><div class="sub">Avec places allouées</div></div>
+      <div class="stat-card ${(s.alertes_total||0) > 0 ? 'accent-red' : ''}"><div class="label">Alertes ouvertes</div><div class="value">${s.alertes_total ?? 0}</div><div class="sub">À traiter</div></div>
     </div>
-
     <div class="stats-grid" style="margin-top:8px;">
       <div class="stat-card" style="grid-column:span 2;">
         <div class="label">Modération annonces emploi</div>
         <div style="display:flex;align-items:baseline;gap:20px;margin-top:10px;flex-wrap:wrap;">
-          <div>
-            <div style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:var(--orange);line-height:1;" id="dash-attente-count">·</div>
-            <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.12em;">En attente</div>
-          </div>
-          <div>
-            <div style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:var(--green);line-height:1;" id="dash-publie-count">·</div>
-            <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.12em;">Publiées</div>
-          </div>
-          <div style="margin-left:auto;">
-            <button class="btn primary" onclick="switchTab('offres')">Modérer →</button>
-          </div>
+          <div><div style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:var(--orange);line-height:1;" id="dash-attente-count">·</div><div style="font-size:11px;color:var(--ink-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.12em;">En attente</div></div>
+          <div><div style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:var(--green);line-height:1;" id="dash-publie-count">·</div><div style="font-size:11px;color:var(--ink-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.12em;">Publiées</div></div>
+          <div style="margin-left:auto;"><button class="btn primary" onclick="switchTab('offres')">Modérer →</button></div>
         </div>
       </div>
       <div class="stat-card" style="grid-column:span 2;">
@@ -1224,8 +1188,6 @@ function renderDashboard(data) {
       </div>
     </div>
   `;
-
-  // On va aussi pull les compteurs offres pour les chiffres ci-dessus
   refreshOffreCountsLight();
 }
 
@@ -1234,46 +1196,34 @@ async function refreshOffreCountsLight() {
     const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}`);
     const data = await res.json();
     if (data.stats) {
-      const att = $('dash-attente-count');
-      const pub = $('dash-publie-count');
+      const att = $('dash-attente-count'); const pub = $('dash-publie-count');
       if (att) att.textContent = data.stats.en_attente || 0;
       if (pub) pub.textContent = data.stats.publie || 0;
-      // Mettre à jour le badge sidebar
       const b = $('sb-badge-attente');
-      if (b) {
-        if (data.stats.en_attente > 0) { b.textContent = data.stats.en_attente; b.hidden = false; }
-        else { b.hidden = true; }
-      }
+      if (b) { if (data.stats.en_attente > 0) { b.textContent = data.stats.en_attente; b.hidden = false; } else b.hidden = true; }
     }
   } catch {}
 }
 
 // ============================================================================
-//  OFFRES EMPLOI — Modération
+//  OFFRES EMPLOI
 // ============================================================================
 async function loadOffres(force=false) {
   const btn = document.querySelector('#tab-offres .refresh-btn');
   if (btn) btn.classList.add('spinning');
   const listEl = $('offres-list');
-
   try {
     const url = `/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}` +
       (CURRENT_OFFRE_FILTER !== 'all' ? `?statut=${encodeURIComponent(CURRENT_OFFRE_FILTER)}` : '');
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-
     OFFRES_CACHE = data.offres || [];
     OFFRES_STATS = data.stats || {};
     renderOffreStats();
     renderOffresList();
-
-    // refresh badge sidebar en cohérence
     const b = $('sb-badge-attente');
-    if (b) {
-      if (OFFRES_STATS.en_attente > 0) { b.textContent = OFFRES_STATS.en_attente; b.hidden = false; }
-      else { b.hidden = true; }
-    }
+    if (b) { if (OFFRES_STATS.en_attente > 0) { b.textContent = OFFRES_STATS.en_attente; b.hidden = false; } else b.hidden = true; }
   } catch (e) {
     listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
   } finally {
@@ -1298,26 +1248,15 @@ function setOffreFilter(statut, btn) {
 }
 
 function statusLabel(statut) {
-  return {
-    en_attente: 'À modérer',
-    publie:     'Publiée',
-    refuse:     'Refusée',
-    archive:    'Archivée',
-    expire:     'Expirée',
-    pourvue:    'Pourvue',
-  }[statut] || statut;
+  return { en_attente: 'À modérer', publie: 'Publiée', refuse: 'Refusée', archive: 'Archivée', expire: 'Expirée', pourvue: 'Pourvue' }[statut] || statut;
 }
 
 function renderOffresList() {
   const el = $('offres-list');
   if (!OFFRES_CACHE.length) {
-    el.innerHTML = `<div class="list-empty">
-      <h3>Aucune annonce</h3>
-      <p>${CURRENT_OFFRE_FILTER === 'en_attente' ? 'Aucune annonce en attente de modération — vous êtes à jour ✓' : 'Aucune annonce dans cette catégorie.'}</p>
-    </div>`;
+    el.innerHTML = `<div class="list-empty"><h3>Aucune annonce</h3><p>${CURRENT_OFFRE_FILTER === 'en_attente' ? 'Aucune annonce en attente de modération — vous êtes à jour ✓' : 'Aucune annonce dans cette catégorie.'}</p></div>`;
     return;
   }
-
   el.innerHTML = OFFRES_CACHE.map(o => {
     const statutClass = o.statut || 'attente';
     const meta = [];
@@ -1325,7 +1264,6 @@ function renderOffresList() {
     if (o.lieu) meta.push(`<span>📍 ${escapeHtml(o.lieu)}</span>`);
     if (o.salaire_indicatif) meta.push(`<span>💼 ${escapeHtml(o.salaire_indicatif)}</span>`);
     meta.push(`<span>${o.statut === 'publie' ? 'Publiée' : 'Créée'} ${formatRelative(o.date_publication || o.created_at)}</span>`);
-
     const actions = [];
     actions.push(`<button class="btn sm" onclick="openOffreDetail('${o.id}')">Voir</button>`);
     if (o.statut === 'en_attente') {
@@ -1334,12 +1272,9 @@ function renderOffresList() {
     } else if (o.statut === 'publie') {
       actions.push(`<button class="btn sm gold" onclick="generateCubePdf('${o.id}')"><span class="ico">📄</span>PDF cube</button>`);
     }
-
-    // Sprint C.4 — compteur candidatures cliquable (ouvre le tab Candidatures filtré sur cette annonce)
     if (o.candidatures_count > 0) {
       actions.push(`<button class="btn sm" style="border-color:var(--gold);color:var(--gold);" onclick="viewCandidaturesForOffre('${o.id}')">📩 ${o.candidatures_count} candidature${o.candidatures_count > 1 ? 's' : ''}</button>`);
     }
-
     return `
       <div class="offre-row ${statutClass}">
         <div class="offre-main">
@@ -1352,14 +1287,10 @@ function renderOffresList() {
           <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
         </div>
         <div class="offre-actions">${actions.join('')}</div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
-// ============================================================================
-//  OFFRE — Détail modal
-// ============================================================================
 async function openOffreDetail(offreId) {
   $('modal-offre').hidden = false;
   $('modal-offre-card').innerHTML = `<div class="modal-body" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">Chargement…</p></div>`;
@@ -1373,36 +1304,20 @@ async function openOffreDetail(offreId) {
     $('modal-offre-card').innerHTML = `<div class="modal-body"><div class="banner danger">Erreur : ${escapeHtml(e.message)}</div><div style="text-align:right;margin-top:14px;"><button class="btn" onclick="closeOffreModal()">Fermer</button></div></div>`;
   }
 }
-
-function closeOffreModal() {
-  $('modal-offre').hidden = true;
-  CURRENT_OFFRE_DETAIL = null;
-}
+function closeOffreModal() { $('modal-offre').hidden = true; CURRENT_OFFRE_DETAIL = null; }
 
 function renderOffreDetail(o) {
   const card = $('modal-offre-card');
-  const isAttente = o.statut === 'en_attente';
-  const isPublie = o.statut === 'publie';
-  const isRefuse = o.statut === 'refuse';
-  const isArchive = o.statut === 'archive';
+  const isAttente = o.statut === 'en_attente', isPublie = o.statut === 'publie', isRefuse = o.statut === 'refuse', isArchive = o.statut === 'archive';
   const meta = o.metadata || {};
-
-  // Logo preview
-  let logoPreview = '';
-  if (meta.logo_b64) {
-    logoPreview = `<div style="margin-top:8px;"><img src="${escapeHtml(meta.logo_b64)}" style="max-width:120px;max-height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:6px;background:white;"></div>`;
-  } else {
-    logoPreview = `<div style="margin-top:8px;color:var(--ink-muted);font-size:11px;font-style:italic;">Aucun logo fourni</div>`;
-  }
-
-  // Banner statut
+  let logoPreview = meta.logo_b64
+    ? `<div style="margin-top:8px;"><img src="${escapeHtml(meta.logo_b64)}" style="max-width:120px;max-height:80px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:6px;background:white;"></div>`
+    : `<div style="margin-top:8px;color:var(--ink-muted);font-size:11px;font-style:italic;">Aucun logo fourni</div>`;
   let banner = '';
-  if (isAttente) banner = `<div class="banner warn"><b>Annonce en attente.</b>&nbsp;Vérifiez le contenu puis publiez ou refusez avec un motif clair (le partenaire pourra voir le motif côté espace).</div>`;
-  else if (isPublie) banner = `<div class="banner success"><b>Annonce publiée${o.date_publication ? ' le ' + formatDate(o.date_publication) : ''}.</b>&nbsp;Visible côté partenaire et côté bénévole (Sprint C). Générez le PDF cube vidéo pour la diffusion.</div>`;
+  if (isAttente) banner = `<div class="banner warn"><b>Annonce en attente.</b>&nbsp;Vérifiez le contenu puis publiez ou refusez avec un motif clair.</div>`;
+  else if (isPublie) banner = `<div class="banner success"><b>Annonce publiée${o.date_publication ? ' le ' + formatDate(o.date_publication) : ''}.</b>&nbsp;Générez le PDF cube vidéo pour la diffusion.</div>`;
   else if (isRefuse) banner = `<div class="banner danger"><b>Annonce refusée.</b>&nbsp;${o.raison_refus ? 'Motif : <i>' + escapeHtml(o.raison_refus) + '</i>' : 'Pas de motif renseigné.'}</div>`;
-  else if (isArchive) banner = `<div class="banner info"><b>Annonce archivée.</b>&nbsp;Plus visible côté partenaire ni côté bénévole.</div>`;
-
-  // Actions selon statut
+  else if (isArchive) banner = `<div class="banner info"><b>Annonce archivée.</b></div>`;
   const actions = [`<button class="btn ghost" onclick="closeOffreModal()">Fermer</button>`];
   if (isAttente) {
     actions.push(`<button class="btn danger" onclick="quickReject('${o.id}')">Refuser</button>`);
@@ -1413,7 +1328,6 @@ function renderOffreDetail(o) {
   } else if (isRefuse || isArchive) {
     actions.push(`<button class="btn success" onclick="quickPublish('${o.id}')">Re-publier</button>`);
   }
-
   card.innerHTML = `
     <div class="modal-head">
       <div class="row">
@@ -1430,7 +1344,6 @@ function renderOffreDetail(o) {
     </div>
     <div class="modal-body">
       ${banner}
-
       <div class="detail-grid">
         <div class="detail-field"><div class="lbl">Type de contrat</div><div class="val ${!o.type_contrat?'empty':''}">${escapeHtml(o.type_contrat || '—')}</div></div>
         <div class="detail-field"><div class="lbl">Lieu</div><div class="val ${!o.lieu?'empty':''}">${escapeHtml(o.lieu || '—')}</div></div>
@@ -1439,17 +1352,8 @@ function renderOffreDetail(o) {
         <div class="detail-field"><div class="lbl">Expérience requise</div><div class="val ${!o.experience_requise?'empty':''}">${escapeHtml(o.experience_requise || '—')}</div></div>
         <div class="detail-field"><div class="lbl">Diffusion cube · date match</div><div class="val ${!meta.date_match?'empty':''}">${escapeHtml(meta.date_match || '—')}</div></div>
       </div>
-
-      ${o.description ? `<div class="detail-section">
-        <div class="detail-section-h">Description / Profil recherché</div>
-        <div class="descr">${escapeHtml(o.description)}</div>
-      </div>` : ''}
-
-      ${meta.les_plus ? `<div class="detail-section">
-        <div class="detail-section-h">Les + de l'offre</div>
-        <div class="descr">${escapeHtml(meta.les_plus)}</div>
-      </div>` : ''}
-
+      ${o.description ? `<div class="detail-section"><div class="detail-section-h">Description / Profil recherché</div><div class="descr">${escapeHtml(o.description)}</div></div>` : ''}
+      ${meta.les_plus ? `<div class="detail-section"><div class="detail-section-h">Les + de l'offre</div><div class="descr">${escapeHtml(meta.les_plus)}</div></div>` : ''}
       <div class="detail-section">
         <div class="detail-section-h">Contact candidatures</div>
         <div class="detail-grid" style="margin-bottom:0;">
@@ -1459,12 +1363,7 @@ function renderOffreDetail(o) {
           <div class="detail-field"><div class="lbl">URL externe</div><div class="val ${!o.url_externe?'empty':''}">${o.url_externe ? `<a href="${escapeHtml(o.url_externe)}" target="_blank" style="color:var(--gold);">${escapeHtml(o.url_externe)}</a>` : '—'}</div></div>
         </div>
       </div>
-
-      <div class="detail-section">
-        <div class="detail-section-h">Logo partenaire fourni</div>
-        ${logoPreview}
-      </div>
-
+      <div class="detail-section"><div class="detail-section-h">Logo partenaire fourni</div>${logoPreview}</div>
       <div class="detail-grid" style="margin-top:6px;">
         <div class="detail-field"><div class="lbl">Soumise par</div><div class="val">${escapeHtml(o.created_by || '—')}</div></div>
         <div class="detail-field"><div class="lbl">Créée le</div><div class="val">${formatDate(o.created_at)}</div></div>
@@ -1476,81 +1375,42 @@ function renderOffreDetail(o) {
   `;
 }
 
-// ============================================================================
-//  ACTIONS — Publier / Refuser / Archiver
-// ============================================================================
 async function quickPublish(offreId) {
-  const ok = await confirmModal({
-    title: 'Publier cette annonce ?',
-    eyebrow: 'Validation',
-    message: 'L\'annonce sera visible dans l\'espace partenaire et bientôt aux bénévoles. Tu pourras toujours l\'archiver plus tard.',
-    confirmText: 'Publier',
-    confirmStyle: 'success',
-  });
+  const ok = await confirmModal({ title: 'Publier cette annonce ?', eyebrow: 'Validation', message: 'L\'annonce sera visible dans l\'espace partenaire et bientôt aux bénévoles.', confirmText: 'Publier', confirmStyle: 'success' });
   if (!ok) return;
   try {
     const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/publish`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast('✓ Annonce publiée', 'success');
-    closeOffreModal();
-    loadOffres();
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+    showToast('✓ Annonce publiée', 'success'); closeOffreModal(); loadOffres();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 async function quickReject(offreId) {
-  const raison = await promptModal({
-    title: 'Refuser cette annonce',
-    eyebrow: 'Refus',
-    message: 'Le motif sera transmis au partenaire. Sois précis et constructif.',
-    inputLabel: 'Motif du refus',
-    inputPlaceholder: 'ex: Description trop courte, manque de détails sur le poste…',
-    confirmText: 'Refuser',
-    confirmStyle: 'danger',
-  });
+  const raison = await promptModal({ title: 'Refuser cette annonce', eyebrow: 'Refus', message: 'Le motif sera transmis au partenaire.', inputLabel: 'Motif du refus', inputPlaceholder: 'ex: Description trop courte…', confirmText: 'Refuser', confirmStyle: 'danger' });
   if (raison === null) return;
   if (!raison.trim()) { showToast('Le motif est obligatoire', 'error'); return; }
   try {
-    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raison: raison.trim() }),
-    });
+    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ raison: raison.trim() }) });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast('Annonce refusée', 'success');
-    closeOffreModal();
-    loadOffres();
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+    showToast('Annonce refusée', 'success'); closeOffreModal(); loadOffres();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 async function quickArchive(offreId) {
-  const ok = await confirmModal({
-    title: 'Archiver cette annonce ?',
-    eyebrow: 'Archivage',
-    message: 'L\'annonce ne sera plus visible côté partenaire ni côté bénévole. C\'est réversible (tu peux la re-publier).',
-    confirmText: 'Archiver',
-    confirmStyle: 'primary',
-  });
+  const ok = await confirmModal({ title: 'Archiver cette annonce ?', eyebrow: 'Archivage', message: 'L\'annonce ne sera plus visible. C\'est réversible.', confirmText: 'Archiver', confirmStyle: 'primary' });
   if (!ok) return;
   try {
     const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/archive`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast('Annonce archivée', 'success');
-    closeOffreModal();
-    loadOffres();
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+    showToast('Annonce archivée', 'success'); closeOffreModal(); loadOffres();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ============================================================================
-//  CONFIRM / PROMPT modals (réutilisables)
+//  CONFIRM / PROMPT modals
 // ============================================================================
 let _confirmResolve = null;
 function confirmModal(opts) {
@@ -1591,24 +1451,16 @@ function closeConfirm(result) {
       const inputWrap = $('mc-input-wrap');
       if (!inputWrap.hidden) _confirmResolve($('mc-input').value);
       else _confirmResolve(true);
-    } else {
-      _confirmResolve(null);
-    }
+    } else { _confirmResolve(null); }
     _confirmResolve = null;
   }
 }
 
 // ============================================================================
-//  ╔════════════════════════════════════════════════════════════════════════╗
-//  ║  PDF CUBE VIDÉO — Génération paysage 16:9 (1920×1080) pour interset    ║
-//  ╚════════════════════════════════════════════════════════════════════════╝
+//  PDF CUBE VIDÉO — paysage 1920×1080
 // ============================================================================
 async function generateCubePdf(offreId) {
-  // Si pas déjà en cache détail, on fetch
-  let offre = CURRENT_OFFRE_DETAIL && CURRENT_OFFRE_DETAIL.id === offreId
-    ? CURRENT_OFFRE_DETAIL
-    : null;
-
+  let offre = CURRENT_OFFRE_DETAIL && CURRENT_OFFRE_DETAIL.id === offreId ? CURRENT_OFFRE_DETAIL : null;
   if (!offre) {
     showToast('Chargement de l\'annonce…', 'success');
     try {
@@ -1616,47 +1468,25 @@ async function generateCubePdf(offreId) {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
       offre = data.offre;
-    } catch (e) {
-      showToast('Erreur chargement : ' + e.message, 'error');
-      return;
-    }
+    } catch (e) { showToast('Erreur chargement : ' + e.message, 'error'); return; }
   }
-
   try {
     showToast('Génération du PDF…', 'success');
     await buildAndDownloadCubePdf(offre);
     showToast('✓ PDF cube vidéo téléchargé', 'success');
-  } catch (e) {
-    console.error(e);
-    showToast('Erreur PDF : ' + e.message, 'error');
-  }
+  } catch (e) { console.error(e); showToast('Erreur PDF : ' + e.message, 'error'); }
 }
 
 async function buildAndDownloadCubePdf(offre) {
   if (!window.jspdf) throw new Error('jsPDF non chargé');
   const { jsPDF } = window.jspdf;
-
-  // Format paysage 16:9 — 1920×1080 points (très haute déf pour diffusion écran géant)
   const W = 1920, H = 1080;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] });
-
-  // === Palette Spacers (alignée sur les CSS variables) ===
   const COLORS = {
-    ink:      [10, 22, 40],     // #0A1628
-    ink2:     [17, 32, 58],     // #11203a
-    gold:     [200, 147, 43],   // #C8932B
-    goldSoft: [232, 201, 119],  // #E8C977
-    cream:    [250, 247, 242],  // #FAF7F2
-    line:     [70, 60, 30],     // accent doré tamisé
-    white:    [255, 255, 255],
-    muted:    [200, 195, 180],
+    ink: [10, 22, 40], ink2: [17, 32, 58], gold: [200, 147, 43], goldSoft: [232, 201, 119],
+    cream: [250, 247, 242], line: [70, 60, 30], white: [255, 255, 255], muted: [200, 195, 180],
   };
-
-  // === Fond : navy avec halo doré en haut-droite ===
-  doc.setFillColor(...COLORS.ink);
-  doc.rect(0, 0, W, H, 'F');
-
-  // Halo doré (simulé par des cercles dégradés)
+  doc.setFillColor(...COLORS.ink); doc.rect(0, 0, W, H, 'F');
   for (let i = 0; i < 12; i++) {
     const alpha = 0.025 - i * 0.0018;
     if (alpha <= 0) break;
@@ -1664,23 +1494,11 @@ async function buildAndDownloadCubePdf(offre) {
     doc.setGState(new doc.GState({ opacity: alpha }));
     doc.circle(W - 120, 100 + i * 18, 350 + i * 60, 'F');
   }
-  doc.setGState(new doc.GState({ opacity: 1 })); // reset
-
-  // === Bandeau haut : "MINUTE EMPLOI" eyebrow + filet doré ===
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(...COLORS.goldSoft);
+  doc.setGState(new doc.GState({ opacity: 1 }));
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...COLORS.goldSoft);
   doc.text('MINUTE EMPLOI · DIFFUSION INTERSET', 100, 110, { charSpace: 4 });
-
-  // Filet doré sous l'eyebrow
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(2);
-  doc.line(100, 130, 240, 130);
-
-  // === Logo Spacers (carré "S") en haut-gauche, sous l'eyebrow ===
+  doc.setDrawColor(...COLORS.gold); doc.setLineWidth(2); doc.line(100, 130, 240, 130);
   drawSpacersLogo(doc, 100, 160, 90, COLORS);
-
-  // === Logo partenaire en haut-droite (depuis metadata.logo_b64) ===
   const meta = offre.metadata || {};
   if (meta.logo_b64) {
     try {
@@ -1688,185 +1506,89 @@ async function buildAndDownloadCubePdf(offre) {
                   meta.logo_b64.startsWith('data:image/jpeg') ? 'JPEG' :
                   meta.logo_b64.startsWith('data:image/jpg') ? 'JPEG' : null;
       if (fmt) {
-        // Cadre blanc autour du logo (visibilité sur fond navy)
-        const logoBoxW = 280, logoBoxH = 180;
-        const logoX = W - 100 - logoBoxW;
-        const logoY = 160;
+        const logoBoxW = 280, logoBoxH = 180, logoX = W - 100 - logoBoxW, logoY = 160;
         doc.setFillColor(...COLORS.white);
         doc.roundedRect(logoX, logoY, logoBoxW, logoBoxH, 12, 12, 'F');
-        // Image avec padding
         doc.addImage(meta.logo_b64, fmt, logoX + 20, logoY + 20, logoBoxW - 40, logoBoxH - 40, undefined, 'FAST');
       }
-    } catch (e) {
-      console.warn('Logo partenaire non rendu :', e.message);
-    }
+    } catch (e) { console.warn('Logo partenaire non rendu :', e.message); }
   }
-
-  // === Raison sociale ===
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  doc.setTextColor(...COLORS.muted);
-  const partenaireName = (offre.partenaire || '').toUpperCase();
-  doc.text(partenaireName.slice(0, 50), 100, 290);
-
-  // === Titre du poste (TRÈS GROS pour lecture à distance) ===
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.white);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(28); doc.setTextColor(...COLORS.muted);
+  doc.text((offre.partenaire || '').toUpperCase().slice(0, 50), 100, 290);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(...COLORS.white);
   const titre = offre.titre || 'Annonce';
   const titreLines = doc.splitTextToSize(titre, W - 200);
   const titreSize = titreLines.length > 2 ? 80 : titreLines.length > 1 ? 100 : 120;
   doc.setFontSize(titreSize);
   let titreY = 400;
-  titreLines.slice(0, 3).forEach((line, i) => {
-    doc.text(line, 100, titreY + i * (titreSize * 1.05));
-  });
+  titreLines.slice(0, 3).forEach((line, i) => { doc.text(line, 100, titreY + i * (titreSize * 1.05)); });
   const titreEndY = titreY + (Math.min(titreLines.length, 3) - 1) * (titreSize * 1.05);
-
-  // === Filet doré sous le titre ===
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(4);
-  doc.line(100, titreEndY + 40, 300, titreEndY + 40);
-
-  // === Bandeau infos clés — chips label/value (Helvetica-safe, plus éditorial) ===
+  doc.setDrawColor(...COLORS.gold); doc.setLineWidth(4); doc.line(100, titreEndY + 40, 300, titreEndY + 40);
   let infoY = titreEndY + 90;
   const infoChips = [];
   if (offre.type_contrat) infoChips.push({ label: 'TYPE', value: offre.type_contrat });
   if (offre.lieu) infoChips.push({ label: 'LIEU', value: offre.lieu });
   if (offre.duree) infoChips.push({ label: 'DURÉE', value: offre.duree });
   if (offre.salaire_indicatif) infoChips.push({ label: 'RÉMU', value: offre.salaire_indicatif });
-
   let chipX = 100;
   infoChips.forEach((chip) => {
-    // Mesure la largeur du chip (basée sur la value qui est plus grande)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(34);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(34);
     const valueW = doc.getTextWidth(chip.value);
     doc.setFontSize(11);
     const labelW = doc.getTextWidth(chip.label);
     const chipW = Math.max(valueW, labelW) + 48;
-
-    if (chipX + chipW > W - 100) return; // overflow guard
-
-    // Pill background navy bordure or
-    doc.setFillColor(...COLORS.ink2);
-    doc.setDrawColor(...COLORS.gold);
-    doc.setLineWidth(1);
+    if (chipX + chipW > W - 100) return;
+    doc.setFillColor(...COLORS.ink2); doc.setDrawColor(...COLORS.gold); doc.setLineWidth(1);
     doc.roundedRect(chipX - 24, infoY - 56, chipW, 102, 18, 18, 'FD');
-
-    // Label (eyebrow petit, lettrage espacé)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...COLORS.muted);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...COLORS.muted);
     doc.text(chip.label, chipX, infoY - 26, { charSpace: 3 });
-
-    // Filet doré sous le label
-    doc.setDrawColor(...COLORS.gold);
-    doc.setLineWidth(1.5);
-    doc.line(chipX, infoY - 16, chipX + labelW + 10, infoY - 16);
-
-    // Value (grand, or doux)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(34);
-    doc.setTextColor(...COLORS.goldSoft);
+    doc.setDrawColor(...COLORS.gold); doc.setLineWidth(1.5); doc.line(chipX, infoY - 16, chipX + labelW + 10, infoY - 16);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(34); doc.setTextColor(...COLORS.goldSoft);
     doc.text(chip.value, chipX, infoY + 26);
-
     chipX += chipW + 22;
   });
-
-  // === "Les +" si fourni ===
   if (meta.les_plus) {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(24);
-    doc.setTextColor(...COLORS.cream);
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(24); doc.setTextColor(...COLORS.cream);
     const plusLines = doc.splitTextToSize('« ' + meta.les_plus + ' »', W - 200);
     let py = infoY + 110;
-    plusLines.slice(0, 3).forEach((line, i) => {
-      doc.text(line, 100, py + i * 36);
-    });
+    plusLines.slice(0, 3).forEach((line, i) => { doc.text(line, 100, py + i * 36); });
   }
-
-  // === Footer : Contact + Date match ===
-  // Ligne or séparatrice
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(2);
-  doc.line(100, H - 180, W - 100, H - 180);
-
-  // Bloc gauche : POSTULER
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(...COLORS.goldSoft);
+  doc.setDrawColor(...COLORS.gold); doc.setLineWidth(2); doc.line(100, H - 180, W - 100, H - 180);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...COLORS.goldSoft);
   doc.text('POSTULER', 100, H - 130, { charSpace: 3 });
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(38);
-  doc.setTextColor(...COLORS.white);
-  const contact = offre.contact_email || offre.url_externe || offre.contact_telephone || '—';
-  doc.text(contact, 100, H - 75);
-
-  // Bloc droite : Diffusion match
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(38); doc.setTextColor(...COLORS.white);
+  doc.text(offre.contact_email || offre.url_externe || offre.contact_telephone || '—', 100, H - 75);
   if (meta.date_match) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(...COLORS.muted);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(...COLORS.muted);
     const dmText = 'DIFFUSION · ' + meta.date_match;
-    const dmW = doc.getTextWidth(dmText);
-    doc.text(dmText, W - 100 - dmW, H - 90, { charSpace: 2 });
+    doc.text(dmText, W - 100 - doc.getTextWidth(dmText), H - 90, { charSpace: 2 });
   }
-
-  // Bloc droite bas : footer club
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(14);
-  doc.setTextColor(...COLORS.muted);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(14); doc.setTextColor(...COLORS.muted);
   const footerText = 'Spacer\'s Toulouse Volley · Business Club';
-  const footerW = doc.getTextWidth(footerText);
-  doc.text(footerText, W - 100 - footerW, H - 60);
-
-  // === Save ===
+  doc.text(footerText, W - 100 - doc.getTextWidth(footerText), H - 60);
   const safeName = (offre.titre || 'annonce').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 50);
   const safePartner = (offre.partenaire || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 30);
-  const filename = `cube_${safePartner}_${safeName}.pdf`;
-  doc.save(filename);
+  doc.save(`cube_${safePartner}_${safeName}.pdf`);
 }
 
-// Logo "S" Spacers carré (cohérent avec la version HTML : carré navy bordure or)
 function drawSpacersLogo(doc, x, y, size, COLORS) {
-  // Cadre carré or
   doc.setFillColor(...COLORS.gold);
   doc.roundedRect(x, y, size, size, 14, 14, 'F');
-  // Lettre S
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(size * 0.7);
-  doc.setTextColor(...COLORS.ink);
-  // Centrer "S" dans le carré
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(size * 0.7); doc.setTextColor(...COLORS.ink);
   const text = 'S';
-  const tw = doc.getTextWidth(text);
-  doc.text(text, x + (size - tw) / 2, y + size * 0.72);
+  doc.text(text, x + (size - doc.getTextWidth(text)) / 2, y + size * 0.72);
 }
 
 // ============================================================================
-//  CANDIDATURES — Sprint C.3 (admin dashboard + workflow)
+//  CANDIDATURES — Sprint C.3
 // ============================================================================
-
-const CAND_STATUT_LABEL = {
-  nouveau:   'Nouvelle',
-  vue:       'Vue',
-  contactee: 'Contactée',
-  refusee:   'Refusée',
-  acceptee:  'Acceptée',
-};
-const CAND_STATUT_TONE = {
-  nouveau:   'attente',
-  vue:       'archive',
-  contactee: 'pourvue',
-  refusee:   'refuse',
-  acceptee:  'publie',
-};
+const CAND_STATUT_LABEL = { nouveau: 'Nouvelle', vue: 'Vue', contactee: 'Contactée', refusee: 'Refusée', acceptee: 'Acceptée' };
+const CAND_STATUT_TONE = { nouveau: 'attente', vue: 'archive', contactee: 'pourvue', refusee: 'refuse', acceptee: 'publie' };
 
 async function loadCandidatures(force=false) {
   const btn = document.querySelector('#tab-candidatures .refresh-btn');
   if (btn) btn.classList.add('spinning');
   const listEl = $('cands-list');
-
   try {
     const params = [];
     if (CURRENT_CAND_FILTER !== 'all') params.push(`statut=${encodeURIComponent(CURRENT_CAND_FILTER)}`);
@@ -1875,18 +1597,12 @@ async function loadCandidatures(force=false) {
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-
     CANDS_CACHE = data.candidatures || [];
     CANDS_STATS = data.stats || {};
     renderCandidatureStats();
     renderCandidaturesList();
-
-    // Badge sidebar : nombre de candidatures "nouveau"
     const b = $('sb-badge-cand-nouveau');
-    if (b) {
-      if (CANDS_STATS.nouveau > 0) { b.textContent = CANDS_STATS.nouveau; b.hidden = false; }
-      else { b.hidden = true; }
-    }
+    if (b) { if (CANDS_STATS.nouveau > 0) { b.textContent = CANDS_STATS.nouveau; b.hidden = false; } else b.hidden = true; }
   } catch (e) {
     listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
   } finally {
@@ -1896,12 +1612,12 @@ async function loadCandidatures(force=false) {
 
 function renderCandidatureStats() {
   const s = CANDS_STATS;
-  $('cnt-cand-all').textContent       = s.total ?? 0;
-  $('cnt-cand-nouveau').textContent   = s.nouveau ?? 0;
-  $('cnt-cand-vue').textContent       = s.vue ?? 0;
+  $('cnt-cand-all').textContent = s.total ?? 0;
+  $('cnt-cand-nouveau').textContent = s.nouveau ?? 0;
+  $('cnt-cand-vue').textContent = s.vue ?? 0;
   $('cnt-cand-contactee').textContent = s.contactee ?? 0;
-  $('cnt-cand-acceptee').textContent  = s.acceptee ?? 0;
-  $('cnt-cand-refusee').textContent   = s.refusee ?? 0;
+  $('cnt-cand-acceptee').textContent = s.acceptee ?? 0;
+  $('cnt-cand-refusee').textContent = s.refusee ?? 0;
 }
 
 function setCandidatureFilter(statut, btn) {
@@ -1911,12 +1627,10 @@ function setCandidatureFilter(statut, btn) {
   loadCandidatures();
 }
 
-// Sprint C.4 — depuis une annonce, ouvrir le tab Candidatures filtré sur cette annonce
 function viewCandidaturesForOffre(offreId) {
   const offre = OFFRES_CACHE.find(o => o.id === offreId);
   CURRENT_CAND_OFFRE = { id: offreId, titre: offre ? offre.titre : '' };
   CURRENT_CAND_FILTER = 'all';
-  // reset visuel des chips statut sur "Toutes"
   document.querySelectorAll('#cands-segs .seg').forEach(s => s.classList.remove('on'));
   const allSeg = document.querySelector('#cands-segs .seg[data-statut="all"]');
   if (allSeg) allSeg.classList.add('on');
@@ -1924,57 +1638,34 @@ function viewCandidaturesForOffre(offreId) {
   loadCandidatures(true);
 }
 
-function clearCandOffreFilter() {
-  CURRENT_CAND_OFFRE = null;
-  loadCandidatures(true);
-}
+function clearCandOffreFilter() { CURRENT_CAND_OFFRE = null; loadCandidatures(true); }
 
 function renderCandidaturesList() {
   const listEl = $('cands-list');
-
-  // Bandeau filtre par annonce (Sprint C.4)
   let banner = '';
   if (CURRENT_CAND_OFFRE) {
-    banner = `
-      <div class="banner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--gold-tint,#FBF3E0);border-left:3px solid var(--gold);margin-bottom:14px;">
+    banner = `<div class="banner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--gold-tint,#FBF3E0);border-left:3px solid var(--gold);margin-bottom:14px;">
         <span>📩 Candidatures pour l'annonce <b>« ${escapeHtml(CURRENT_CAND_OFFRE.titre || '—')} »</b></span>
-        <button class="btn sm ghost" style="flex:0 0 auto;" onclick="clearCandOffreFilter()">✕ Retirer le filtre</button>
-      </div>`;
+        <button class="btn sm ghost" style="flex:0 0 auto;" onclick="clearCandOffreFilter()">✕ Retirer le filtre</button></div>`;
   }
-
   if (!CANDS_CACHE.length) {
-    listEl.innerHTML = banner + `
-      <div class="list-empty">
-        <h3>Aucune candidature</h3>
-        <p>${CURRENT_CAND_OFFRE ? 'Cette annonce n\'a pas encore reçu de candidature.' : (CURRENT_CAND_FILTER === 'nouveau' ? 'Aucune candidature en attente de traitement — vous êtes à jour ✓' : `Aucune candidature ${CURRENT_CAND_FILTER !== 'all' ? `avec le statut « ${CAND_STATUT_LABEL[CURRENT_CAND_FILTER] || CURRENT_CAND_FILTER} »` : 'pour le moment'}.`)}</p>
-      </div>`;
+    listEl.innerHTML = banner + `<div class="list-empty"><h3>Aucune candidature</h3><p>${CURRENT_CAND_OFFRE ? 'Cette annonce n\'a pas encore reçu de candidature.' : (CURRENT_CAND_FILTER === 'nouveau' ? 'Aucune candidature en attente — vous êtes à jour ✓' : 'Aucune candidature pour le moment.')}</p></div>`;
     return;
   }
-
-  // Map statut candidature → classe couleur cohérente avec .offre-row.attente / .publie / etc.
-  const STATUT_BORDER_CLASS = {
-    nouveau:   'attente',
-    vue:       '',
-    contactee: 'publie',  // bleu/vert pour "en cours"
-    refusee:   'refuse',
-    acceptee:  'publie',
-  };
-
+  const STATUT_BORDER_CLASS = { nouveau: 'attente', vue: '', contactee: 'publie', refusee: 'refuse', acceptee: 'publie' };
   listEl.innerHTML = banner + CANDS_CACHE.map(c => {
     const borderClass = STATUT_BORDER_CLASS[c.statut] || '';
-    const tone  = CAND_STATUT_TONE[c.statut] || '';
+    const tone = CAND_STATUT_TONE[c.statut] || '';
     const label = CAND_STATUT_LABEL[c.statut] || c.statut;
     const fullName = `${c.candidat_prenom || ''} ${c.candidat_nom || ''}`.trim() || '—';
     const initialsTxt = initials(fullName);
     const sourceLabel = c.source === 'app-benevole' ? 'App bénévole' : (c.source === 'web-public' ? 'Site public' : (c.source || ''));
-
     const meta = [];
     meta.push(`<span><b>${escapeHtml(c.offre_titre)}</b></span>`);
     if (c.offre_type_contrat) meta.push(`<span class="tag">${escapeHtml(c.offre_type_contrat)}</span>`);
     if (c.offre_lieu) meta.push(`<span>📍 ${escapeHtml(c.offre_lieu)}</span>`);
     if (sourceLabel) meta.push(`<span>↗ ${escapeHtml(sourceLabel)}</span>`);
     meta.push(`<span>Reçue ${formatRelative(c.created_at)}</span>`);
-
     return `
       <div class="offre-row ${borderClass}" onclick="openCandidatureModal('${c.id}')" style="cursor:pointer;">
         <div class="offre-main" style="display:flex;gap:14px;align-items:flex-start;">
@@ -1985,63 +1676,38 @@ function renderCandidaturesList() {
               ${c.pilote_notes ? `<span style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;">✦ Notes</span>` : ''}
             </div>
             <div class="offre-titre">${escapeHtml(fullName)}</div>
-            <div class="offre-partner">
-              <span>${escapeHtml(c.candidat_email)}</span>
-              ${c.candidat_telephone ? ` · <span>${escapeHtml(c.candidat_telephone)}</span>` : ''}
-            </div>
+            <div class="offre-partner"><span>${escapeHtml(c.candidat_email)}</span>${c.candidat_telephone ? ` · <span>${escapeHtml(c.candidat_telephone)}</span>` : ''}</div>
             <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
 async function openCandidatureModal(candidatureId) {
-  // Fetch détail complet
   try {
     const res = await fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(candidatureId)}`);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     CURRENT_CAND_DETAIL = data.candidature;
-
-    // Auto-mark "vue" si statut === "nouveau" (en fire-and-forget, ne bloque pas le rendu)
     if (CURRENT_CAND_DETAIL.statut === 'nouveau') {
       fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(candidatureId)}/update-statut`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut: 'vue' }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'vue' }),
       }).then(r => r.json()).then(r => {
         if (r.ok && r.candidature) {
           CURRENT_CAND_DETAIL.statut = 'vue';
-          // Update le cache local + re-render la liste pour refléter le nouveau statut
           const idx = CANDS_CACHE.findIndex(c => c.id === candidatureId);
-          if (idx !== -1) {
-            CANDS_CACHE[idx].statut = 'vue';
-            CANDS_CACHE[idx].traite_le = r.candidature.traite_le;
-          }
-          if (CANDS_STATS.nouveau > 0) {
-            CANDS_STATS.nouveau--;
-            CANDS_STATS.vue = (CANDS_STATS.vue || 0) + 1;
-          }
-          renderCandidatureStats();
-          renderCandidaturesList();
-          renderCandidatureModalContent();
-          // Update badge sidebar
+          if (idx !== -1) { CANDS_CACHE[idx].statut = 'vue'; CANDS_CACHE[idx].traite_le = r.candidature.traite_le; }
+          if (CANDS_STATS.nouveau > 0) { CANDS_STATS.nouveau--; CANDS_STATS.vue = (CANDS_STATS.vue || 0) + 1; }
+          renderCandidatureStats(); renderCandidaturesList(); renderCandidatureModalContent();
           const b = $('sb-badge-cand-nouveau');
-          if (b) {
-            if (CANDS_STATS.nouveau > 0) { b.textContent = CANDS_STATS.nouveau; b.hidden = false; }
-            else { b.hidden = true; }
-          }
+          if (b) { if (CANDS_STATS.nouveau > 0) { b.textContent = CANDS_STATS.nouveau; b.hidden = false; } else b.hidden = true; }
         }
       }).catch(() => {});
     }
-
     renderCandidatureModalContent();
     $('modal-cand').hidden = false;
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 function renderCandidatureModalContent() {
@@ -2053,8 +1719,6 @@ function renderCandidatureModalContent() {
   const tone = CAND_STATUT_TONE[c.statut] || '';
   const label = CAND_STATUT_LABEL[c.statut] || c.statut;
   const sourceLabel = c.source === 'app-benevole' ? 'App bénévole' : (c.source === 'web-public' ? 'Site public' : (c.source || '—'));
-
-  // Boutons disponibles selon statut courant
   const isFinal = c.statut === 'refusee' || c.statut === 'acceptee';
   const actions = isFinal ? '' : `
     <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
@@ -2062,11 +1726,10 @@ function renderCandidatureModalContent() {
       <button class="btn danger" onclick="confirmCandidatureStatut('refusee')">✗ Refuser</button>
       <button class="btn success" onclick="confirmCandidatureStatut('acceptee')">✓ Accepter</button>
     </div>`;
-
   card.innerHTML = `
     <div class="modal-head">
       <div class="row" style="display:flex;align-items:flex-start;gap:14px;">
-        <div class="row-av" style="width:56px;height:56px;font-size:18px;flex:0 0 auto;">${escapeHtml(initialsTxt)}</div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--ink);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex:0 0 auto;">${escapeHtml(initialsTxt)}</div>
         <div style="flex:1;">
           <div class="eyebrow">Candidature · ${escapeHtml(sourceLabel)}</div>
           <h2 class="display" style="margin:4px 0 6px;">${escapeHtml(fullName)}</h2>
@@ -2079,96 +1742,57 @@ function renderCandidatureModalContent() {
       </div>
     </div>
     <div class="modal-body">
-      <!-- Section : Offre ciblée -->
       <div style="background:var(--bg-soft);border-radius:10px;padding:14px 16px;margin-bottom:18px;">
         <div style="font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:6px;">POSTE VISÉ</div>
         <div style="font-size:15px;font-weight:600;color:var(--ink);">${escapeHtml(c.offre_titre)}</div>
-        <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">
-          ${escapeHtml(c.partenaire_nom)}${c.offre_type_contrat ? ` · ${escapeHtml(c.offre_type_contrat)}` : ''}${c.offre_lieu ? ` · ${escapeHtml(c.offre_lieu)}` : ''}
-        </div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${escapeHtml(c.partenaire_nom)}${c.offre_type_contrat ? ` · ${escapeHtml(c.offre_type_contrat)}` : ''}${c.offre_lieu ? ` · ${escapeHtml(c.offre_lieu)}` : ''}</div>
       </div>
-
-      <!-- Section : Coordonnées candidat -->
       <div style="margin-bottom:18px;">
         <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">COORDONNÉES</div>
         <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;">
           <div style="color:var(--ink-soft);">Email</div>
           <div><a href="mailto:${encodeURIComponent(c.candidat_email)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(c.candidat_email)}</a></div>
-          ${c.candidat_telephone ? `
-            <div style="color:var(--ink-soft);">Téléphone</div>
-            <div><a href="tel:${escapeHtml(c.candidat_telephone)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(c.candidat_telephone)}</a></div>` : ''}
-          ${c.cv_url ? `
-            <div style="color:var(--ink-soft);">CV / Lien</div>
-            <div><a href="${escapeHtml(c.cv_url)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;word-break:break-all;">${escapeHtml(c.cv_url)}</a></div>` : ''}
-          ${c.benevole_pseudo ? `
-            <div style="color:var(--ink-soft);">Bénévole</div>
-            <div>${escapeHtml(c.benevole_pseudo)}</div>` : ''}
+          ${c.candidat_telephone ? `<div style="color:var(--ink-soft);">Téléphone</div><div><a href="tel:${escapeHtml(c.candidat_telephone)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(c.candidat_telephone)}</a></div>` : ''}
+          ${c.cv_url ? `<div style="color:var(--ink-soft);">CV / Lien</div><div><a href="${escapeHtml(c.cv_url)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;word-break:break-all;">${escapeHtml(c.cv_url)}</a></div>` : ''}
+          ${c.benevole_pseudo ? `<div style="color:var(--ink-soft);">Bénévole</div><div>${escapeHtml(c.benevole_pseudo)}</div>` : ''}
         </div>
       </div>
-
-      ${c.message ? `
-      <!-- Section : Message du candidat -->
-      <div style="margin-bottom:18px;">
-        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">MESSAGE DU CANDIDAT</div>
-        <div style="background:var(--bg-soft);border-left:3px solid var(--gold);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;font-style:italic;">${escapeHtml(c.message)}</div>
-      </div>` : ''}
-
-      <!-- Section : Notes pilote -->
+      ${c.message ? `<div style="margin-bottom:18px;"><div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">MESSAGE DU CANDIDAT</div><div style="background:var(--bg-soft);border-left:3px solid var(--gold);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;font-style:italic;">${escapeHtml(c.message)}</div></div>` : ''}
       <div style="margin-bottom:6px;">
         <label class="input-lbl" for="cand-notes">Notes pilote <span style="color:var(--ink-soft);font-weight:400;font-size:11px;">(visible uniquement par l'équipe Spacer's)</span></label>
-        <textarea id="cand-notes" class="input" rows="3" placeholder="Ex : Profil intéressant pour Picoty, voir avec Thomas avant accusé de réception…">${escapeHtml(c.pilote_notes || '')}</textarea>
+        <textarea id="cand-notes" class="input" rows="3" placeholder="Ex : Profil intéressant pour Picoty…">${escapeHtml(c.pilote_notes || '')}</textarea>
         <button class="btn ghost" style="margin-top:8px;font-size:12px;padding:6px 12px;" onclick="saveCandidatureNotes()">💾 Sauvegarder les notes</button>
       </div>
-
-      ${c.traite_le ? `
-      <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
-        Dernier statut posé le ${escapeHtml(formatDateShort(c.traite_le))}.
-      </div>` : ''}
+      ${c.traite_le ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">Dernier statut posé le ${escapeHtml(formatDateShort(c.traite_le))}.</div>` : ''}
     </div>
     ${actions}
   `;
 }
 
-function closeCandidatureModal() {
-  $('modal-cand').hidden = true;
-  CURRENT_CAND_DETAIL = null;
-}
+function closeCandidatureModal() { $('modal-cand').hidden = true; CURRENT_CAND_DETAIL = null; }
 
 async function updateCandidatureStatut(newStatut) {
   if (!CURRENT_CAND_DETAIL) return;
   const id = CURRENT_CAND_DETAIL.id;
   const notes = $('cand-notes')?.value || '';
-
   try {
     const res = await fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update-statut`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statut: newStatut, pilote_notes: notes }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: newStatut, pilote_notes: notes }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-
     showToast(`✓ Statut mis à jour : ${CAND_STATUT_LABEL[newStatut]}`, 'success');
-    closeCandidatureModal();
-    loadCandidatures(); // refresh tout
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+    closeCandidatureModal(); loadCandidatures();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 async function confirmCandidatureStatut(statut) {
   const label = CAND_STATUT_LABEL[statut];
   const messages = {
-    refusee: 'Confirmer le refus de cette candidature ? Le candidat n\'est pas notifié automatiquement — il faudra lui écrire directement si besoin.',
-    acceptee: 'Confirmer l\'acceptation de cette candidature ? Pense à prévenir le partenaire et le candidat par mail ou téléphone.',
+    refusee: 'Confirmer le refus de cette candidature ? Le candidat n\'est pas notifié automatiquement.',
+    acceptee: 'Confirmer l\'acceptation ? Pense à prévenir le partenaire et le candidat.',
   };
-  const ok = await confirmModal({
-    eyebrow: 'Confirmation',
-    title: `Marquer comme ${label.toLowerCase()} ?`,
-    message: messages[statut] || '',
-    confirmText: 'Confirmer',
-    confirmStyle: statut === 'refusee' ? 'danger' : 'primary',
-  });
+  const ok = await confirmModal({ eyebrow: 'Confirmation', title: `Marquer comme ${label.toLowerCase()} ?`, message: messages[statut] || '', confirmText: 'Confirmer', confirmStyle: statut === 'refusee' ? 'danger' : 'primary' });
   if (ok) updateCandidatureStatut(statut);
 }
 
@@ -2176,56 +1800,34 @@ async function saveCandidatureNotes() {
   if (!CURRENT_CAND_DETAIL) return;
   const id = CURRENT_CAND_DETAIL.id;
   const notes = $('cand-notes')?.value || '';
-
   try {
     const res = await fetch(`/api/admin/candidature/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update-statut`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statut: CURRENT_CAND_DETAIL.statut, pilote_notes: notes }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: CURRENT_CAND_DETAIL.statut, pilote_notes: notes }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-
     CURRENT_CAND_DETAIL.pilote_notes = notes;
-    // Update cache local
     const idx = CANDS_CACHE.findIndex(c => c.id === id);
     if (idx !== -1) CANDS_CACHE[idx].pilote_notes = notes;
-
     showToast('💾 Notes sauvegardées', 'success');
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ============================================================================
-//  PUBLICATIONS — Sprint B.1 (forum / proposition / echange — modération)
+//  PUBLICATIONS — Sprint B.1
 // ============================================================================
-
 const PUB_TYPE_META = {
   forum:       { label: 'Forum',       ico: '⌘', tagline: 'Sortie / afterwork / événement' },
   proposition: { label: 'Proposition', ico: '◈', tagline: 'Offre ou remise B2B' },
   echange:     { label: 'Échange',     ico: '⌬', tagline: 'Demande de prestataire' },
 };
-const PUB_STATUT_LABEL = {
-  en_attente: 'En attente',
-  publie:     'Publiée',
-  refuse:     'Refusée',
-  expire:     'Expirée',
-  archive:    'Archivée',
-};
-const PUB_STATUT_TONE = {
-  en_attente: 'attente',
-  publie:     'publie',
-  refuse:     'refuse',
-  expire:     'expire',
-  archive:    'archive',
-};
+const PUB_STATUT_LABEL = { en_attente: 'En attente', publie: 'Publiée', refuse: 'Refusée', expire: 'Expirée', archive: 'Archivée' };
+const PUB_STATUT_TONE = { en_attente: 'attente', publie: 'publie', refuse: 'refuse', expire: 'expire', archive: 'archive' };
 
 async function loadPublications(force=false) {
   const btn = document.querySelector('#tab-publications .refresh-btn');
   if (btn) btn.classList.add('spinning');
   const listEl = $('pubs-list');
-
   try {
     const params = [];
     if (CURRENT_PUB_TYPE !== 'all')   params.push(`type=${encodeURIComponent(CURRENT_PUB_TYPE)}`);
@@ -2234,19 +1836,13 @@ async function loadPublications(force=false) {
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-
     PUBS_CACHE = data.publications || [];
     PUBS_STATS = data.stats || {};
     renderPublicationStats();
     renderPublicationsList();
-
-    // Badge sidebar : total des publications en_attente (tous types)
     const totalAttente = ['forum','proposition','echange'].reduce((s,t) => s + (PUBS_STATS[t]?.en_attente || 0), 0);
     const b = $('sb-badge-pub-attente');
-    if (b) {
-      if (totalAttente > 0) { b.textContent = totalAttente; b.hidden = false; }
-      else { b.hidden = true; }
-    }
+    if (b) { if (totalAttente > 0) { b.textContent = totalAttente; b.hidden = false; } else b.hidden = true; }
   } catch (e) {
     listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
   } finally {
@@ -2258,11 +1854,11 @@ function renderPublicationStats() {
   const s = PUBS_STATS;
   const totalAll = ['forum','proposition','echange'].reduce((acc,t) => acc + (s[t]?.total || 0), 0);
   const totalAttente = ['forum','proposition','echange'].reduce((acc,t) => acc + (s[t]?.en_attente || 0), 0);
-  $('cnt-pub-all').textContent         = totalAll;
-  $('cnt-pub-forum').textContent       = s.forum?.total || 0;
+  $('cnt-pub-all').textContent = totalAll;
+  $('cnt-pub-forum').textContent = s.forum?.total || 0;
   $('cnt-pub-proposition').textContent = s.proposition?.total || 0;
-  $('cnt-pub-echange').textContent     = s.echange?.total || 0;
-  $('cnt-pubst-attente').textContent   = totalAttente;
+  $('cnt-pub-echange').textContent = s.echange?.total || 0;
+  $('cnt-pubst-attente').textContent = totalAttente;
 }
 
 function setPubTypeFilter(type, btn) {
@@ -2271,7 +1867,6 @@ function setPubTypeFilter(type, btn) {
   btn.classList.add('on');
   loadPublications();
 }
-
 function setPubStatutFilter(statut, btn) {
   CURRENT_PUB_STATUT = statut;
   document.querySelectorAll('#pubs-statut-segs .seg').forEach(s => s.classList.remove('on'));
@@ -2282,29 +1877,21 @@ function setPubStatutFilter(statut, btn) {
 function renderPublicationsList() {
   const listEl = $('pubs-list');
   if (!PUBS_CACHE.length) {
-    listEl.innerHTML = `
-      <div class="list-empty">
-        <h3>Aucune publication</h3>
-        <p>${CURRENT_PUB_STATUT === 'en_attente' ? 'Aucune publication en attente de modération — tout est traité ✓' : 'Aucune publication ne correspond à ces filtres.'}</p>
-      </div>`;
+    listEl.innerHTML = `<div class="list-empty"><h3>Aucune publication</h3><p>${CURRENT_PUB_STATUT === 'en_attente' ? 'Aucune publication en attente — tout est traité ✓' : 'Aucune publication ne correspond à ces filtres.'}</p></div>`;
     return;
   }
-
   const STATUT_BORDER = { en_attente:'attente', publie:'publie', refuse:'refuse', expire:'archive', archive:'archive' };
-
   listEl.innerHTML = PUBS_CACHE.map(p => {
     const tmeta = PUB_TYPE_META[p.type] || { label: p.type, ico: '•', tagline: '' };
     const borderClass = STATUT_BORDER[p.statut] || '';
-    const tone  = PUB_STATUT_TONE[p.statut] || '';
+    const tone = PUB_STATUT_TONE[p.statut] || '';
     const label = PUB_STATUT_LABEL[p.statut] || p.statut;
-
     const meta = [];
     meta.push(`<span class="tag">${tmeta.ico} ${tmeta.label}</span>`);
     if (p.categorie) meta.push(`<span>${escapeHtml(p.categorie)}</span>`);
     meta.push(`<span>${escapeHtml(p.partenaire)}</span>`);
     meta.push(`<span>Reçue ${formatRelative(p.created_at)}</span>`);
     if (p.reponses_count > 0) meta.push(`<span>💬 ${p.reponses_count}</span>`);
-
     return `
       <div class="offre-row ${borderClass}" onclick="openPublicationModal('${p.id}')" style="cursor:pointer;">
         <div class="offre-main">
@@ -2316,8 +1903,7 @@ function renderPublicationsList() {
           ${p.description ? `<div class="offre-partner" style="font-weight:400;">${escapeHtml(p.description.slice(0,120))}${p.description.length > 120 ? '…' : ''}</div>` : ''}
           <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
@@ -2329,9 +1915,7 @@ async function openPublicationModal(pubId) {
     CURRENT_PUB_DETAIL = data.publication || data;
     renderPublicationModalContent();
     $('modal-pub').hidden = false;
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 function renderPublicationModalContent() {
@@ -2339,31 +1923,21 @@ function renderPublicationModalContent() {
   if (!p) return;
   const card = $('modal-pub-card');
   const tmeta = PUB_TYPE_META[p.type] || { label: p.type, ico: '•', tagline: '' };
-  const tone  = PUB_STATUT_TONE[p.statut] || '';
+  const tone = PUB_STATUT_TONE[p.statut] || '';
   const label = PUB_STATUT_LABEL[p.statut] || p.statut;
-
-  // Rendu du champ data (JSON libre) en lignes clé/valeur
   let dataRows = '';
   if (p.data && typeof p.data === 'object' && Object.keys(p.data).length) {
-    dataRows = Object.entries(p.data)
-      .filter(([k,v]) => v !== null && v !== '' && v !== undefined)
-      .map(([k,v]) => `
-        <div style="color:var(--ink-soft);text-transform:capitalize;">${escapeHtml(k.replace(/_/g,' '))}</div>
-        <div>${escapeHtml(String(v))}</div>`).join('');
+    dataRows = Object.entries(p.data).filter(([k,v]) => v !== null && v !== '' && v !== undefined)
+      .map(([k,v]) => `<div style="color:var(--ink-soft);text-transform:capitalize;">${escapeHtml(k.replace(/_/g,' '))}</div><div>${escapeHtml(String(v))}</div>`).join('');
   }
-
-  // Actions selon statut
   let actions = '';
   if (p.statut === 'en_attente') {
-    actions = `
-      <button class="btn success" onclick="publicationAction('publish')">✓ Publier</button>
-      <button class="btn danger" onclick="publicationReject()">✗ Refuser</button>`;
+    actions = `<button class="btn success" onclick="publicationAction('publish')">✓ Publier</button><button class="btn danger" onclick="publicationReject()">✗ Refuser</button>`;
   } else if (p.statut === 'publie') {
     actions = `<button class="btn ghost" onclick="publicationAction('archive')">⌫ Archiver</button>`;
   } else if (p.statut === 'refuse') {
     actions = `<button class="btn success" onclick="publicationAction('publish')">↻ Publier finalement</button>`;
   }
-
   card.innerHTML = `
     <div class="modal-head">
       <div style="display:flex;align-items:flex-start;gap:14px;">
@@ -2380,20 +1954,9 @@ function renderPublicationModalContent() {
       </div>
     </div>
     <div class="modal-body">
-      ${p.description ? `
-      <div style="margin-bottom:18px;">
-        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">DESCRIPTION</div>
-        <div style="font-size:14px;color:var(--ink);line-height:1.7;white-space:pre-wrap;">${escapeHtml(p.description)}</div>
-      </div>` : ''}
-
+      ${p.description ? `<div style="margin-bottom:18px;"><div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">DESCRIPTION</div><div style="font-size:14px;color:var(--ink);line-height:1.7;white-space:pre-wrap;">${escapeHtml(p.description)}</div></div>` : ''}
       ${p.categorie ? `<div style="margin-bottom:14px;"><span class="tag" style="background:var(--bg-soft);padding:4px 12px;border-radius:999px;font-size:12px;">${escapeHtml(p.categorie)}</span></div>` : ''}
-
-      ${dataRows ? `
-      <div style="margin-bottom:18px;">
-        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">DÉTAILS</div>
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;background:var(--bg-soft);border-radius:10px;padding:12px 16px;">${dataRows}</div>
-      </div>` : ''}
-
+      ${dataRows ? `<div style="margin-bottom:18px;"><div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">DÉTAILS</div><div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;background:var(--bg-soft);border-radius:10px;padding:12px 16px;">${dataRows}</div></div>` : ''}
       <div style="margin-bottom:6px;">
         <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">CONTACT</div>
         <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;">
@@ -2402,89 +1965,52 @@ function renderPublicationModalContent() {
           ${p.contact_telephone ? `<div style="color:var(--ink-soft);">Téléphone</div><div><a href="tel:${escapeHtml(p.contact_telephone)}" style="color:var(--gold);text-decoration:none;">${escapeHtml(p.contact_telephone)}</a></div>` : ''}
         </div>
       </div>
-
-      ${p.raison_refus ? `
-      <div style="margin-top:16px;padding:12px 14px;background:var(--red-tint);border-left:3px solid var(--red);border-radius:6px;font-size:13px;color:var(--red);">
-        <b>Motif de refus :</b> ${escapeHtml(p.raison_refus)}
-      </div>` : ''}
+      ${p.raison_refus ? `<div style="margin-top:16px;padding:12px 14px;background:var(--red-tint);border-left:3px solid var(--red);border-radius:6px;font-size:13px;color:var(--red);"><b>Motif de refus :</b> ${escapeHtml(p.raison_refus)}</div>` : ''}
     </div>
     ${actions ? `<div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">${actions}</div>` : ''}
   `;
 }
 
-function closePublicationModal() {
-  $('modal-pub').hidden = true;
-  CURRENT_PUB_DETAIL = null;
-}
+function closePublicationModal() { $('modal-pub').hidden = true; CURRENT_PUB_DETAIL = null; }
 
 async function publicationAction(action) {
   if (!CURRENT_PUB_DETAIL) return;
   const id = CURRENT_PUB_DETAIL.id;
-
   if (action === 'publish') {
-    const ok = await confirmModal({
-      eyebrow: 'Validation', title: 'Publier cette publication ?',
-      message: 'Elle deviendra visible des autres partenaires dans leur espace.',
-      confirmText: 'Publier', confirmStyle: 'success',
-    });
+    const ok = await confirmModal({ eyebrow: 'Validation', title: 'Publier cette publication ?', message: 'Elle deviendra visible des autres partenaires.', confirmText: 'Publier', confirmStyle: 'success' });
     if (!ok) return;
   } else if (action === 'archive') {
-    const ok = await confirmModal({
-      eyebrow: 'Archivage', title: 'Archiver cette publication ?',
-      message: 'Elle ne sera plus visible des partenaires mais reste conservée.',
-      confirmText: 'Archiver', confirmStyle: 'primary',
-    });
+    const ok = await confirmModal({ eyebrow: 'Archivage', title: 'Archiver cette publication ?', message: 'Elle ne sera plus visible des partenaires.', confirmText: 'Archiver', confirmStyle: 'primary' });
     if (!ok) return;
   }
-
   try {
     const res = await fetch(`/api/admin/publications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/${action}`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     const labels = { publish: 'publiée', archive: 'archivée' };
     showToast(`✓ Publication ${labels[action] || 'mise à jour'}`, 'success');
-    closePublicationModal();
-    loadPublications();
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+    closePublicationModal(); loadPublications();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 async function publicationReject() {
   if (!CURRENT_PUB_DETAIL) return;
   const id = CURRENT_PUB_DETAIL.id;
-  const raison = await promptModal({
-    eyebrow: 'Refus', title: 'Refuser cette publication',
-    message: 'Le motif sera transmis au partenaire. Sois précis et constructif.',
-    inputPlaceholder: 'Ex : Contenu hors charte, doublon, informations incomplètes…',
-    confirmText: 'Refuser', confirmStyle: 'danger',
-  });
-  if (raison === null) return; // annulé
-
+  const raison = await promptModal({ eyebrow: 'Refus', title: 'Refuser cette publication', message: 'Le motif sera transmis au partenaire.', inputPlaceholder: 'Ex : Contenu hors charte, doublon…', confirmText: 'Refuser', confirmStyle: 'danger' });
+  if (raison === null) return;
   try {
-    const res = await fetch(`/api/admin/publications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raison: raison }),
-    });
+    const res = await fetch(`/api/admin/publications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ raison: raison }) });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('✓ Publication refusée', 'success');
-    closePublicationModal();
-    loadPublications();
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+    closePublicationModal(); loadPublications();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ============================================================================
-//  COMMUNICATIONS — Sprint D.2 (invitations + annonces, création + RSVP)
+//  COMMUNICATIONS — Sprint D.2
 // ============================================================================
-
-const COM_TYPE_META = {
-  invitation: { label: 'Invitation', ico: '✦' },
-  annonce:    { label: 'Annonce',    ico: '◇' },
-};
+const COM_TYPE_META = { invitation: { label: 'Invitation', ico: '✦' }, annonce: { label: 'Annonce', ico: '◇' } };
 const COM_STATUT_LABEL = { brouillon: 'Brouillon', publie: 'Publiée', archive: 'Archivée' };
 const COM_STATUT_TONE  = { brouillon: 'attente', publie: 'publie', archive: 'archive' };
 
@@ -2500,12 +2026,10 @@ async function loadCommunications(force=false) {
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-
     COMS_CACHE = data.communications || [];
     COMS_STATS = data.stats || {};
     renderComStats();
     renderCommunicationsList();
-
     const totalBrouillon = (COMS_STATS.invitation?.brouillon || 0) + (COMS_STATS.annonce?.brouillon || 0);
     const b = $('sb-badge-com-brouillon');
     if (b) { if (totalBrouillon > 0) { b.textContent = totalBrouillon; b.hidden = false; } else b.hidden = true; }
@@ -2518,25 +2042,21 @@ async function loadCommunications(force=false) {
 
 function renderComStats() {
   const s = COMS_STATS;
-  const totalAll = (s.invitation?.total || 0) + (s.annonce?.total || 0);
-  const totalBr  = (s.invitation?.brouillon || 0) + (s.annonce?.brouillon || 0);
-  $('cnt-com-all').textContent        = totalAll;
+  $('cnt-com-all').textContent = (s.invitation?.total || 0) + (s.annonce?.total || 0);
   $('cnt-com-invitation').textContent = s.invitation?.total || 0;
-  $('cnt-com-annonce').textContent    = s.annonce?.total || 0;
-  $('cnt-comst-brouillon').textContent = totalBr;
+  $('cnt-com-annonce').textContent = s.annonce?.total || 0;
+  $('cnt-comst-brouillon').textContent = (s.invitation?.brouillon || 0) + (s.annonce?.brouillon || 0);
 }
 
 function setComTypeFilter(type, btn) {
   CURRENT_COM_TYPE = type;
   document.querySelectorAll('#coms-type-segs .seg').forEach(s => s.classList.remove('on'));
-  btn.classList.add('on');
-  loadCommunications();
+  btn.classList.add('on'); loadCommunications();
 }
 function setComStatutFilter(statut, btn) {
   CURRENT_COM_STATUT = statut;
   document.querySelectorAll('#coms-statut-segs .seg').forEach(s => s.classList.remove('on'));
-  btn.classList.add('on');
-  loadCommunications();
+  btn.classList.add('on'); loadCommunications();
 }
 
 function renderCommunicationsList() {
@@ -2546,33 +2066,27 @@ function renderCommunicationsList() {
     return;
   }
   const STATUT_BORDER = { brouillon: 'attente', publie: 'publie', archive: 'archive' };
-
   listEl.innerHTML = COMS_CACHE.map(c => {
     const tmeta = COM_TYPE_META[c.type] || { label: c.type, ico: '•' };
     const borderClass = STATUT_BORDER[c.statut] || '';
-    const tone  = COM_STATUT_TONE[c.statut] || '';
+    const tone = COM_STATUT_TONE[c.statut] || '';
     const label = COM_STATUT_LABEL[c.statut] || c.statut;
     const d = c.data || {};
-
     const meta = [];
     meta.push(`<span class="tag">${tmeta.ico} ${tmeta.label}</span>`);
     if (c.type === 'invitation' && d.date_event) meta.push(`<span>📅 ${escapeHtml(d.date_event)}${d.heure ? ' · ' + escapeHtml(d.heure) : ''}</span>`);
     if (c.type === 'invitation' && d.lieu) meta.push(`<span>📍 ${escapeHtml(d.lieu)}</span>`);
     meta.push(`<span>${c.statut === 'publie' && c.date_publication ? 'Publiée ' + formatRelative(c.date_publication) : 'Créée ' + formatRelative(c.created_at)}</span>`);
-
-    // Agrégat RSVP pour les invitations publiées
     let rsvpBadge = '';
     if (c.type === 'invitation' && c.statut === 'publie') {
       const r = c.reponses || { present: 0, total_personnes: 0 };
       rsvpBadge = `<span style="font-size:11px;color:var(--green);font-weight:700;">✓ ${r.present} présent${r.present>1?'s':''} · ${r.total_personnes} pers.</span>`;
     }
-
     return `
       <div class="offre-row ${borderClass}" onclick="openCommunicationModal('${c.id}')" style="cursor:pointer;">
         <div class="offre-main">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
-            ${rsvpBadge}
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>${rsvpBadge}
           </div>
           <div class="offre-titre">${escapeHtml(c.titre)}</div>
           ${c.message ? `<div class="offre-partner" style="font-weight:400;">${escapeHtml(c.message.slice(0,110))}${c.message.length>110?'…':''}</div>` : ''}
@@ -2582,18 +2096,15 @@ function renderCommunicationsList() {
   }).join('');
 }
 
-// ---- Création ----
 function openComCreateModal() {
   COM_CREATE_TYPE = 'invitation';
   document.querySelectorAll('#com-create-type .seg').forEach(s => s.classList.remove('on'));
   document.querySelector('#com-create-type .seg[data-ctype="invitation"]').classList.add('on');
   $('com-invit-fields').style.display = '';
-  $('com-titre').value = '';
-  $('com-message').value = '';
+  $('com-titre').value = ''; $('com-message').value = '';
   $('com-date').value = ''; $('com-heure').value = ''; $('com-lieu').value = ''; $('com-deadline').value = '';
   $('com-create-status').textContent = '';
-  $('com-create-btn').disabled = false;
-  $('com-create-btn').textContent = 'Créer en brouillon';
+  $('com-create-btn').disabled = false; $('com-create-btn').textContent = 'Créer en brouillon';
   $('modal-com-create').hidden = false;
 }
 function closeComCreateModal() { $('modal-com-create').hidden = true; }
@@ -2609,7 +2120,6 @@ async function submitCommunication() {
   const titre = $('com-titre').value.trim();
   const status = $('com-create-status');
   if (!titre) { status.textContent = '⚠ Le titre est obligatoire'; status.style.color = '#993556'; return; }
-
   const data = {};
   if (COM_CREATE_TYPE === 'invitation') {
     if ($('com-date').value.trim())     data.date_event = $('com-date').value.trim();
@@ -2617,14 +2127,7 @@ async function submitCommunication() {
     if ($('com-lieu').value.trim())     data.lieu = $('com-lieu').value.trim();
     if ($('com-deadline').value.trim()) data.deadline_rsvp = $('com-deadline').value.trim();
   }
-
-  const payload = {
-    type: COM_CREATE_TYPE,
-    titre,
-    message: $('com-message').value.trim() || null,
-    data,
-  };
-
+  const payload = { type: COM_CREATE_TYPE, titre, message: $('com-message').value.trim() || null, data };
   const btn = $('com-create-btn');
   btn.disabled = true; btn.textContent = '⏳ Création…';
   try {
@@ -2634,15 +2137,13 @@ async function submitCommunication() {
     const dataR = await res.json();
     if (!res.ok || dataR.error) throw new Error(dataR.error || `Erreur ${res.status}`);
     showToast('✓ Communication créée en brouillon', 'success');
-    closeComCreateModal();
-    loadCommunications();
+    closeComCreateModal(); loadCommunications();
   } catch (e) {
     status.textContent = '❌ ' + e.message; status.style.color = '#993556';
     btn.disabled = false; btn.textContent = 'Créer en brouillon';
   }
 }
 
-// ---- Détail + RSVP ----
 async function openCommunicationModal(comId) {
   try {
     const res = await fetch(`/api/admin/communication/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(comId)}`);
@@ -2651,9 +2152,7 @@ async function openCommunicationModal(comId) {
     CURRENT_COM_DETAIL = data;
     renderCommunicationModalContent();
     $('modal-com').hidden = false;
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 function renderCommunicationModalContent() {
@@ -2661,11 +2160,9 @@ function renderCommunicationModalContent() {
   if (!c) return;
   const card = $('modal-com-card');
   const tmeta = COM_TYPE_META[c.type] || { label: c.type, ico: '•' };
-  const tone  = COM_STATUT_TONE[c.statut] || '';
+  const tone = COM_STATUT_TONE[c.statut] || '';
   const label = COM_STATUT_LABEL[c.statut] || c.statut;
   const d = c.data || {};
-
-  // Détails invitation
   let dataRows = '';
   if (c.type === 'invitation') {
     const lines = [];
@@ -2674,38 +2171,24 @@ function renderCommunicationModalContent() {
     if (d.deadline_rsvp) lines.push(['Réponse avant', d.deadline_rsvp]);
     if (lines.length) {
       dataRows = `<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;background:var(--bg-soft);border-radius:10px;padding:12px 16px;margin-bottom:18px;">`
-        + lines.map(([k,v]) => `<div style="color:var(--ink-soft);">${escapeHtml(k)}</div><div>${escapeHtml(v)}</div>`).join('')
-        + `</div>`;
+        + lines.map(([k,v]) => `<div style="color:var(--ink-soft);">${escapeHtml(k)}</div><div>${escapeHtml(v)}</div>`).join('') + `</div>`;
     }
   }
-
-  // Bloc RSVP (invitations publiées)
   let rsvpBlock = '';
   if (c.type === 'invitation' && c.statut === 'publie') {
     const repItems = (reponses || []).map(r => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
         <div><b>${escapeHtml(r.partenaire_nom)}</b>${r.commentaire ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;">${escapeHtml(r.commentaire)}</div>` : ''}</div>
-        <div style="text-align:right;">
-          ${r.reponse === 'present'
-            ? `<span style="color:var(--green);font-weight:700;">✓ ${r.nb_personnes} pers.</span>`
-            : `<span style="color:var(--red);font-weight:700;">✗ Absent</span>`}
-        </div>
+        <div style="text-align:right;">${r.reponse === 'present' ? `<span style="color:var(--green);font-weight:700;">✓ ${r.nb_personnes} pers.</span>` : `<span style="color:var(--red);font-weight:700;">✗ Absent</span>`}</div>
       </div>`).join('');
-    rsvpBlock = `
-      <div style="margin-bottom:18px;">
-        <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">RÉPONSES — ${agg.present} présent${agg.present>1?'s':''} (${agg.total_personnes} pers.) · ${agg.absent} absent${agg.absent>1?'s':''}</div>
-        ${repItems || '<div style="font-size:13px;color:var(--ink-soft);font-style:italic;">Aucune réponse pour le moment.</div>'}
-      </div>`;
+    rsvpBlock = `<div style="margin-bottom:18px;"><div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:8px;">RÉPONSES — ${agg.present} présent${agg.present>1?'s':''} (${agg.total_personnes} pers.) · ${agg.absent} absent${agg.absent>1?'s':''}</div>${repItems || '<div style="font-size:13px;color:var(--ink-soft);font-style:italic;">Aucune réponse pour le moment.</div>'}</div>`;
   }
-
-  // Actions
   let actions = '';
   if (c.statut === 'brouillon') {
     actions = `<button class="btn success" onclick="communicationPublish()">📣 Publier &amp; notifier</button>`;
   } else if (c.statut === 'publie') {
     actions = `<button class="btn ghost" onclick="communicationArchive()">⌫ Archiver</button>`;
   }
-
   card.innerHTML = `
     <div class="modal-head">
       <div style="display:flex;align-items:flex-start;gap:14px;">
@@ -2733,47 +2216,36 @@ function closeCommunicationModal() { $('modal-com').hidden = true; CURRENT_COM_D
 async function communicationPublish() {
   if (!CURRENT_COM_DETAIL?.communication) return;
   const c = CURRENT_COM_DETAIL.communication;
-  const ok = await confirmModal({
-    eyebrow: 'Publication', title: 'Publier et notifier ?',
-    message: 'Un email partira à tous les partenaires et le message apparaîtra dans leur espace. Action immédiate.',
-    confirmText: 'Publier', confirmStyle: 'success',
-  });
+  const ok = await confirmModal({ eyebrow: 'Publication', title: 'Publier et notifier ?', message: 'Un email partira à tous les partenaires et le message apparaîtra dans leur espace. Action immédiate.', confirmText: 'Publier', confirmStyle: 'success' });
   if (!ok) return;
   try {
     const res = await fetch(`/api/admin/communications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(c.id)}/publish`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('📣 Communication publiée et notifiée', 'success');
-    closeCommunicationModal();
-    loadCommunications();
+    closeCommunicationModal(); loadCommunications();
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 async function communicationArchive() {
   if (!CURRENT_COM_DETAIL?.communication) return;
   const c = CURRENT_COM_DETAIL.communication;
-  const ok = await confirmModal({
-    eyebrow: 'Archivage', title: 'Archiver cette communication ?',
-    message: 'Elle ne sera plus visible des partenaires.',
-    confirmText: 'Archiver', confirmStyle: 'primary',
-  });
+  const ok = await confirmModal({ eyebrow: 'Archivage', title: 'Archiver cette communication ?', message: 'Elle ne sera plus visible des partenaires.', confirmText: 'Archiver', confirmStyle: 'primary' });
   if (!ok) return;
   try {
     const res = await fetch(`/api/admin/communications/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(c.id)}/archive`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('✓ Communication archivée', 'success');
-    closeCommunicationModal();
-    loadCommunications();
+    closeCommunicationModal(); loadCommunications();
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ============================================================================
-//  PARTENAIRES / CONTACTS — Sprint E.3 (gestion des comptes BC par société)
+//  PARTENAIRES / CONTACTS — Sprint E.3
 // ============================================================================
-
 const CTC_STATUT_LABEL = { a_inviter: 'À inviter', invite: 'Invité', active: 'Actif', inactif: 'Inactif' };
-const CTC_STATUT_TONE  = { a_inviter: 'attente', invite: 'publie', active: 'success', inactif: 'archive' };
+const CTC_STATUT_TONE  = { a_inviter: 'attente', invite: 'pourvue', active: 'publie', inactif: 'archive' };
 
 async function loadPartenaires(force=false) {
   const btn = document.querySelector('#tab-partenaires .refresh-btn');
@@ -2785,11 +2257,9 @@ async function loadPartenaires(force=false) {
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     PARTENAIRES_CACHE = data.partenaires || [];
     renderPartenairesList();
-
-    // Badge sidebar = nb total de contacts "à inviter" sur l'ensemble des sociétés
-    const totalAinviter = PARTENAIRES_CACHE.reduce((s, p) => s + (p.contacts_stats?.a_inviter || 0), 0);
+    const totalAInviter = PARTENAIRES_CACHE.reduce((s,p) => s + (p.contacts_a_inviter || 0), 0);
     const b = $('sb-badge-ctc-ainviter');
-    if (b) { if (totalAinviter > 0) { b.textContent = totalAinviter; b.hidden = false; } else b.hidden = true; }
+    if (b) { if (totalAInviter > 0) { b.textContent = totalAInviter; b.hidden = false; } else b.hidden = true; }
   } catch (e) {
     listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
   } finally {
@@ -2798,80 +2268,48 @@ async function loadPartenaires(force=false) {
 }
 
 function filterPartenaires() {
-  const q = ($('part-search')?.value || '').trim().toLowerCase();
+  const q = ($('part-search').value || '').toLowerCase().trim();
   renderPartenairesList(q);
 }
 
-function renderPartenairesList(filterQuery='') {
+function renderPartenairesList(q='') {
   const listEl = $('partenaires-list');
-  if (!PARTENAIRES_CACHE.length) {
-    listEl.innerHTML = `<div class="list-empty"><h3>Aucun partenaire</h3><p>La table partenaires est vide.</p></div>`;
+  let list = PARTENAIRES_CACHE;
+  if (q) list = list.filter(p => (p.raison_sociale || '').toLowerCase().includes(q));
+  if (!list.length) {
+    listEl.innerHTML = `<div class="list-empty"><h3>Aucune société</h3><p>${q ? 'Aucun partenaire ne correspond à cette recherche.' : 'Aucun partenaire enregistré pour le moment.'}</p></div>`;
     return;
   }
-  let items = PARTENAIRES_CACHE;
-  if (filterQuery) items = items.filter(p => (p.raison_sociale || '').toLowerCase().includes(filterQuery));
-
-  if (!items.length) { listEl.innerHTML = `<div class="list-empty">Aucun résultat pour « ${escapeHtml(filterQuery)} »</div>`; return; }
-
-  listEl.innerHTML = items.map(p => {
-    const s = p.contacts_stats || { total: 0, a_inviter: 0, invite: 0, active: 0, inactif: 0 };
-
-    // Pastilles statuts contacts
-    const pills = [];
-    if (s.active > 0)    pills.push(`<span class="status-badge success">✓ ${s.active} actif${s.active>1?'s':''}</span>`);
-    if (s.invite > 0)    pills.push(`<span class="status-badge publie">⏳ ${s.invite} invité${s.invite>1?'s':''}</span>`);
-    if (s.a_inviter > 0) pills.push(`<span class="status-badge attente">⚠ ${s.a_inviter} à inviter</span>`);
-    if (s.inactif > 0)   pills.push(`<span class="status-badge archive">${s.inactif} inactif${s.inactif>1?'s':''}</span>`);
-    if (!pills.length)   pills.push(`<span class="status-badge archive" style="opacity:.6;">Aucun contact</span>`);
-
-    const tickieBadge = p.tickie_customer_id
-      ? `<span class="tag" style="background:rgba(200,147,43,.12);color:var(--gold);">⌬ Tickie lié</span>`
-      : '';
-
+  listEl.innerHTML = list.map(p => {
+    const nbContacts = p.contacts_count || 0;
+    const nbActifs = p.contacts_actifs || 0;
+    const nbAInviter = p.contacts_a_inviter || 0;
+    const meta = [];
+    meta.push(`<span>${nbContacts} contact${nbContacts>1?'s':''}</span>`);
+    if (nbActifs > 0) meta.push(`<span style="color:var(--green);">✓ ${nbActifs} actif${nbActifs>1?'s':''}</span>`);
+    if (nbAInviter > 0) meta.push(`<span style="color:var(--orange);">${nbAInviter} à inviter</span>`);
+    if (p.pack_places) meta.push(`<span class="tag">${escapeHtml(String(p.pack_places))} places VIP</span>`);
     return `
       <div class="offre-row" onclick="openPartenaireModal('${p.id}')" style="cursor:pointer;">
-        <div class="offre-main">
-          <div class="offre-titre">${escapeHtml(p.raison_sociale || 'Sans nom')}</div>
-          <div class="offre-partner" style="font-weight:400;">${p.representant ? '👤 ' + escapeHtml(p.representant) : 'Aucun représentant'}${p.siren ? ' · SIREN ' + escapeHtml(p.siren) : ''}</div>
-          <div class="offre-meta" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
-            ${pills.join('')}${tickieBadge}
+        <div class="offre-main" style="display:flex;gap:14px;align-items:center;">
+          <div style="width:46px;height:46px;border-radius:12px;background:var(--ink);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 auto;font-family:'Fraunces',serif;">${escapeHtml(initials(p.raison_sociale))}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="offre-titre" style="margin-bottom:2px;">${escapeHtml(p.raison_sociale)}</div>
+            <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--ink-soft);align-self:center;">→</div>
+        <div class="offre-actions"><button class="btn sm">Gérer →</button></div>
       </div>`;
   }).join('');
 }
 
-// ---- Modale : contacts d'une société ----
 async function openPartenaireModal(partenaireId) {
-  CURRENT_PARTENAIRE = PARTENAIRES_CACHE.find(p => p.id === partenaireId) || null;
-  if (!CURRENT_PARTENAIRE) { showToast('Partenaire introuvable', 'error'); return; }
-
+  CURRENT_PARTENAIRE = PARTENAIRES_CACHE.find(p => p.id === partenaireId) || { id: partenaireId };
   $('modal-partenaire').hidden = false;
-  $('modal-partenaire-card').innerHTML = `
-    <div class="modal-head">
-      <div>
-        <div class="eyebrow">${escapeHtml(CURRENT_PARTENAIRE.representant || 'Société partenaire')}</div>
-        <h2 class="display" style="margin:4px 0 0;">${escapeHtml(CURRENT_PARTENAIRE.raison_sociale)}</h2>
-      </div>
-      <button class="modal-close" onclick="closePartenaireModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="partenaire-contacts-list"><div style="text-align:center;color:var(--ink-soft);padding:20px;">Chargement…</div></div>
-    </div>
-    <div class="modal-actions" style="display:flex;gap:8px;justify-content:space-between;padding:16px 22px;border-top:1px solid var(--line);">
-      <button class="btn ghost" onclick="closePartenaireModal()">Fermer</button>
-      <button class="btn primary" onclick="openContactFormModal()">+ Ajouter un contact</button>
-    </div>
-  `;
+  $('modal-partenaire-card').innerHTML = `<div class="modal-body" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">Chargement des contacts…</p></div>`;
   await loadContactsForCurrentPartenaire();
 }
-
-function closePartenaireModal() {
-  $('modal-partenaire').hidden = true;
-  CURRENT_PARTENAIRE = null;
-  CURRENT_PARTENAIRE_CONTACTS = [];
-}
+function closePartenaireModal() { $('modal-partenaire').hidden = true; CURRENT_PARTENAIRE = null; CURRENT_PARTENAIRE_CONTACTS = []; }
 
 async function loadContactsForCurrentPartenaire() {
   if (!CURRENT_PARTENAIRE) return;
@@ -2880,169 +2318,140 @@ async function loadContactsForCurrentPartenaire() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     CURRENT_PARTENAIRE_CONTACTS = data.contacts || [];
+    if (data.partenaire) CURRENT_PARTENAIRE = { ...CURRENT_PARTENAIRE, ...data.partenaire };
     renderContactsList();
   } catch (e) {
-    $('partenaire-contacts-list').innerHTML = `<div class="banner danger">Erreur : ${escapeHtml(e.message)}</div>`;
+    $('modal-partenaire-card').innerHTML = `<div class="modal-body"><div class="banner danger">Erreur : ${escapeHtml(e.message)}</div><div style="text-align:right;"><button class="btn" onclick="closePartenaireModal()">Fermer</button></div></div>`;
   }
 }
 
 function renderContactsList() {
-  const wrap = $('partenaire-contacts-list');
-  if (!wrap) return;
-  if (!CURRENT_PARTENAIRE_CONTACTS.length) {
-    wrap.innerHTML = `
-      <div style="text-align:center;padding:30px 20px;color:var(--ink-soft);">
-        <div style="font-size:28px;margin-bottom:8px;">👥</div>
-        <div style="font-weight:600;color:var(--ink);">Aucun contact pour le moment</div>
-        <div style="font-size:13px;margin-top:6px;">Ajoute le premier contact pour cette société en cliquant sur le bouton ci-dessous.</div>
-      </div>`;
-    return;
-  }
-  wrap.innerHTML = CURRENT_PARTENAIRE_CONTACTS.map(c => {
+  const p = CURRENT_PARTENAIRE;
+  const card = $('modal-partenaire-card');
+  const contactRows = CURRENT_PARTENAIRE_CONTACTS.length ? CURRENT_PARTENAIRE_CONTACTS.map(c => {
+    const fullName = `${c.prenom || ''} ${c.nom || ''}`.trim() || '—';
     const tone = CTC_STATUT_TONE[c.statut] || 'archive';
     const label = CTC_STATUT_LABEL[c.statut] || c.statut;
-
-    // Actions selon le statut
-    let actions = '';
-    if (c.statut === 'a_inviter') {
-      actions += `<button class="btn primary" onclick="event.stopPropagation();sendInvitation('${c.id}')" style="font-size:12px;padding:6px 12px;">📧 Inviter</button>`;
-    } else if (c.statut === 'invite') {
-      actions += `<button class="btn ghost" onclick="event.stopPropagation();sendInvitation('${c.id}')" style="font-size:12px;padding:6px 12px;" title="Renvoyer l'email d'invitation">↻ Réinviter</button>`;
-    }
-    actions += `<button class="btn ghost" onclick="event.stopPropagation();openContactFormModal('${c.id}')" style="font-size:12px;padding:6px 12px;">✎</button>`;
-    actions += `<button class="btn ghost" onclick="event.stopPropagation();deleteContact('${c.id}')" style="font-size:12px;padding:6px 12px;color:#c62828;">✕</button>`;
-
-    const fullName = [c.prenom, c.nom].filter(Boolean).join(' ');
-    const invitDate = c.invitation_envoyee_at ? `Invité ${formatRelative(c.invitation_envoyee_at)}` : '';
-
+    const canInvite = c.statut === 'a_inviter' || c.statut === 'inactif';
+    const canReinvite = c.statut === 'invite';
+    const actions = [];
+    if (canInvite) actions.push(`<button class="btn sm success" onclick="sendInvitation('${c.id}', event)">✉ Inviter</button>`);
+    if (canReinvite) actions.push(`<button class="btn sm" onclick="sendInvitation('${c.id}', event)">↻ Relancer</button>`);
+    actions.push(`<button class="btn sm ghost" onclick="openContactFormModal('${c.id}', event)">✎</button>`);
+    actions.push(`<button class="btn sm ghost" style="color:var(--red);" onclick="deleteContact('${c.id}', event)">🗑</button>`);
     return `
-      <div style="padding:14px 0;border-bottom:1px solid var(--line);">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:200px;">
-            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${escapeHtml(fullName) || '—'} <span class="status-badge ${tone}" style="font-size:10px;padding:2px 8px;margin-left:6px;">${escapeHtml(label)}</span></div>
-            <div style="font-size:13px;color:var(--ink-soft);">📧 ${escapeHtml(c.email)}</div>
-            ${c.telephone ? `<div style="font-size:13px;color:var(--ink-soft);">📞 ${escapeHtml(c.telephone)}</div>` : ''}
-            ${c.fonction ? `<div style="font-size:12px;color:var(--ink-muted);font-style:italic;margin-top:2px;">${escapeHtml(c.fonction)}</div>` : ''}
-            ${invitDate ? `<div style="font-size:11px;color:var(--ink-muted);margin-top:4px;">${invitDate}</div>` : ''}
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            ${actions}
-          </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--bg-soft);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:0 0 auto;">${escapeHtml(initials(fullName))}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${escapeHtml(fullName)}<span class="status-badge ${tone}" style="font-size:9px;">${escapeHtml(label)}</span></div>
+          <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(c.email)}${c.fonction ? ' · ' + escapeHtml(c.fonction) : ''}</div>
+          ${c.derniere_connexion_at ? `<div style="font-size:10px;color:var(--ink-muted);">Dernière connexion ${escapeHtml(formatRelative(c.derniere_connexion_at))}</div>` : (c.invitation_envoyee_at ? `<div style="font-size:10px;color:var(--ink-muted);">Invité ${escapeHtml(formatRelative(c.invitation_envoyee_at))}</div>` : '')}
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto;">${actions.join('')}</div>
       </div>`;
-  }).join('');
+  }).join('') : '<div style="text-align:center;color:var(--ink-soft);font-style:italic;padding:24px 0;font-size:13px;">Aucun contact pour cette société. Ajoute-en un ci-dessous.</div>';
+  card.innerHTML = `
+    <div class="modal-head">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:48px;height:48px;border-radius:12px;background:var(--ink);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex:0 0 auto;font-family:'Fraunces',serif;">${escapeHtml(initials(p.raison_sociale || '?'))}</div>
+        <div style="flex:1;">
+          <div class="eyebrow">Société partenaire</div>
+          <h2 class="display" style="margin:4px 0 4px;">${escapeHtml(p.raison_sociale || '—')}</h2>
+          <div style="font-size:12px;color:var(--ink-soft);">${CURRENT_PARTENAIRE_CONTACTS.length} contact${CURRENT_PARTENAIRE_CONTACTS.length>1?'s':''}${p.pack_places ? ` · ${escapeHtml(String(p.pack_places))} places VIP` : ''}</div>
+        </div>
+        <button class="modal-close" onclick="closePartenaireModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin-bottom:4px;">CONTACTS</div>
+      ${contactRows}
+      <button class="btn primary" style="margin-top:18px;width:100%;justify-content:center;" onclick="openContactFormModal(null, event)"><span class="ico">+</span>&nbsp;Ajouter un contact</button>
+    </div>
+  `;
 }
 
-// ---- Modale : création / édition d'un contact ----
-function openContactFormModal(contactId=null) {
+function openContactFormModal(contactId, event) {
+  if (event) event.stopPropagation();
   CURRENT_CONTACT_EDIT = contactId ? CURRENT_PARTENAIRE_CONTACTS.find(c => c.id === contactId) : null;
-  const isEdit = !!CURRENT_CONTACT_EDIT;
-
-  $('contact-form-eyebrow').textContent = isEdit ? `Modifier le contact` : `Nouveau contact — ${CURRENT_PARTENAIRE?.raison_sociale || ''}`;
-  $('contact-form-title').textContent = isEdit ? 'Modifier le contact' : 'Ajouter un contact';
-  $('contact-form-submit').textContent = isEdit ? 'Enregistrer' : 'Ajouter';
-
-  $('ctc-prenom').value = CURRENT_CONTACT_EDIT?.prenom || '';
-  $('ctc-nom').value    = CURRENT_CONTACT_EDIT?.nom || '';
-  $('ctc-email').value  = CURRENT_CONTACT_EDIT?.email || '';
-  $('ctc-tel').value    = CURRENT_CONTACT_EDIT?.telephone || '';
-  $('ctc-fonction').value = CURRENT_CONTACT_EDIT?.fonction || '';
-  // L'email est non-modifiable en mode édition (sinon désynchro avec auth.users)
-  $('ctc-email').disabled = isEdit;
-  $('ctc-email').style.opacity = isEdit ? '0.6' : '1';
-
+  const c = CURRENT_CONTACT_EDIT;
+  $('contact-form-eyebrow').textContent = c ? 'Modifier le contact' : 'Nouveau contact';
+  $('contact-form-title').textContent = c ? `${c.prenom || ''} ${c.nom || ''}`.trim() : 'Ajouter un contact';
+  $('ctc-prenom').value = c?.prenom || '';
+  $('ctc-nom').value = c?.nom || '';
+  $('ctc-email').value = c?.email || '';
+  $('ctc-tel').value = c?.telephone || '';
+  $('ctc-fonction').value = c?.fonction || '';
   $('contact-form-status').textContent = '';
+  $('contact-form-submit').textContent = c ? 'Enregistrer' : 'Ajouter';
   $('contact-form-submit').disabled = false;
   $('modal-contact-form').hidden = false;
 }
-
-function closeContactFormModal() {
-  $('modal-contact-form').hidden = true;
-  CURRENT_CONTACT_EDIT = null;
-}
+function closeContactFormModal() { $('modal-contact-form').hidden = true; CURRENT_CONTACT_EDIT = null; }
 
 async function submitContactForm() {
-  const status = $('contact-form-status');
-  const btn = $('contact-form-submit');
   const nom = $('ctc-nom').value.trim();
   const email = $('ctc-email').value.trim();
-  if (!nom) { status.textContent = '⚠ Le nom est obligatoire'; status.style.color = '#993556'; $('ctc-nom').focus(); return; }
-  if (!email || !email.includes('@')) { status.textContent = '⚠ Email invalide'; status.style.color = '#993556'; $('ctc-email').focus(); return; }
-
+  const status = $('contact-form-status');
+  if (!nom) { status.textContent = '⚠ Le nom est obligatoire'; status.style.color = '#993556'; return; }
+  if (!email || !email.includes('@')) { status.textContent = '⚠ Email invalide'; status.style.color = '#993556'; return; }
   const payload = {
-    nom,
     prenom: $('ctc-prenom').value.trim() || null,
-    email,
+    nom, email,
     telephone: $('ctc-tel').value.trim() || null,
     fonction: $('ctc-fonction').value.trim() || null,
   };
-
-  btn.disabled = true; btn.textContent = '⏳';
+  const btn = $('contact-form-submit');
+  btn.disabled = true; btn.textContent = '⏳…';
   try {
-    let res;
+    let url, method;
     if (CURRENT_CONTACT_EDIT) {
-      // Édition : email immuable, on omet
-      delete payload.email;
-      res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/contact/${encodeURIComponent(CURRENT_CONTACT_EDIT.id)}/update`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      });
+      url = `/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/contact/${encodeURIComponent(CURRENT_CONTACT_EDIT.id)}/update`;
+      method = 'POST';
     } else {
-      // Création
-      res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(CURRENT_PARTENAIRE.id)}/contacts/create`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      });
+      url = `/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(CURRENT_PARTENAIRE.id)}/contact/create`;
+      method = 'POST';
     }
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast(CURRENT_CONTACT_EDIT ? '✓ Contact modifié' : '✓ Contact ajouté', 'success');
+    showToast(CURRENT_CONTACT_EDIT ? '✓ Contact mis à jour' : '✓ Contact ajouté', 'success');
     closeContactFormModal();
     await loadContactsForCurrentPartenaire();
-    loadPartenaires(); // pour rafraîchir le compteur sidebar + les stats société
+    loadPartenaires();
   } catch (e) {
     status.textContent = '❌ ' + e.message; status.style.color = '#993556';
     btn.disabled = false; btn.textContent = CURRENT_CONTACT_EDIT ? 'Enregistrer' : 'Ajouter';
   }
 }
 
-// ---- Action : envoyer (ou renvoyer) une invitation ----
-async function sendInvitation(contactId) {
-  const contact = CURRENT_PARTENAIRE_CONTACTS.find(c => c.id === contactId);
-  if (!contact) return;
-
-  const isResend = contact.statut === 'invite';
+async function sendInvitation(contactId, event) {
+  if (event) event.stopPropagation();
+  const c = CURRENT_PARTENAIRE_CONTACTS.find(x => x.id === contactId);
+  const isReinvite = c && c.statut === 'invite';
   const ok = await confirmModal({
-    eyebrow: isResend ? 'Renvoi d\'invitation' : 'Envoi d\'invitation',
-    title: isResend ? 'Renvoyer le lien d\'activation ?' : 'Envoyer l\'invitation ?',
-    message: `Un email partira à ${contact.email} avec un lien pour définir son mot de passe et accéder à son espace Business Club.`,
-    confirmText: isResend ? 'Renvoyer' : 'Envoyer',
-    confirmStyle: 'success',
+    eyebrow: isReinvite ? 'Relance' : 'Invitation',
+    title: isReinvite ? 'Renvoyer l\'invitation ?' : 'Envoyer l\'invitation ?',
+    message: `Un email avec un lien d'activation sera envoyé à ${c ? c.email : 'ce contact'}.`,
+    confirmText: isReinvite ? 'Relancer' : 'Inviter', confirmStyle: 'success',
   });
   if (!ok) return;
-
   try {
     const res = await fetch(`/api/admin/partenaire/${encodeURIComponent(ADMIN_TOKEN)}/contact/${encodeURIComponent(contactId)}/invite`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast(`📧 ${data.message || 'Invitation envoyée'}`, 'success');
+    showToast('✉ Invitation envoyée', 'success');
     await loadContactsForCurrentPartenaire();
     loadPartenaires();
-  } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
-async function deleteContact(contactId) {
-  const contact = CURRENT_PARTENAIRE_CONTACTS.find(c => c.id === contactId);
-  if (!contact) return;
-  const fullName = [contact.prenom, contact.nom].filter(Boolean).join(' ');
+async function deleteContact(contactId, event) {
+  if (event) event.stopPropagation();
+  const c = CURRENT_PARTENAIRE_CONTACTS.find(x => x.id === contactId);
   const ok = await confirmModal({
-    eyebrow: 'Suppression',
-    title: `Supprimer ${fullName || contact.email} ?`,
-    message: contact.auth_user_id
-      ? 'Le compte Business Club associé sera également supprimé. Cette action est irréversible.'
-      : 'Cette action est irréversible.',
-    confirmText: 'Supprimer',
-    confirmStyle: 'danger',
+    eyebrow: 'Suppression', title: 'Supprimer ce contact ?',
+    message: `${c ? (c.prenom || '') + ' ' + (c.nom || '') : 'Ce contact'} sera retiré. Si un compte est déjà actif, il perdra l'accès.`,
+    confirmText: 'Supprimer', confirmStyle: 'danger',
   });
   if (!ok) return;
   try {
@@ -3052,9 +2461,300 @@ async function deleteContact(contactId) {
     showToast('✓ Contact supprimé', 'success');
     await loadContactsForCurrentPartenaire();
     loadPartenaires();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+// ============================================================================
+//  MAILS — module d'envoi de campagnes aux partenaires
+// ============================================================================
+const MAIL_STATUT_LABEL = { brouillon: 'Brouillon', valide: 'Validé', envoye: 'Envoyé' };
+const MAIL_STATUT_TONE  = { brouillon: 'attente', valide: 'publie', envoye: 'archive' };
+
+async function loadMails(force=false) {
+  const btn = document.querySelector('#tab-mails .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('mails-list');
+  try {
+    const res = await fetch(`/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    MAILS_CACHE = data.mails || [];
+    MAILS_STATS = data.stats || {};
+    renderMailStats();
+    renderMailsList();
+    const b = $('sb-badge-mail-brouillon');
+    if (b) { if (MAILS_STATS.brouillon > 0) { b.textContent = MAILS_STATS.brouillon; b.hidden = false; } else b.hidden = true; }
   } catch (e) {
-    showToast('Erreur : ' + e.message, 'error');
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
   }
+}
+
+function renderMailStats() {
+  const s = MAILS_STATS;
+  $('cnt-mail-all').textContent = s.total ?? 0;
+  $('cnt-mail-brouillon').textContent = s.brouillon ?? 0;
+  $('cnt-mail-valide').textContent = s.valide ?? 0;
+  $('cnt-mail-envoye').textContent = s.envoye ?? 0;
+}
+
+function setMailFilter(statut, btn) {
+  CURRENT_MAIL_FILTER = statut;
+  document.querySelectorAll('#mails-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  renderMailsList();
+}
+
+function renderMailsList() {
+  const listEl = $('mails-list');
+  let list = MAILS_CACHE;
+  if (CURRENT_MAIL_FILTER !== 'all') list = list.filter(m => m.statut === CURRENT_MAIL_FILTER);
+  if (!list.length) {
+    listEl.innerHTML = `<div class="list-empty"><h3>Aucun mail</h3><p>${CURRENT_MAIL_FILTER === 'all' ? 'Crée ta première campagne avec « Créer un mail ».' : 'Aucun mail dans cette catégorie.'}</p></div>`;
+    return;
+  }
+  const STATUT_BORDER = { brouillon: 'attente', valide: 'publie', envoye: 'archive' };
+  listEl.innerHTML = list.map(m => {
+    const borderClass = STATUT_BORDER[m.statut] || '';
+    const tone = MAIL_STATUT_TONE[m.statut] || '';
+    const label = MAIL_STATUT_LABEL[m.statut] || m.statut;
+    const meta = [];
+    meta.push(`<span>Par ${escapeHtml(m.cree_par_nom || '—')}</span>`);
+    if (m.statut === 'envoye') {
+      meta.push(`<span style="color:var(--green);">✓ ${m.nb_destinataires || 0} destinataire${(m.nb_destinataires||0)>1?'s':''}</span>`);
+      meta.push(`<span>Envoyé ${formatRelative(m.envoye_le)}</span>`);
+    } else {
+      meta.push(`<span>Créé ${formatRelative(m.created_at)}</span>`);
+    }
+    return `
+      <div class="offre-row ${borderClass}" onclick="openMailDetail('${m.id}')" style="cursor:pointer;">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+          </div>
+          <div class="offre-titre">${escapeHtml(m.sujet)}</div>
+          ${m.pre_header ? `<div class="offre-partner" style="font-weight:400;">${escapeHtml(m.pre_header.slice(0,110))}${m.pre_header.length>110?'…':''}</div>` : ''}
+          <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---- Création / édition ----
+function openMailFormModal(mail=null) {
+  CURRENT_MAIL_EDIT = mail;
+  $('mail-form-eyebrow').textContent = mail ? 'Modifier le mail' : 'Nouveau mail';
+  $('mail-form-title').textContent = mail ? 'Modifier le brouillon' : 'Composer un mail';
+  $('mail-sujet').value = mail?.sujet || '';
+  $('mail-preheader').value = mail?.pre_header || '';
+  $('mail-expediteur').value = mail?.expediteur_nom || "Le Spacer's Business Club";
+  $('mail-titre').value = mail?.titre || '';
+  $('mail-corps').value = mail?.corps || '';
+  $('mail-image').value = mail?.image_url || '';
+  $('mail-btn-label').value = mail?.bouton_label || '';
+  $('mail-btn-url').value = mail?.bouton_url || '';
+  $('mail-form-status').textContent = '';
+  $('mail-form-submit').textContent = mail ? 'Enregistrer' : 'Enregistrer le brouillon';
+  $('mail-form-submit').disabled = false;
+  updateMailPreview();
+  $('modal-mail-form').hidden = false;
+}
+function closeMailFormModal() { $('modal-mail-form').hidden = true; CURRENT_MAIL_EDIT = null; }
+
+function updateMailPreview() {
+  const titre = $('mail-titre').value.trim();
+  const corps = $('mail-corps').value;
+  const img = $('mail-image').value.trim();
+  const btnLabel = $('mail-btn-label').value.trim();
+  const btnUrl = $('mail-btn-url').value.trim();
+  const preheader = $('mail-preheader').value.trim();
+  const exp = $('mail-expediteur').value.trim() || "Le Spacer's Business Club";
+  const corpsHtml = escapeHtml(corps).replace(/\n/g, '<br>');
+  $('mail-preview').innerHTML = `
+    <div style="background:#0A1628;padding:18px 22px;text-align:center;">
+      <div style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;background:#C8932B;color:#0A1628;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">S</div>
+      <div style="color:rgba(255,255,255,.55);font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-top:8px;">Le Business Club</div>
+    </div>
+    <div style="padding:24px 22px;">
+      ${preheader ? `<div style="font-size:11px;color:#8A8478;margin-bottom:12px;font-style:italic;">${escapeHtml(preheader)}</div>` : ''}
+      ${img ? `<img src="${escapeHtml(img)}" style="width:100%;border-radius:10px;margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
+      ${titre ? `<div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:#0A1628;margin-bottom:12px;letter-spacing:-.01em;">${escapeHtml(titre)}</div>` : ''}
+      <div style="font-size:14px;color:#11203a;line-height:1.7;">${corpsHtml || '<span style="color:#B8B2A4;font-style:italic;">Votre message apparaîtra ici…</span>'}</div>
+      ${btnLabel ? `<div style="margin-top:20px;"><span style="display:inline-block;background:#C8932B;color:#fff;font-weight:700;font-size:13px;padding:11px 22px;border-radius:999px;text-decoration:none;">${escapeHtml(btnLabel)}</span>${btnUrl ? '' : '<div style="font-size:10px;color:#B23A48;margin-top:4px;">⚠ Ajoute le lien du bouton</div>'}</div>` : ''}
+    </div>
+    <div style="padding:14px 22px;background:#F1ECE2;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;">
+      Envoyé par ${escapeHtml(exp)} · Spacer's Toulouse Volley<br>
+      <span style="text-decoration:underline;">Se désinscrire</span>
+    </div>`;
+}
+
+async function submitMail() {
+  const sujet = $('mail-sujet').value.trim();
+  const status = $('mail-form-status');
+  if (!sujet) { status.textContent = '⚠ Le sujet est obligatoire'; status.style.color = '#993556'; return; }
+  const payload = {
+    sujet,
+    pre_header: $('mail-preheader').value.trim() || null,
+    expediteur_nom: $('mail-expediteur').value.trim() || "Le Spacer's Business Club",
+    titre: $('mail-titre').value.trim() || null,
+    corps: $('mail-corps').value || null,
+    image_url: $('mail-image').value.trim() || null,
+    bouton_label: $('mail-btn-label').value.trim() || null,
+    bouton_url: $('mail-btn-url').value.trim() || null,
+  };
+  const btn = $('mail-form-submit');
+  btn.disabled = true; btn.textContent = '⏳…';
+  try {
+    let url;
+    if (CURRENT_MAIL_EDIT) url = `/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(CURRENT_MAIL_EDIT.id)}/update`;
+    else url = `/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/create`;
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(CURRENT_MAIL_EDIT ? '✓ Brouillon mis à jour' : '✓ Brouillon créé', 'success');
+    closeMailFormModal();
+    await loadMails();
+    if (data.mail && data.mail.id) openMailDetail(data.mail.id);
+  } catch (e) {
+    status.textContent = '❌ ' + e.message; status.style.color = '#993556';
+    btn.disabled = false; btn.textContent = CURRENT_MAIL_EDIT ? 'Enregistrer' : 'Enregistrer le brouillon';
+  }
+}
+
+// ---- Détail / envoi ----
+async function openMailDetail(mailId) {
+  $('modal-mail').hidden = false;
+  $('modal-mail-card').innerHTML = `<div class="modal-body" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">Chargement…</p></div>`;
+  try {
+    const res = await fetch(`/api/admin/mail/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(mailId)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_MAIL_DETAIL = data.mail || data;
+    renderMailDetail(CURRENT_MAIL_DETAIL, data.destinataires_count);
+  } catch (e) {
+    $('modal-mail-card').innerHTML = `<div class="modal-body"><div class="banner danger">Erreur : ${escapeHtml(e.message)}</div><div style="text-align:right;margin-top:14px;"><button class="btn" onclick="closeMailDetailModal()">Fermer</button></div></div>`;
+  }
+}
+function closeMailDetailModal() { $('modal-mail').hidden = true; CURRENT_MAIL_DETAIL = null; }
+
+function renderMailDetail(m, destinatairesCount) {
+  const card = $('modal-mail-card');
+  const tone = MAIL_STATUT_TONE[m.statut] || '';
+  const label = MAIL_STATUT_LABEL[m.statut] || m.statut;
+  const corpsHtml = escapeHtml(m.corps || '').replace(/\n/g, '<br>');
+  const nbDest = (destinatairesCount !== undefined && destinatairesCount !== null) ? destinatairesCount : (m.nb_destinataires || null);
+
+  let banner = '';
+  if (m.statut === 'brouillon') banner = `<div class="banner warn"><b>Brouillon.</b>&nbsp;Valide-le pour pouvoir l'envoyer. Tu peux d'abord t'envoyer un test.</div>`;
+  else if (m.statut === 'valide') banner = `<div class="banner success"><b>Validé.</b>&nbsp;Prêt à être envoyé${nbDest !== null ? ' à ' + nbDest + ' partenaire' + (nbDest>1?'s':'') : ''}. L'envoi est définitif.</div>`;
+  else if (m.statut === 'envoye') banner = `<div class="banner info"><b>Envoyé${m.envoye_le ? ' le ' + formatDate(m.envoye_le) : ''}</b>${m.nb_destinataires ? ' à ' + m.nb_destinataires + ' destinataire' + (m.nb_destinataires>1?'s':'') : ''}.</div>`;
+
+  const preview = `
+    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAF7F2;">
+      <div style="background:#0A1628;padding:18px 22px;text-align:center;">
+        <div style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;background:#C8932B;color:#0A1628;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">S</div>
+        <div style="color:rgba(255,255,255,.55);font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-top:8px;">Le Business Club</div>
+      </div>
+      <div style="padding:24px 22px;">
+        ${m.pre_header ? `<div style="font-size:11px;color:#8A8478;margin-bottom:12px;font-style:italic;">${escapeHtml(m.pre_header)}</div>` : ''}
+        ${m.image_url ? `<img src="${escapeHtml(m.image_url)}" style="width:100%;border-radius:10px;margin-bottom:16px;" onerror="this.style.display='none'">` : ''}
+        ${m.titre ? `<div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:#0A1628;margin-bottom:12px;">${escapeHtml(m.titre)}</div>` : ''}
+        <div style="font-size:14px;color:#11203a;line-height:1.7;">${corpsHtml || '<span style="color:#B8B2A4;font-style:italic;">(pas de message)</span>'}</div>
+        ${m.bouton_label ? `<div style="margin-top:20px;"><span style="display:inline-block;background:#C8932B;color:#fff;font-weight:700;font-size:13px;padding:11px 22px;border-radius:999px;">${escapeHtml(m.bouton_label)}</span></div>` : ''}
+      </div>
+      <div style="padding:14px 22px;background:#F1ECE2;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;">Envoyé par ${escapeHtml(m.expediteur_nom || "Le Spacer's Business Club")} · Spacer's Toulouse Volley<br><span style="text-decoration:underline;">Se désinscrire</span></div>
+    </div>`;
+
+  const actions = [`<button class="btn ghost" onclick="closeMailDetailModal()">Fermer</button>`];
+  if (m.statut === 'brouillon') {
+    actions.push(`<button class="btn" onclick="openMailEditFromDetail()">✎ Modifier</button>`);
+    actions.push(`<button class="btn" onclick="mailTest()">✉ Test à moi</button>`);
+    actions.push(`<button class="btn success" onclick="mailValidate()">✓ Valider</button>`);
+  } else if (m.statut === 'valide') {
+    actions.push(`<button class="btn" onclick="openMailEditFromDetail()">✎ Modifier</button>`);
+    actions.push(`<button class="btn" onclick="mailTest()">✉ Test à moi</button>`);
+    actions.push(`<button class="btn gold" onclick="mailSend()">📣 Envoyer aux partenaires</button>`);
+  }
+
+  card.innerHTML = `
+    <div class="modal-head">
+      <div class="row">
+        <div style="flex:1;min-width:0;">
+          <div class="eyebrow">Mail aux partenaires</div>
+          <h2 class="display" style="margin:4px 0 6px;">${escapeHtml(m.sujet)}</h2>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            <span style="font-size:12px;color:var(--ink-soft);">Par ${escapeHtml(m.cree_par_nom || '—')}</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeMailDetailModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      ${banner}
+      <div class="input-lbl">Aperçu du mail</div>
+      ${preview}
+    </div>
+    <div class="modal-foot">${actions.join('')}</div>
+  `;
+}
+
+function openMailEditFromDetail() {
+  if (!CURRENT_MAIL_DETAIL) return;
+  closeMailDetailModal();
+  openMailFormModal(CURRENT_MAIL_DETAIL);
+}
+
+async function mailValidate() {
+  if (!CURRENT_MAIL_DETAIL) return;
+  const id = CURRENT_MAIL_DETAIL.id;
+  const ok = await confirmModal({ eyebrow: 'Validation', title: 'Valider ce mail ?', message: 'Une fois validé, il pourra être envoyé à tous les partenaires. Tu pourras encore le modifier (il repassera alors en brouillon).', confirmText: 'Valider', confirmStyle: 'success' });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/validate`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Mail validé', 'success');
+    await loadMails();
+    openMailDetail(id);
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function mailTest() {
+  if (!CURRENT_MAIL_DETAIL) return;
+  const id = CURRENT_MAIL_DETAIL.id;
+  showToast('Envoi du test…', 'success');
+  try {
+    const res = await fetch(`/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/test`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✉ Test envoyé' + (data.to ? ' à ' + data.to : ''), 'success');
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function mailSend() {
+  if (!CURRENT_MAIL_DETAIL) return;
+  const id = CURRENT_MAIL_DETAIL.id;
+  const confirm = await promptModal({
+    eyebrow: 'Envoi définitif',
+    title: 'Envoyer à tous les partenaires ?',
+    message: 'C\'est définitif. Pour confirmer, tape ENVOYER en majuscules.',
+    inputLabel: 'Confirmation',
+    inputPlaceholder: 'ENVOYER',
+    confirmText: 'Envoyer maintenant', confirmStyle: 'gold',
+  });
+  if (confirm === null) return;
+  if (confirm.trim().toUpperCase() !== 'ENVOYER') { showToast('Confirmation incorrecte — envoi annulé', 'error'); return; }
+  showToast('Envoi en cours…', 'success');
+  try {
+    const res = await fetch(`/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/send`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(`📣 Envoyé à ${data.nb_destinataires || 0} partenaire${(data.nb_destinataires||0)>1?'s':''}`, 'success');
+    closeMailDetailModal();
+    await loadMails();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ============================================================================
@@ -3070,30 +2770,17 @@ document.addEventListener('keydown', (e) => {
     if (!$('modal-com-create').hidden) closeComCreateModal();
     if (!$('modal-partenaire').hidden) closePartenaireModal();
     if (!$('modal-contact-form').hidden) closeContactFormModal();
+    if (!$('modal-mail').hidden) closeMailDetailModal();
+    if (!$('modal-mail-form').hidden) closeMailFormModal();
   }
 });
 
 init();
 </script>
-
 <script>
-// Sprint F — Enregistrement du service worker (PWA installable)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(reg => {
-        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        reg.addEventListener('updatefound', () => {
-          const sw = reg.installing;
-          if (!sw) return;
-          sw.addEventListener('statechange', () => {
-            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-              sw.postMessage({ type: 'SKIP_WAITING' });
-            }
-          });
-        });
-      })
-      .catch(err => console.warn('[SW pilote] enregistrement échoué:', err));
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
   });
 }
 </script>
