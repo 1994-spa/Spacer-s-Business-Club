@@ -187,6 +187,10 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/offres-emploi$/);
       if (m) return await handlePartnerOffreCreate(m[1], body || {}, env);
 
+      // Partenaire — mise à jour de sa fiche annuaire
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
+      if (m) return await handlePartnerFicheUpdate(m[1], body || {}, env);
+
       // Partenaire — répondre à une publication du board (Sprint B.3)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponse$/);
       if (m) return await handlePartnerPublicationRespond(m[1], m[2], body || {}, env, ctx);
@@ -323,6 +327,13 @@ async function handleApi(request, env, path, ctx) {
     // Partner — board partagé (toutes les publications publiées) + réponses (Sprint B.3)
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/board$/);
     if (m) return await handlePartnerBoard(m[1], url.searchParams, env);
+
+    // Partner — Annuaire des partenaires (networking) + sa propre fiche
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/annuaire$/);
+    if (m) return await handlePartnerAnnuaire(m[1], env);
+
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
+    if (m) return await handlePartnerFicheGet(m[1], env);
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponses$/);
     if (m) return await handlePartnerPublicationReponses(m[1], m[2], env);
@@ -4199,6 +4210,72 @@ async function runInvitationRelances(env) {
 // ============================================================================
 //  SPRINT B.3 — Board partagé entre partenaires + réponses aux publications
 // ============================================================================
+// ============================================================================
+//  ANNUAIRE PARTENAIRES (networking B2B)
+// ============================================================================
+
+async function handlePartnerAnnuaire(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const rows = await supabaseQuery('partenaires',
+    `select=id,raison_sociale,secteur,ville,adresse,site_web,email_societe,logo_b64,niveau,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&order=raison_sociale.asc&limit=500`,
+    env);
+  const fiches = (rows || []).map(p => ({
+    id: p.id,
+    is_mine: p.id === partner.partenaire_id,
+    raison_sociale: p.raison_sociale || '',
+    secteur: p.secteur || '',
+    ville: p.ville || '',
+    adresse: p.adresse || '',
+    site_web: p.site_web || '',
+    email_societe: p.email_societe || '',
+    logo_b64: p.logo_b64 || null,
+    niveau: p.niveau || '',
+    representant: p.representant || '',
+    representant_fonction: p.representant_fonction || '',
+    representant_email: p.representant_email || '',
+    representant_tel: p.representant_tel || '',
+    representant_photo_b64: p.representant_photo_b64 || null,
+  }));
+  return jsonResponseNoCache({ fiches, count: fiches.length });
+}
+
+async function handlePartnerFicheGet(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const rows = await supabaseQuery('partenaires',
+    `id=eq.${partner.partenaire_id}&select=id,raison_sociale,siren,siret,secteur,adresse,code_postal,ville,site_web,email_societe,logo_b64,niveau,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&limit=1`,
+    env);
+  if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Fiche introuvable' }, 404);
+  return jsonResponseNoCache({ fiche: rows[0] });
+}
+
+async function handlePartnerFicheUpdate(token, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const str = (v, max) => { const s = (v == null ? '' : String(v)).trim(); return s ? s.slice(0, max || 300) : null; };
+  const patch = {
+    secteur: str(body.secteur, 120),
+    adresse: str(body.adresse, 300),
+    code_postal: str(body.code_postal, 20),
+    ville: str(body.ville, 120),
+    site_web: str(body.site_web, 300),
+    email_societe: str(body.email_societe, 200),
+    siret: str(body.siret, 20),
+    representant: str(body.representant, 160),
+    representant_fonction: str(body.representant_fonction, 160),
+    representant_email: str(body.representant_email, 200),
+    representant_tel: str(body.representant_tel, 40),
+  };
+  // Images : ne toucher que si le champ est fourni (string = nouvelle/actuelle, null = effacer)
+  if (body.logo_b64 !== undefined) patch.logo_b64 = body.logo_b64 ? String(body.logo_b64).slice(0, 1500000) : null;
+  if (body.representant_photo_b64 !== undefined) patch.representant_photo_b64 = body.representant_photo_b64 ? String(body.representant_photo_b64).slice(0, 1500000) : null;
+  try {
+    await supabasePatch_('partenaires', `id=eq.${partner.partenaire_id}`, patch, env);
+    return jsonResponseNoCache({ ok: true });
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur mise à jour', detail: e.message }, 500); }
+}
+
 async function handlePartnerBoard(token, queryParams, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
