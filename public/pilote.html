@@ -2558,6 +2558,7 @@ let MAIL_UPLOAD_TARGET = null; // { idx, field }
 
 const MAIL_BLOCK_DEFS = {
   entete:               { label: 'En-tête Spacers', ico: '▦' },
+  banniere:             { label: 'Bannière (pleine largeur)', ico: '🖼' },
   titre:                { label: 'Titre', ico: 'H' },
   paragraphe:           { label: 'Paragraphe', ico: '¶' },
   image:                { label: 'Image', ico: '▣' },
@@ -2573,12 +2574,13 @@ const MAIL_BLOCK_DEFS = {
   pied:                 { label: 'Pied de page', ico: '▁' },
   html:                 { label: 'HTML libre', ico: '⟨⟩' },
 };
-const MAIL_PALETTE_ORDER = ['entete','titre','paragraphe','image','bouton','separateur','deux_colonnes_texte','deux_colonnes_image','image_texte','texte_image','menu','reseaux','adresse','pied','html'];
+const MAIL_PALETTE_ORDER = ['entete','banniere','titre','paragraphe','image','bouton','separateur','deux_colonnes_texte','deux_colonnes_image','image_texte','texte_image','menu','reseaux','adresse','pied','html'];
 
 function mailUid() { return 'b' + Math.random().toString(36).slice(2, 9); }
 function mailNewBlock(type) {
   const defaults = {
     entete: { logo_url: '', marque: "SPACER'S BUSINESS CLUB", sous_marque: 'Toulouse Volley · Saison 2026–2027', eyebrow: 'LE BUSINESS CLUB', titre: '', sous_titre: '' },
+    banniere: { url: '', alt: '', link: '' },
     titre: { text: '', align: 'left' },
     paragraphe: { text: '', align: 'left' },
     image: { url: '', alt: '', link: '' },
@@ -2674,29 +2676,33 @@ function _fAlign(idx, val) {
   const o = (v,l) => `<option value="${v}" ${val===v?'selected':''}>${l}</option>`;
   return `<select class="input" style="max-width:150px;" onchange="mailBlockSet(${idx},'align',this.value)">${o('left','⬅ Gauche')}${o('center','⬌ Centre')}${o('right','➡ Droite')}</select>`;
 }
-function _fImage(idx, field, val) {
+function _fImage(idx, field, val, hint) {
   return `<div style="display:flex;gap:6px;align-items:center;">
     <input class="input" type="url" placeholder="https://… ou téléverse →" value="${escapeHtml(val||'')}" oninput="mailBlockSet(${idx},'${field}',this.value)" style="flex:1;">
     <button class="btn sm" type="button" onclick="mailPickImage(${idx},'${field}')">⬆ Téléverser</button>
-  </div>${val ? `<img src="${escapeHtml(val)}" style="max-height:64px;margin-top:6px;border-radius:6px;border:1px solid var(--line);" onerror="this.style.display='none'">` : ''}`;
+  </div>${hint ? `<div style="font-size:10px;color:var(--ink-muted);margin-top:4px;">📐 Taille conseillée : <b>${hint}</b></div>` : ''}${val ? `<img src="${escapeHtml(val)}" style="max-height:64px;margin-top:6px;border-radius:6px;border:1px solid var(--line);" onerror="this.style.display='none'">` : ''}`;
 }
 function mailBlockFields(b, idx) {
   const L = (t) => `<label class="input-lbl" style="margin-top:8px;">${t}</label>`;
   const L0 = (t) => `<label class="input-lbl">${t}</label>`;
   switch (b.type) {
     case 'entete':
-      return `${L0('Logo (remplace le « S » — optionnel)')}${_fImage(idx,'logo_url',b.logo_url)}
+      return `${L0('Logo (remplace le « S » — optionnel)')}${_fImage(idx,'logo_url',b.logo_url,'180 × 48 px (logo horizontal)')}
         ${L('Marque')}${_fIn(idx,'marque',b.marque,"SPACER'S BUSINESS CLUB")}
         ${L('Sous-marque')}${_fIn(idx,'sous_marque',b.sous_marque,'Toulouse Volley · Saison…')}
         ${L('Eyebrow (petit titre or)')}${_fIn(idx,'eyebrow',b.eyebrow,'LE BUSINESS CLUB')}
         ${L('Grand titre')}${_fIn(idx,'titre',b.titre,'Vos places sont disponibles')}
         ${L('Sous-titre')}${_fIn(idx,'sous_titre',b.sous_titre,'')}`;
+    case 'banniere':
+      return `${L0('Image de bannière (bord à bord)')}${_fImage(idx,'url',b.url,'600 px de large (1200 px pour la netteté Retina) · hauteur libre')}
+        ${L('Texte alternatif')}${_fIn(idx,'alt',b.alt,'description')}
+        ${L('Lien au clic (optionnel)')}${_fIn(idx,'link',b.link,'https://…','url')}`;
     case 'titre':
       return `${_fIn(idx,'text',b.text,'Votre titre')}<div style="margin-top:8px;">${_fAlign(idx,b.align)}</div>`;
     case 'paragraphe':
       return `${_fTa(idx,'text',b.text,'Votre texte… (sauts de ligne conservés)',4)}<div style="margin-top:8px;">${_fAlign(idx,b.align)}</div>`;
     case 'image':
-      return `${L0('Image')}${_fImage(idx,'url',b.url)}${L('Texte alternatif')}${_fIn(idx,'alt',b.alt,'description')}${L('Lien au clic (optionnel)')}${_fIn(idx,'link',b.link,'https://…','url')}`;
+      return `${L0('Image')}${_fImage(idx,'url',b.url,'540 px de large')}${L('Texte alternatif')}${_fIn(idx,'alt',b.alt,'description')}${L('Lien au clic (optionnel)')}${_fIn(idx,'link',b.link,'https://…','url')}`;
     case 'bouton':
       return `${L0('Libellé')}${_fIn(idx,'label',b.label,'Réserver mes places')}${L('Lien')}${_fIn(idx,'url',b.url,'https://…','url')}<div style="margin-top:8px;">${_fAlign(idx,b.align)}</div>`;
     case 'separateur':
@@ -2704,11 +2710,11 @@ function mailBlockFields(b, idx) {
     case 'deux_colonnes_texte':
       return `${L0('Colonne gauche')}${_fTa(idx,'gauche',b.gauche,'',3)}${L('Colonne droite')}${_fTa(idx,'droite',b.droite,'',3)}`;
     case 'deux_colonnes_image':
-      return `${L0('Image gauche')}${_fImage(idx,'img_gauche',b.img_gauche)}${L('Lien gauche')}${_fIn(idx,'link_gauche',b.link_gauche,'https://…','url')}${L('Image droite')}${_fImage(idx,'img_droite',b.img_droite)}${L('Lien droite')}${_fIn(idx,'link_droite',b.link_droite,'https://…','url')}`;
+      return `${L0('Image gauche')}${_fImage(idx,'img_gauche',b.img_gauche,'260 px de large')}${L('Lien gauche')}${_fIn(idx,'link_gauche',b.link_gauche,'https://…','url')}${L('Image droite')}${_fImage(idx,'img_droite',b.img_droite,'260 px de large')}${L('Lien droite')}${_fIn(idx,'link_droite',b.link_droite,'https://…','url')}`;
     case 'image_texte':
-      return `${L0('Image (gauche)')}${_fImage(idx,'url',b.url)}${L('Texte (droite)')}${_fTa(idx,'text',b.text,'',3)}${L('Lien image')}${_fIn(idx,'link',b.link,'https://…','url')}`;
+      return `${L0('Image (gauche)')}${_fImage(idx,'url',b.url,'220 px de large')}${L('Texte (droite)')}${_fTa(idx,'text',b.text,'',3)}${L('Lien image')}${_fIn(idx,'link',b.link,'https://…','url')}`;
     case 'texte_image':
-      return `${L0('Texte (gauche)')}${_fTa(idx,'text',b.text,'',3)}${L('Image (droite)')}${_fImage(idx,'url',b.url)}${L('Lien image')}${_fIn(idx,'link',b.link,'https://…','url')}`;
+      return `${L0('Texte (gauche)')}${_fTa(idx,'text',b.text,'',3)}${L('Image (droite)')}${_fImage(idx,'url',b.url,'220 px de large')}${L('Lien image')}${_fIn(idx,'link',b.link,'https://…','url')}`;
     case 'menu': {
       const txt = (b.items||[]).map(i => `${i.label||''} | ${i.url||''}`).join('\n');
       return `${L0('Liens (un par ligne : Libellé | https://url)')}<textarea class="input" rows="3" placeholder="Accueil | https://spacerstoulouse.fr" oninput="mailMenuSet(${idx},this.value)">${escapeHtml(txt)}</textarea>`;
@@ -2718,7 +2724,7 @@ function mailBlockFields(b, idx) {
     case 'adresse':
       return _fTa(idx,'text',b.text,"Spacer's Toulouse Volley · Palais des Sports André Brouat",2);
     case 'pied':
-      return `${L0('Logo / image (optionnel)')}${_fImage(idx,'logo_url',b.logo_url)}${L('Ligne 1')}${_fIn(idx,'ligne1',b.ligne1,"Spacer's Toulouse Volley · …")}${L('Texte du lien site')}${_fIn(idx,'site',b.site,'spacerstoulouse.fr')}${L('URL du site')}${_fIn(idx,'site_url',b.site_url,'https://spacerstoulouse.fr','url')}${L('Email contact')}${_fIn(idx,'email',b.email,'marketing@spacerstoulouse.fr')}`;
+      return `${L0('Logo / image (optionnel)')}${_fImage(idx,'logo_url',b.logo_url,'170 × 40 px')}${L('Ligne 1')}${_fIn(idx,'ligne1',b.ligne1,"Spacer's Toulouse Volley · …")}${L('Texte du lien site')}${_fIn(idx,'site',b.site,'spacerstoulouse.fr')}${L('URL du site')}${_fIn(idx,'site_url',b.site_url,'https://spacerstoulouse.fr','url')}${L('Email contact')}${_fIn(idx,'email',b.email,'marketing@spacerstoulouse.fr')}`;
     case 'html':
       return `${L0('Code HTML')}${_fTa(idx,'code',b.code,'<table>…</table>',4)}`;
     default: return '';
@@ -2750,11 +2756,23 @@ function mailPickImage(idx, field) {
   MAIL_UPLOAD_TARGET = { idx, field };
   const fi = $('mail-file-input'); fi.value = ''; fi.click();
 }
+function _readImageSize(file) {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => { resolve({ w: img.naturalWidth, h: img.naturalHeight }); URL.revokeObjectURL(url); };
+      img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+      img.src = url;
+    } catch (_) { resolve(null); }
+  });
+}
 async function mailHandleFileChosen(input) {
   const file = input.files && input.files[0];
   if (!file || !MAIL_UPLOAD_TARGET) return;
   const { idx, field } = MAIL_UPLOAD_TARGET;
   if (file.size > 3 * 1024 * 1024) { showToast('Image trop lourde (max 3 Mo)', 'error'); MAIL_UPLOAD_TARGET = null; return; }
+  const dim = await _readImageSize(file);
   showToast('Upload de l\'image…', 'success');
   try {
     const fd = new FormData(); fd.append('file', file);
@@ -2763,7 +2781,7 @@ async function mailHandleFileChosen(input) {
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     if (MAIL_BLOCKS[idx]) MAIL_BLOCKS[idx][field] = data.url;
     renderMailEditor(); updateMailPreview();
-    showToast('✓ Image ajoutée', 'success');
+    showToast(dim ? `✓ Image ajoutée (${dim.w} × ${dim.h} px)` : '✓ Image ajoutée', 'success');
   } catch (e) { showToast('Erreur upload : ' + e.message, 'error'); }
   MAIL_UPLOAD_TARGET = null;
 }
@@ -2795,6 +2813,7 @@ function mailPreviewBlockHtml(b) {
     case 'titre': return wrap(`<div style="font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:500;color:#0A1628;line-height:1.25;text-align:${_pAlign(b.align)};">${escapeHtml(b.text || '') || '<span style="color:#B8B2A4;font-style:italic;">Titre…</span>'}</div>`, SIDE);
     case 'paragraphe': return wrap(`<div style="font-size:14px;color:#4A5568;line-height:1.7;text-align:${_pAlign(b.align)};">${_pNl2br(b.text) || '<span style="color:#B8B2A4;font-style:italic;">Texte…</span>'}</div>`, SIDE);
     case 'image': return wrap(b.url ? `<img src="${escapeHtml(b.url)}" style="width:100%;border-radius:8px;display:block;" onerror="this.style.display='none'">` : '<div style="background:#EFE9DC;border-radius:8px;height:90px;display:grid;place-items:center;color:#B8B2A4;font-size:12px;">Image</div>', 'padding:8px 30px;');
+    case 'banniere': return b.url ? `<div style="font-size:0;line-height:0;"><img src="${escapeHtml(b.url)}" style="width:100%;display:block;" onerror="this.style.display='none'"></div>` : '<div style="background:#EFE9DC;height:120px;display:grid;place-items:center;color:#B8B2A4;font-size:12px;">Bannière pleine largeur</div>';
     case 'bouton': { if (!b.label) return ''; return wrap(`<span style="display:inline-block;background:#C8932B;color:#0A1628;font-weight:700;font-size:14px;padding:12px 26px;border-radius:999px;">${escapeHtml(b.label)}</span>`, `padding:10px 30px;text-align:${_pAlign(b.align)};`); }
     case 'separateur': return wrap('<div style="border-top:1px solid #E5DED1;"></div>', 'padding:12px 30px;');
     case 'deux_colonnes_texte': return wrap(`<div style="display:flex;gap:20px;"><div style="flex:1;font-size:14px;color:#4A5568;line-height:1.7;">${_pNl2br(b.gauche)}</div><div style="flex:1;font-size:14px;color:#4A5568;line-height:1.7;">${_pNl2br(b.droite)}</div></div>`, SIDE);
