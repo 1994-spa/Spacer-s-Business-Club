@@ -1,19 +1,49 @@
+# =============================================================================
+#  Spacer's Business Club — Configuration Cloudflare Worker
+#  Worker : spacers-business-club  (V4.20-invitations)
+#  Domaine prod : business.spacerstoulouse.fr
+# =============================================================================
+
 name = "spacers-business-club"
 main = "src/worker.js"
-compatibility_date = "2025-09-01"
 
-# Assets statiques (public/) servis via env.ASSETS.fetch() dans worker.js
+# ⚠️ Garde la date de compatibilité que tu avais déjà si elle est plus ancienne.
+# Avancer cette date est généralement sans risque ; en cas de doute, conserve la tienne.
+compatibility_date = "2025-05-01"
+
+# Si ton compte n'est pas résolu automatiquement, décommente et renseigne :
+# account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# -----------------------------------------------------------------------------
+#  Assets statiques (public/) — sert index.html, pilote.html, etc.
+#  Le worker y accède via env.ASSETS.fetch(...)
+# -----------------------------------------------------------------------------
 [assets]
 directory = "./public"
 binding = "ASSETS"
 
-# Variables publiques — versionnées dans Git, accessibles via env.VARNAME.
-# ⚠ JAMAIS de secret ici (clés service_role, API keys privées, mots de passe).
-# Les secrets restent dans le dashboard Cloudflare :
-#   Settings → Variables and Secrets → type "Secret" :
-#     - RESEND_API_KEY
-#     - SUPABASE_SERVICE_ROLE_KEY
-#     - TICKIE_API_KEY
+# -----------------------------------------------------------------------------
+#  Variables d'environnement (NON secrètes) — versionnées ici
+# -----------------------------------------------------------------------------
 [vars]
 SUPABASE_URL = "https://goaviqaevdkvptejrreo.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvYXZpcWFldmRrdnB0ZWpycmVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzgxMjMsImV4cCI6MjA5NDg1NDEyM30.I_KY72kLksYb4iRk9Y_Q3E_gcaK6xtm1zjb5qGaqpc4"
+
+# -----------------------------------------------------------------------------
+#  Cron — relances & rappels automatiques des invitations
+#  "0 8 * * *" = tous les jours à 08:00 UTC (≈ 10h en France l'été, 9h l'hiver)
+#  Le worker exécute alors runInvitationRelances() :
+#    - relance les non-répondants le jour de date_relance
+#    - envoie un rappel aux présents le jour de date_rappel
+# -----------------------------------------------------------------------------
+[triggers]
+crons = ["0 8 * * *"]
+
+# =============================================================================
+#  SECRETS (à NE PAS mettre ici) — déjà configurés via le dashboard ou la CLI :
+#
+#    wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+#    wrangler secret put RESEND_API_KEY
+#    wrangler secret put TICKIE_API_KEY
+#
+#  Vérifier la liste : wrangler secret list
+# =============================================================================
