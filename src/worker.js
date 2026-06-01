@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.26-annuaire (Annuaire partenaires : fiches partenaire + edition admin)
+ * Spacers Business Club — Worker V4.27-annuaire (Annuaire + auto-remplissage SIRET via API publique entreprises)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -339,6 +339,9 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
     if (m) return await handlePartnerFicheGet(m[1], env);
 
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/siret-lookup$/);
+    if (m) return await handlePartnerSiretLookup(m[1], url.searchParams, env);
+
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponses$/);
     if (m) return await handlePartnerPublicationReponses(m[1], m[2], env);
 
@@ -383,6 +386,9 @@ async function handleApi(request, env, path, ctx) {
     // ===== Sprint E.2 — Gestion des contacts partenaires (admin) =====
     m = path.match(/^\/api\/admin\/partenaires\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminPartenairesList(m[1], env);
+
+    m = path.match(/^\/api\/admin\/siret-lookup\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminSiretLookup(m[1], url.searchParams, env);
 
     m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts$/);
     if (m) return await handleAdminContactsList(m[1], m[2], env);
@@ -4321,6 +4327,85 @@ async function handlePartnerFicheUpdate(token, body, env) {
     await supabasePatch_('partenaires', `id=eq.${partner.partenaire_id}`, patch, env);
     return jsonResponseNoCache({ ok: true });
   } catch (e) { return jsonResponseNoCache({ error: 'Erreur mise à jour', detail: e.message }, 500); }
+}
+
+// --- Auto-remplissage depuis le SIRET (API publique recherche-entreprises.api.gouv.fr, sans clé) ---
+function nafSectionLabel_(naf) {
+  const d = parseInt(String(naf || '').replace(/\D/g, '').slice(0, 2), 10);
+  if (!d) return '';
+  const map = [
+    [1, 3, 'Agriculture, sylviculture et pêche'],
+    [5, 9, 'Industries extractives'],
+    [10, 33, 'Industrie manufacturière'],
+    [35, 35, "Production et distribution d'électricité et de gaz"],
+    [36, 39, 'Eau, assainissement et gestion des déchets'],
+    [41, 43, 'Construction'],
+    [45, 47, 'Commerce et réparation automobile'],
+    [49, 53, 'Transports et entreposage'],
+    [55, 56, 'Hébergement et restauration'],
+    [58, 63, 'Information et communication'],
+    [64, 66, "Activités financières et d'assurance"],
+    [68, 68, 'Activités immobilières'],
+    [69, 75, 'Activités spécialisées, scientifiques et techniques'],
+    [77, 82, 'Services administratifs et de soutien'],
+    [84, 84, 'Administration publique'],
+    [85, 85, 'Enseignement'],
+    [86, 88, 'Santé humaine et action sociale'],
+    [90, 93, 'Arts, spectacles et activités récréatives'],
+    [94, 96, 'Autres activités de services'],
+    [97, 98, 'Activités des ménages en tant employeurs'],
+    [99, 99, 'Activités extra-territoriales'],
+  ];
+  for (const row of map) { if (d >= row[0] && d <= row[1]) return row[2]; }
+  return '';
+}
+
+async function lookupSiret_(q, env) {
+  const clean = String(q || '').replace(/\s/g, '');
+  if (!/^\d{9}$/.test(clean) && !/^\d{14}$/.test(clean)) {
+    return { error: 'Numéro SIRET (14 chiffres) ou SIREN (9 chiffres) attendu' };
+  }
+  const url = `https://recherche-entreprises.api.gouv.fr/search?q=${encodeURIComponent(clean)}&per_page=1`;
+  let resp;
+  try {
+    resp = await fetch(url, { headers: { 'Accept': 'application/json', 'User-Agent': 'SpacersBusinessClub/1.0' } });
+  } catch (e) { return { error: 'Service annuaire entreprises indisponible' }; }
+  if (!resp.ok) return { error: `Service annuaire entreprises : erreur ${resp.status}` };
+  let data;
+  try { data = await resp.json(); } catch (e) { return { error: 'Réponse illisible du service' }; }
+  const r = (data.results && data.results[0]) || null;
+  if (!r) return { error: 'Aucune entreprise trouvée pour ce numéro' };
+  const s = r.siege || {};
+  const naf = s.activite_principale || r.activite_principale || '';
+  const libelle = s.libelle_activite_principale || r.libelle_activite_principale || '';
+  const secteur = libelle || nafSectionLabel_(naf) || naf || '';
+  const adresseVoie = [s.numero_voie, s.type_voie, s.libelle_voie].filter(Boolean).join(' ').trim();
+  let adresse = adresseVoie;
+  if (!adresse && s.adresse) adresse = String(s.adresse).replace(/\s*\d{5}\s+.*$/, '').trim();
+  return {
+    raison_sociale: r.nom_raison_sociale || r.nom_complet || '',
+    siren: r.siren || '',
+    siret: s.siret || (clean.length === 14 ? clean : ''),
+    naf,
+    secteur,
+    adresse: adresse || (s.adresse || ''),
+    code_postal: s.code_postal || '',
+    ville: s.libelle_commune || '',
+  };
+}
+
+async function handlePartnerSiretLookup(token, searchParams, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const out = await lookupSiret_(searchParams.get('q'), env);
+  return jsonResponseNoCache(out, out.error ? 422 : 200);
+}
+
+async function handleAdminSiretLookup(token, searchParams, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const out = await lookupSiret_(searchParams.get('q'), env);
+  return jsonResponseNoCache(out, out.error ? 422 : 200);
 }
 
 async function handlePartnerBoard(token, queryParams, env) {
