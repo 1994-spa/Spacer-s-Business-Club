@@ -445,6 +445,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">✦</span><span class="label">Communications</span>
         <span class="badge" id="sb-badge-com-brouillon" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="invitations" onclick="switchTab('invitations')">
+        <span class="ico">🎟</span><span class="label">Invitations</span>
+        <span class="badge" id="sb-badge-inv-brouillon" hidden>0</span>
+      </button>
       <button class="sb-link" data-tab="mails" onclick="switchTab('mails')">
         <span class="ico">✉</span><span class="label">Mails</span>
         <span class="badge" id="sb-badge-mail-brouillon" hidden>0</span>
@@ -601,6 +605,31 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
       </div>
       <div id="coms-list" class="list">
+        <div class="list-empty">Chargement…</div>
+      </div>
+    </section>
+
+    <!-- ===== TAB : Invitations (Sprint Invitations) ===== -->
+    <section id="tab-invitations" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Invi<em>tations</em></h1>
+          <p class="desc">Événements partenaires avec réponse RSVP, places et relances</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn primary" onclick="openInvFormModal()"><span class="ico">+</span>&nbsp;Créer une invitation</button>
+          <button class="refresh-btn" onclick="loadInvitations(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="segs" id="invs-segs">
+          <button class="seg on" data-statut="all" onclick="setInvFilter('all',this)">Toutes <span class="count" id="cnt-inv-all">·</span></button>
+          <button class="seg warn" data-statut="brouillon" onclick="setInvFilter('brouillon',this)">Brouillons <span class="count" id="cnt-inv-brouillon">·</span></button>
+          <button class="seg success" data-statut="valide" onclick="setInvFilter('valide',this)">Validées <span class="count" id="cnt-inv-valide">·</span></button>
+          <button class="seg" data-statut="envoye" onclick="setInvFilter('envoye',this)">Envoyées <span class="count" id="cnt-inv-envoye">·</span></button>
+        </div>
+      </div>
+      <div id="invs-list" class="list">
         <div class="list-empty">Chargement…</div>
       </div>
     </section>
@@ -778,9 +807,6 @@ textarea.input { resize: vertical; min-height: 80px; }
       <div class="input-lbl" style="margin-top:18px;">Aperçu du rendu réel</div>
       <div id="mail-preview" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAF7F2;"></div>
       <div id="mail-form-status" style="font-size:12px;text-align:center;min-height:18px;margin:8px 0 0;"></div>
-
-      <!-- input fichier caché réutilisé pour tous les uploads d'image -->
-      <input type="file" id="mail-file-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;" onchange="mailHandleFileChosen(this)">
     </div>
     <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
       <button class="btn ghost" onclick="closeMailFormModal()">Annuler</button>
@@ -820,12 +846,113 @@ textarea.input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- ===== Input fichier global (upload images, partagé Mails + Invitations) ===== -->
+<input type="file" id="be-file-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;" onchange="mailHandleFileChosen(this)">
+
+<!-- ===== MODAL : Création / édition d'une invitation ===== -->
+<div id="modal-inv-form" class="modal-ov" hidden onclick="if(event.target.id==='modal-inv-form')closeInvFormModal()">
+  <div class="modal-card" id="modal-inv-form-card" style="max-width:1060px;">
+    <div class="modal-head">
+      <div class="row">
+        <div>
+          <div class="eyebrow" id="inv-form-eyebrow">Nouvelle invitation</div>
+          <h2 class="display" id="inv-form-title" style="margin:4px 0 0;">Créer une invitation</h2>
+        </div>
+        <button class="modal-close" onclick="closeInvFormModal()">✕</button>
+      </div>
+      <div class="segs" style="margin-top:14px;">
+        <button class="seg on" id="inv-tab-reglages" onclick="switchInvSubtab('reglages')">1 · Réglages</button>
+        <button class="seg" id="inv-tab-email" onclick="switchInvSubtab('email')">2 · Email (blocs)</button>
+        <button class="seg" id="inv-tab-pages" onclick="switchInvSubtab('pages')">3 · Pages de réponse</button>
+      </div>
+    </div>
+    <div class="modal-body">
+
+      <!-- Sous-onglet RÉGLAGES -->
+      <div id="inv-sub-reglages">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label class="input-lbl">Sujet du mail *</label><input id="inv-sujet" class="input" type="text" placeholder="Invitation — déjeuner du Business Club"></div>
+          <div><label class="input-lbl">Thème de l'événement</label><input id="inv-theme" class="input" type="text" placeholder="Déjeuner partenaires"></div>
+          <div><label class="input-lbl">Date de l'événement</label><input id="inv-date_event" class="input" type="text" placeholder="mercredi 01 juillet 2026"></div>
+          <div><label class="input-lbl">Heure</label><input id="inv-heure" class="input" type="text" placeholder="12h00 à 13h00"></div>
+        </div>
+        <div style="margin-top:14px;font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;">LIEU</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;">
+          <div><label class="input-lbl">Prélude de l'adresse</label><input id="inv-lieu_prelude" class="input" type="text" placeholder="Sur le site de… / au restaurant…"></div>
+          <div><label class="input-lbl">Adresse</label><input id="inv-lieu_adresse" class="input" type="text" placeholder="Palais des Sports André Brouat"></div>
+          <div><label class="input-lbl">Code postal</label><input id="inv-lieu_cp" class="input" type="text" placeholder="31000"></div>
+          <div><label class="input-lbl">Ville</label><input id="inv-lieu_ville" class="input" type="text" placeholder="Toulouse"></div>
+        </div>
+        <div style="margin-top:14px;font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;">DATES & EXPÉDITEUR</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:6px;">
+          <div><label class="input-lbl">Réponse souhaitée avant</label><input id="inv-reponse_avant" class="input" type="date"></div>
+          <div><label class="input-lbl">Date de relance (non-répondants)</label><input id="inv-date_relance" class="input" type="date"></div>
+          <div><label class="input-lbl">Date de rappel (présents)</label><input id="inv-date_rappel" class="input" type="date"></div>
+          <div><label class="input-lbl">Nom expéditeur</label><input id="inv-expediteur" class="input" type="text" placeholder="Le Spacer's Business Club"></div>
+          <div><label class="input-lbl">Répondre à (email)</label><input id="inv-reply_to" class="input" type="email" placeholder="marketing@spacerstoulouse.fr"></div>
+        </div>
+        <div style="margin-top:14px;font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;">PARTICIPATION</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;align-items:end;">
+          <div><label class="input-lbl">Nombre max de participants (0 = illimité)</label><input id="inv-max_participants" class="input" type="number" min="0" value="0"></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding-bottom:8px;"><input type="checkbox" id="inv-afficher_places"> Afficher les places restantes</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="inv-opt_liste_participants" checked> Demander « combien serez-vous ? »</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="inv-opt_infos_complementaires"> Champ « informations complémentaires »</label>
+        </div>
+      </div>
+
+      <!-- Sous-onglet EMAIL (blocs) -->
+      <div id="inv-sub-email" hidden>
+        <div style="display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start;">
+          <div>
+            <div class="input-lbl" style="margin-bottom:8px;">Ajouter un bloc</div>
+            <div id="inv-palette" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+          <div>
+            <div class="input-lbl" style="margin-bottom:8px;">Contenu de l'email d'invitation</div>
+            <div id="inv-editor" style="display:flex;flex-direction:column;gap:10px;min-height:120px;"></div>
+          </div>
+        </div>
+        <div class="input-lbl" style="margin-top:18px;">Aperçu du rendu réel</div>
+        <div id="inv-preview" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAF7F2;"></div>
+      </div>
+
+      <!-- Sous-onglet PAGES de réponse -->
+      <div id="inv-sub-pages" hidden>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--green);font-weight:700;margin-bottom:8px;">PAGE D'ACCEPTATION (si « Je participe »)</div>
+            <label class="input-lbl">Titre</label><input id="inv-acc-titre" class="input" type="text" placeholder="Votre présence est confirmée !">
+            <label class="input-lbl" style="margin-top:8px;">Texte</label><textarea id="inv-acc-texte" class="input" rows="4" placeholder="Merci, nous avons bien noté votre participation. À très bientôt !"></textarea>
+          </div>
+          <div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--red);font-weight:700;margin-bottom:8px;">PAGE DE DÉCLINAISON (si « Je ne pourrai pas »)</div>
+            <label class="input-lbl">Titre</label><input id="inv-dec-titre" class="input" type="text" placeholder="Nous sommes navrés de votre choix">
+            <label class="input-lbl" style="margin-top:8px;">Texte</label><textarea id="inv-dec-texte" class="input" rows="4" placeholder="Peut-être à une autre fois. Merci de nous avoir prévenus."></textarea>
+          </div>
+        </div>
+        <div class="banner info" style="margin-top:16px;font-size:12px;">Ces pages s'affichent au partenaire après sa réponse, sur une page brandée Spacers. Laisse vide pour utiliser les textes par défaut.</div>
+      </div>
+
+      <div id="inv-form-status" style="font-size:12px;text-align:center;min-height:18px;margin:10px 0 0;"></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);">
+      <button class="btn ghost" onclick="closeInvFormModal()">Annuler</button>
+      <button class="btn primary" id="inv-form-submit" onclick="submitInvitation()">Enregistrer le brouillon</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL : Détail / réponses d'une invitation ===== -->
+<div id="modal-inv" class="modal-ov" hidden onclick="if(event.target.id==='modal-inv')closeInvDetailModal()">
+  <div class="modal-card" id="modal-inv-card" style="max-width:760px;"></div>
+</div>
+
 <!-- ===== TOAST ===== -->
 <div id="toast" class="toast"></div>
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V8 — Spacer's Business Club  (+ Mails par blocs + upload images)
+//  PILOTE ADMIN V9 — Spacer's Business Club  (+ Invitations RSVP)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -899,6 +1026,13 @@ let MAILS_STATS = {};
 let CURRENT_MAIL_FILTER = 'all';
 let CURRENT_MAIL_DETAIL = null;
 let CURRENT_MAIL_EDIT = null;
+
+// Sprint Invitations
+let INVS_CACHE = [];
+let INVS_STATS = {};
+let CURRENT_INV_FILTER = 'all';
+let CURRENT_INV_DETAIL = null;
+let CURRENT_INV_EDIT = null;
 
 const FR_MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -1145,6 +1279,7 @@ function switchTab(tab) {
   if (tab === 'communications' && COMS_CACHE.length === 0) loadCommunications();
   if (tab === 'partenaires' && PARTENAIRES_CACHE.length === 0) loadPartenaires();
   if (tab === 'mails' && MAILS_CACHE.length === 0) loadMails();
+  if (tab === 'invitations' && INVS_CACHE.length === 0) loadInvitations();
 }
 
 // ============================================================================
@@ -2553,8 +2688,11 @@ function renderMailsList() {
 }
 
 // ---- Composeur par BLOCS ----
-let MAIL_BLOCKS = [];
+let MAIL_BLOCKS = [];          // alias historique (pointe vers BE.blocks en mode Mail)
 let MAIL_UPLOAD_TARGET = null; // { idx, field }
+// Contrôleur générique d'éditeur de blocs — partagé Mails + Invitations (une seule instance active)
+let BE = { blocks: [], ids: { palette: 'mail-palette', editor: 'mail-editor', preview: 'mail-preview', file: 'be-file-input' }, palette: null, ctx: null, kind: 'mail', noUnsub: false, onChange: null };
+function beRefresh() { renderMailEditor(); updateMailPreview(); if (typeof BE.onChange === 'function') { try { BE.onChange(); } catch (_) {} } }
 
 const MAIL_BLOCK_DEFS = {
   entete:               { label: 'En-tête Spacers', ico: '▦' },
@@ -2573,8 +2711,11 @@ const MAIL_BLOCK_DEFS = {
   adresse:              { label: 'Adresse', ico: '⌂' },
   pied:                 { label: 'Pied de page', ico: '▁' },
   html:                 { label: 'HTML libre', ico: '⟨⟩' },
+  invit_modalite:       { label: 'Modalités de l\'événement', ico: '🗓' },
+  invit_reponse:        { label: 'Boutons de réponse (RSVP)', ico: '✅' },
 };
 const MAIL_PALETTE_ORDER = ['entete','banniere','titre','paragraphe','image','bouton','separateur','deux_colonnes_texte','deux_colonnes_image','image_texte','texte_image','menu','reseaux','adresse','pied','html'];
+const INV_PALETTE_ORDER = ['entete','banniere','invit_modalite','titre','paragraphe','image','bouton','invit_reponse','separateur','deux_colonnes_texte','deux_colonnes_image','image_texte','texte_image','menu','reseaux','adresse','pied','html'];
 
 function mailUid() { return 'b' + Math.random().toString(36).slice(2, 9); }
 function mailNewBlock(type) {
@@ -2595,6 +2736,8 @@ function mailNewBlock(type) {
     adresse: { text: "Spacer's Toulouse Volley · Palais des Sports André Brouat" },
     pied: { logo_url: '', ligne1: "Spacer's Toulouse Volley · Palais des Sports André Brouat", site: 'spacerstoulouse.fr', site_url: 'https://spacerstoulouse.fr', email: 'marketing@spacerstoulouse.fr' },
     html: { code: '' },
+    invit_modalite: {},
+    invit_reponse: { label_oui: 'Je participe', label_non: 'Je ne pourrai pas' },
   };
   return Object.assign({ _id: mailUid(), type }, defaults[type] || {});
 }
@@ -2619,13 +2762,16 @@ function openMailFormModal(mail=null) {
 
   let blocks = mail?.blocks;
   if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = null; } }
+  let arr;
   if (Array.isArray(blocks) && blocks.length) {
-    MAIL_BLOCKS = blocks.map(b => Object.assign({ _id: mailUid() }, b));
+    arr = blocks.map(b => Object.assign({ _id: mailUid() }, b));
   } else if (mail && (mail.corps || mail.titre || mail.image_url)) {
-    MAIL_BLOCKS = mailBlocksFromLegacy(mail);
+    arr = mailBlocksFromLegacy(mail);
   } else {
-    MAIL_BLOCKS = mailDefaultBlocks();
+    arr = mailDefaultBlocks();
   }
+  MAIL_BLOCKS = arr;
+  BE = { blocks: arr, ids: { palette: 'mail-palette', editor: 'mail-editor', preview: 'mail-preview', file: 'be-file-input' }, palette: MAIL_PALETTE_ORDER, ctx: null, kind: 'mail', noUnsub: false, onChange: null };
 
   $('mail-form-status').textContent = '';
   $('mail-form-submit').textContent = mail ? 'Enregistrer' : 'Enregistrer le brouillon';
@@ -2639,30 +2785,31 @@ function openMailFormModal(mail=null) {
 function closeMailFormModal() { $('modal-mail-form').hidden = true; CURRENT_MAIL_EDIT = null; MAIL_BLOCKS = []; MAIL_UPLOAD_TARGET = null; }
 
 function renderMailPalette() {
-  $('mail-palette').innerHTML = MAIL_PALETTE_ORDER.map(t => {
-    const d = MAIL_BLOCK_DEFS[t];
+  const order = BE.palette || MAIL_PALETTE_ORDER;
+  $(BE.ids.palette).innerHTML = order.map(t => {
+    const d = MAIL_BLOCK_DEFS[t]; if (!d) return '';
     return `<button class="btn ghost" style="justify-content:flex-start;border:1px solid var(--line);background:#fff;font-size:12px;padding:7px 10px;" onclick="mailAddBlock('${t}')"><span style="display:inline-block;width:20px;text-align:center;color:var(--gold);font-weight:700;">${d.ico}</span>&nbsp;${d.label}</button>`;
   }).join('');
 }
 function mailAddBlock(type) {
-  MAIL_BLOCKS.push(mailNewBlock(type));
-  renderMailEditor(); updateMailPreview();
-  const ed = $('mail-editor'); if (ed) ed.scrollTop = ed.scrollHeight;
+  BE.blocks.push(mailNewBlock(type));
+  beRefresh();
+  const ed = $(BE.ids.editor); if (ed) ed.scrollTop = ed.scrollHeight;
 }
 function mailMoveBlock(idx, dir) {
   const j = idx + dir;
-  if (j < 0 || j >= MAIL_BLOCKS.length) return;
-  const tmp = MAIL_BLOCKS[idx]; MAIL_BLOCKS[idx] = MAIL_BLOCKS[j]; MAIL_BLOCKS[j] = tmp;
-  renderMailEditor(); updateMailPreview();
+  if (j < 0 || j >= BE.blocks.length) return;
+  const tmp = BE.blocks[idx]; BE.blocks[idx] = BE.blocks[j]; BE.blocks[j] = tmp;
+  beRefresh();
 }
-function mailDeleteBlock(idx) { MAIL_BLOCKS.splice(idx, 1); renderMailEditor(); updateMailPreview(); }
-function mailBlockSet(idx, field, value) { if (MAIL_BLOCKS[idx]) { MAIL_BLOCKS[idx][field] = value; updateMailPreview(); } }
+function mailDeleteBlock(idx) { BE.blocks.splice(idx, 1); beRefresh(); }
+function mailBlockSet(idx, field, value) { if (BE.blocks[idx]) { BE.blocks[idx][field] = value; updateMailPreview(); if (typeof BE.onChange === 'function') { try { BE.onChange(); } catch (_) {} } } }
 function mailMenuSet(idx, value) {
   const items = String(value).split('\n').map(l => {
     const parts = l.split('|'); const label = (parts[0]||'').trim(); const url = (parts[1]||'').trim();
     return label ? { label, url } : null;
   }).filter(Boolean);
-  if (MAIL_BLOCKS[idx]) { MAIL_BLOCKS[idx].items = items; updateMailPreview(); }
+  if (BE.blocks[idx]) { BE.blocks[idx].items = items; updateMailPreview(); }
 }
 
 // -- champs d'édition --
@@ -2727,23 +2874,27 @@ function mailBlockFields(b, idx) {
       return `${L0('Logo / image (optionnel)')}${_fImage(idx,'logo_url',b.logo_url,'170 × 40 px')}${L('Ligne 1')}${_fIn(idx,'ligne1',b.ligne1,"Spacer's Toulouse Volley · …")}${L('Texte du lien site')}${_fIn(idx,'site',b.site,'spacerstoulouse.fr')}${L('URL du site')}${_fIn(idx,'site_url',b.site_url,'https://spacerstoulouse.fr','url')}${L('Email contact')}${_fIn(idx,'email',b.email,'marketing@spacerstoulouse.fr')}`;
     case 'html':
       return `${L0('Code HTML')}${_fTa(idx,'code',b.code,'<table>…</table>',4)}`;
+    case 'invit_modalite':
+      return `<div style="font-size:12px;color:var(--ink-muted);font-style:italic;">Affiche automatiquement la date, le lieu et la date limite de réponse saisis dans l'onglet « Réglages ».</div>`;
+    case 'invit_reponse':
+      return `<div style="font-size:12px;color:var(--ink-muted);font-style:italic;margin-bottom:8px;">Deux boutons RSVP (lien unique par destinataire, généré à l'envoi).</div>${L0('Libellé « Je participe »')}${_fIn(idx,'label_oui',b.label_oui,'Je participe')}${L('Libellé « Je décline »')}${_fIn(idx,'label_non',b.label_non,'Je ne pourrai pas')}`;
     default: return '';
   }
 }
 function renderMailEditor() {
-  const ed = $('mail-editor');
-  if (!MAIL_BLOCKS.length) {
+  const ed = $(BE.ids.editor);
+  if (!BE.blocks.length) {
     ed.innerHTML = `<div style="border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--ink-muted);font-size:13px;">Ajoute un bloc depuis la palette ←</div>`;
     return;
   }
-  ed.innerHTML = MAIL_BLOCKS.map((b, idx) => {
+  ed.innerHTML = BE.blocks.map((b, idx) => {
     const d = MAIL_BLOCK_DEFS[b.type] || { label: b.type, ico: '•' };
     return `<div style="border:1px solid var(--line);border-radius:10px;background:#fff;">
       <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg-soft);border-radius:10px 10px 0 0;border-bottom:1px solid var(--line);">
         <span style="color:var(--gold);font-weight:700;width:22px;text-align:center;">${d.ico}</span>
         <b style="font-size:12px;flex:1;">${escapeHtml(d.label)}</b>
         <button class="btn sm ghost" title="Monter" onclick="mailMoveBlock(${idx},-1)" ${idx===0?'disabled':''}>↑</button>
-        <button class="btn sm ghost" title="Descendre" onclick="mailMoveBlock(${idx},1)" ${idx===MAIL_BLOCKS.length-1?'disabled':''}>↓</button>
+        <button class="btn sm ghost" title="Descendre" onclick="mailMoveBlock(${idx},1)" ${idx===BE.blocks.length-1?'disabled':''}>↓</button>
         <button class="btn sm ghost" title="Supprimer" style="color:var(--red);" onclick="mailDeleteBlock(${idx})">🗑</button>
       </div>
       <div style="padding:12px;">${mailBlockFields(b, idx)}</div>
@@ -2754,7 +2905,7 @@ function renderMailEditor() {
 // -- upload image (input fichier unique réutilisé) --
 function mailPickImage(idx, field) {
   MAIL_UPLOAD_TARGET = { idx, field };
-  const fi = $('mail-file-input'); fi.value = ''; fi.click();
+  const fi = $(BE.ids.file); fi.value = ''; fi.click();
 }
 function _readImageSize(file) {
   return new Promise((resolve) => {
@@ -2779,8 +2930,8 @@ async function mailHandleFileChosen(input) {
     const res = await fetch(`/api/admin/mails/${encodeURIComponent(ADMIN_TOKEN)}/upload-image`, { method: 'POST', body: fd });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    if (MAIL_BLOCKS[idx]) MAIL_BLOCKS[idx][field] = data.url;
-    renderMailEditor(); updateMailPreview();
+    if (BE.blocks[idx]) BE.blocks[idx][field] = data.url;
+    beRefresh();
     showToast(dim ? `✓ Image ajoutée (${dim.w} × ${dim.h} px)` : '✓ Image ajoutée', 'success');
   } catch (e) { showToast('Erreur upload : ' + e.message, 'error'); }
   MAIL_UPLOAD_TARGET = null;
@@ -2789,7 +2940,7 @@ async function mailHandleFileChosen(input) {
 // -- aperçu (miroir du rendu worker) --
 function _pNl2br(s) { return escapeHtml(s || '').replace(/\n/g, '<br>'); }
 function _pAlign(a) { return (a === 'center' || a === 'right') ? a : 'left'; }
-function mailPreviewBlockHtml(b) {
+function mailPreviewBlockHtml(b, ctx) {
   if (!b || !b.type) return '';
   const SIDE = 'padding:6px 30px;';
   const wrap = (inner, pad) => `<div style="${pad}">${inner}</div>`;
@@ -2825,28 +2976,45 @@ function mailPreviewBlockHtml(b) {
     case 'adresse': return wrap(`<div style="text-align:center;font-size:11px;color:#8A8478;line-height:1.6;">${_pNl2br(b.text)}</div>`, 'padding:10px 30px;');
     case 'pied': { const logo = b.logo_url ? `<img src="${escapeHtml(b.logo_url)}" style="height:40px;max-height:40px;width:auto;display:inline-block;margin-bottom:8px;" onerror="this.style.display='none'"><br>` : ''; const site = b.site ? `<span style="color:#C8932B;">${escapeHtml(b.site)}</span>` : ''; const email = b.email ? `<span style="color:#C8932B;">${escapeHtml(b.email)}</span>` : ''; const sep = (site && email) ? ' · ' : ''; return `<div style="background:#F1ECE2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">${logo}${escapeHtml(b.ligne1 || "Spacer's Toulouse Volley · Palais des Sports André Brouat")}<br>${site}${sep}${email}</div>`; }
     case 'html': return wrap(b.code || '', 'padding:6px 30px;');
+    case 'invit_modalite': {
+      const inv = ctx || {};
+      const lieu = [inv.lieu_prelude, inv.lieu_adresse, [inv.lieu_cp, inv.lieu_ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      const rows = [];
+      if (inv.date_event) rows.push(`<div><b style="color:#0A1628;">Date :</b> ${escapeHtml(inv.date_event)}${inv.heure ? ' · ' + escapeHtml(inv.heure) : ''}</div>`);
+      if (lieu) rows.push(`<div><b style="color:#0A1628;">Lieu :</b> ${escapeHtml(lieu)}</div>`);
+      if (inv.reponse_avant) rows.push(`<div><b style="color:#0A1628;">Réponse avant le :</b> ${escapeHtml(_invDateFrJs(inv.reponse_avant))}</div>`);
+      const body = rows.length ? rows.join('') : '<span style="color:#B8B2A4;font-style:italic;">Date, lieu… (renseignés dans Réglages)</span>';
+      return wrap(`<div style="background:#FAF7F2;border:1px solid #E5DED1;border-radius:10px;padding:12px 16px;font-size:13px;color:#4A5568;line-height:1.8;">${body}</div>`, 'padding:10px 30px;');
+    }
+    case 'invit_reponse':
+      return wrap(`<div style="text-align:center;"><span style="display:inline-block;background:#C8932B;color:#0A1628;font-weight:700;font-size:14px;padding:12px 24px;border-radius:999px;margin:4px;">${escapeHtml(b.label_oui || 'Je participe')}</span><span style="display:inline-block;background:#fff;color:#0A1628;border:1px solid #E5DED1;font-weight:700;font-size:14px;padding:11px 24px;border-radius:999px;margin:4px;">${escapeHtml(b.label_non || 'Je ne pourrai pas')}</span></div>`, 'padding:14px 30px;');
     default: return '';
   }
 }
-function renderMailPreviewFromBlocks(blocks, preheader) {
-  const inner = (blocks || []).map(mailPreviewBlockHtml).join('');
+function renderMailPreviewFromBlocks(blocks, preheader, opts) {
+  opts = opts || {};
+  const inner = (blocks || []).map(b => mailPreviewBlockHtml(b, opts.ctx)).join('');
+  const footer = opts.noUnsub
+    ? `<div style="background:#FAF7F2;padding:14px 30px;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">Spacer's Toulouse Volley · Business Club</div>`
+    : `<div style="background:#FAF7F2;padding:14px 30px;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">Vous recevez cet email en tant que partenaire du Spacer's Business Club. <span style="text-decoration:underline;">Se désinscrire</span>.</div>`;
   return `<div style="background:#fff;">
     ${preheader ? `<div style="font-size:11px;color:#8A8478;font-style:italic;padding:10px 30px 0;">${escapeHtml(preheader)}</div>` : ''}
     ${inner || '<div style="padding:40px;text-align:center;color:#B8B2A4;font-size:13px;">Aucun bloc — ajoute du contenu</div>'}
-    <div style="background:#FAF7F2;padding:14px 30px;text-align:center;font-size:10px;color:#8A8478;line-height:1.6;border-top:1px solid #E5DED1;">Vous recevez cet email en tant que partenaire du Spacer's Business Club. <span style="text-decoration:underline;">Se désinscrire</span>.</div>
+    ${footer}
   </div>`;
 }
 function updateMailPreview() {
-  const preheader = $('mail-preheader') ? $('mail-preheader').value.trim() : '';
-  $('mail-preview').innerHTML = renderMailPreviewFromBlocks(MAIL_BLOCKS, preheader);
+  const preheader = (BE.kind === 'mail' && $('mail-preheader')) ? $('mail-preheader').value.trim()
+                  : (BE.kind === 'invitation' && $('inv-theme')) ? $('inv-theme').value.trim() : '';
+  $(BE.ids.preview).innerHTML = renderMailPreviewFromBlocks(BE.blocks, preheader, { ctx: BE.ctx, noUnsub: BE.kind === 'invitation' });
 }
 
 async function submitMail() {
   const sujet = $('mail-sujet').value.trim();
   const status = $('mail-form-status');
   if (!sujet) { status.textContent = '⚠ Le sujet est obligatoire'; status.style.color = '#993556'; return; }
-  if (!MAIL_BLOCKS.length) { status.textContent = '⚠ Ajoute au moins un bloc'; status.style.color = '#993556'; return; }
-  const blocks = MAIL_BLOCKS.map(b => { const c = Object.assign({}, b); delete c._id; return c; });
+  if (!BE.blocks.length) { status.textContent = '⚠ Ajoute au moins un bloc'; status.style.color = '#993556'; return; }
+  const blocks = BE.blocks.map(b => { const c = Object.assign({}, b); delete c._id; return c; });
   const editId = CURRENT_MAIL_EDIT ? CURRENT_MAIL_EDIT.id : null;
   const payload = {
     sujet,
@@ -3015,6 +3183,337 @@ async function mailSend() {
 }
 
 // ============================================================================
+//  INVITATIONS — événements partenaires (RSVP, places, relances)
+// ============================================================================
+const INV_STATUT_LABEL = { brouillon: 'Brouillon', valide: 'Validée', envoye: 'Envoyée', clos: 'Close' };
+const INV_STATUT_TONE  = { brouillon: 'attente', valide: 'publie', envoye: 'archive', clos: 'archive' };
+let INV_DRAFT_BLOCKS = [];
+
+function _invDateFrJs(d) {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d);
+}
+function invDefaultBlocks() {
+  return [
+    Object.assign(mailNewBlock('entete'), { eyebrow: 'INVITATION', titre: '' }),
+    mailNewBlock('invit_modalite'),
+    Object.assign(mailNewBlock('paragraphe'), { text: 'Nous serions ravis de vous compter parmi nous. Merci de confirmer votre présence ci-dessous.' }),
+    mailNewBlock('invit_reponse'),
+    mailNewBlock('pied'),
+  ];
+}
+
+async function loadInvitations(force=false) {
+  const btn = document.querySelector('#tab-invitations .refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  const listEl = $('invs-list');
+  try {
+    const res = await fetch(`/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    INVS_CACHE = data.invitations || [];
+    INVS_STATS = data.stats || {};
+    renderInvStats();
+    renderInvsList();
+    const b = $('sb-badge-inv-brouillon');
+    if (b) { if (INVS_STATS.brouillon > 0) { b.textContent = INVS_STATS.brouillon; b.hidden = false; } else b.hidden = true; }
+  } catch (e) {
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+function renderInvStats() {
+  const s = INVS_STATS;
+  $('cnt-inv-all').textContent = s.total ?? 0;
+  $('cnt-inv-brouillon').textContent = s.brouillon ?? 0;
+  $('cnt-inv-valide').textContent = s.valide ?? 0;
+  $('cnt-inv-envoye').textContent = s.envoye ?? 0;
+}
+function setInvFilter(statut, btn) {
+  CURRENT_INV_FILTER = statut;
+  document.querySelectorAll('#invs-segs .seg').forEach(s => s.classList.remove('on'));
+  btn.classList.add('on');
+  renderInvsList();
+}
+function renderInvsList() {
+  const listEl = $('invs-list');
+  let list = INVS_CACHE;
+  if (CURRENT_INV_FILTER !== 'all') list = list.filter(i => i.statut === CURRENT_INV_FILTER);
+  if (!list.length) {
+    listEl.innerHTML = `<div class="list-empty"><h3>Aucune invitation</h3><p>${CURRENT_INV_FILTER === 'all' ? 'Crée ta première invitation avec « Créer une invitation ».' : 'Aucune invitation dans cette catégorie.'}</p></div>`;
+    return;
+  }
+  const STATUT_BORDER = { brouillon: 'attente', valide: 'publie', envoye: 'archive', clos: 'archive' };
+  listEl.innerHTML = list.map(i => {
+    const tone = INV_STATUT_TONE[i.statut] || '';
+    const label = INV_STATUT_LABEL[i.statut] || i.statut;
+    const meta = [];
+    if (i.date_event) meta.push(`<span>📅 ${escapeHtml(i.date_event)}${i.heure ? ' · ' + escapeHtml(i.heure) : ''}</span>`);
+    if (i.statut === 'envoye') meta.push(`<span style="color:var(--green);">✓ ${i.nb_destinataires || 0} invité${(i.nb_destinataires||0)>1?'s':''}</span>`);
+    else meta.push(`<span>Par ${escapeHtml(i.cree_par_nom || '—')}</span>`);
+    if (i.max_participants > 0) meta.push(`<span class="tag">${i.max_participants} places</span>`);
+    meta.push(`<span>${i.statut === 'envoye' && i.envoye_le ? 'Envoyée ' + formatRelative(i.envoye_le) : 'Créée ' + formatRelative(i.created_at)}</span>`);
+    return `
+      <div class="offre-row ${STATUT_BORDER[i.statut] || ''}" onclick="openInvDetail('${i.id}')" style="cursor:pointer;">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+          </div>
+          <div class="offre-titre">${escapeHtml(i.theme || i.sujet)}</div>
+          ${i.theme ? `<div class="offre-partner" style="font-weight:400;">${escapeHtml(i.sujet)}</div>` : ''}
+          <div class="offre-meta">${meta.join(' <span class="dot"></span> ')}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---- Création / édition ----
+function openInvFormModal(inv=null) {
+  CURRENT_INV_EDIT = inv;
+  $('inv-form-eyebrow').textContent = inv ? 'Modifier l\'invitation' : 'Nouvelle invitation';
+  $('inv-form-title').textContent = inv ? 'Modifier l\'invitation' : 'Créer une invitation';
+  const g = (id, v) => { $(id).value = v || ''; };
+  g('inv-sujet', inv?.sujet); g('inv-theme', inv?.theme); g('inv-date_event', inv?.date_event); g('inv-heure', inv?.heure);
+  g('inv-lieu_prelude', inv?.lieu_prelude); g('inv-lieu_adresse', inv?.lieu_adresse); g('inv-lieu_cp', inv?.lieu_cp); g('inv-lieu_ville', inv?.lieu_ville);
+  g('inv-reponse_avant', inv?.reponse_avant ? String(inv.reponse_avant).slice(0,10) : '');
+  g('inv-date_relance', inv?.date_relance ? String(inv.date_relance).slice(0,10) : '');
+  g('inv-date_rappel', inv?.date_rappel ? String(inv.date_rappel).slice(0,10) : '');
+  g('inv-expediteur', inv?.expediteur_nom || "Le Spacer's Business Club");
+  g('inv-reply_to', inv?.reply_to);
+  $('inv-max_participants').value = inv?.max_participants != null ? inv.max_participants : 0;
+  $('inv-afficher_places').checked = !!(inv && inv.afficher_places);
+  $('inv-opt_liste_participants').checked = inv ? !!inv.opt_liste_participants : true;
+  $('inv-opt_infos_complementaires').checked = !!(inv && inv.opt_infos_complementaires);
+  const pa = inv?.page_acceptation || {}; const pd = inv?.page_declinaison || {};
+  g('inv-acc-titre', pa.titre); g('inv-acc-texte', pa.texte); g('inv-dec-titre', pd.titre); g('inv-dec-texte', pd.texte);
+
+  let blocks = inv?.blocks;
+  if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = null; } }
+  INV_DRAFT_BLOCKS = (Array.isArray(blocks) && blocks.length) ? blocks.map(b => Object.assign({ _id: mailUid() }, b)) : invDefaultBlocks();
+
+  $('inv-form-status').textContent = '';
+  $('inv-form-submit').textContent = inv ? 'Enregistrer' : 'Enregistrer le brouillon';
+  $('inv-form-submit').disabled = false;
+  switchInvSubtab('reglages');
+  $('modal-inv-form').hidden = false;
+}
+function closeInvFormModal() { $('modal-inv-form').hidden = true; CURRENT_INV_EDIT = null; INV_DRAFT_BLOCKS = []; MAIL_UPLOAD_TARGET = null; }
+
+function switchInvSubtab(name) {
+  ['reglages','email','pages'].forEach(n => {
+    $('inv-tab-' + n).classList.toggle('on', n === name);
+    $('inv-sub-' + n).hidden = (n !== name);
+  });
+  if (name === 'email') openInvEmailEditor();
+}
+function invReadSettings() {
+  const v = id => ($(id) ? $(id).value.trim() : '');
+  return {
+    sujet: v('inv-sujet'), theme: v('inv-theme'), date_event: v('inv-date_event'), heure: v('inv-heure'),
+    lieu_prelude: v('inv-lieu_prelude'), lieu_adresse: v('inv-lieu_adresse'), lieu_cp: v('inv-lieu_cp'), lieu_ville: v('inv-lieu_ville'),
+    reponse_avant: v('inv-reponse_avant') || null, date_relance: v('inv-date_relance') || null, date_rappel: v('inv-date_rappel') || null,
+    expediteur_nom: v('inv-expediteur') || "Le Spacer's Business Club", reply_to: v('inv-reply_to') || null,
+    max_participants: parseInt($('inv-max_participants').value, 10) || 0,
+    afficher_places: $('inv-afficher_places').checked,
+    opt_liste_participants: $('inv-opt_liste_participants').checked,
+    opt_infos_complementaires: $('inv-opt_infos_complementaires').checked,
+  };
+}
+function openInvEmailEditor() {
+  BE = {
+    blocks: INV_DRAFT_BLOCKS,
+    ids: { palette: 'inv-palette', editor: 'inv-editor', preview: 'inv-preview', file: 'be-file-input' },
+    palette: INV_PALETTE_ORDER, ctx: invReadSettings(), kind: 'invitation', noUnsub: true, onChange: null,
+  };
+  renderMailPalette();
+  renderMailEditor();
+  updateMailPreview();
+}
+
+async function submitInvitation() {
+  const s = invReadSettings();
+  const status = $('inv-form-status');
+  if (!s.sujet) { status.textContent = '⚠ Le sujet est obligatoire'; status.style.color = '#993556'; switchInvSubtab('reglages'); return; }
+  const blocks = (INV_DRAFT_BLOCKS || []).map(b => { const c = Object.assign({}, b); delete c._id; return c; });
+  const payload = Object.assign({}, s, {
+    blocks,
+    page_acceptation: { titre: $('inv-acc-titre').value.trim(), texte: $('inv-acc-texte').value.trim() },
+    page_declinaison: { titre: $('inv-dec-titre').value.trim(), texte: $('inv-dec-texte').value.trim() },
+  });
+  const editId = CURRENT_INV_EDIT ? CURRENT_INV_EDIT.id : null;
+  const btn = $('inv-form-submit'); btn.disabled = true; btn.textContent = '⏳…';
+  try {
+    const url = editId
+      ? `/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(editId)}/update`
+      : `/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}/create`;
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(editId ? '✓ Invitation mise à jour' : '✓ Invitation créée', 'success');
+    closeInvFormModal();
+    await loadInvitations();
+    const openId = (data.invitation && data.invitation.id) ? data.invitation.id : editId;
+    if (openId) openInvDetail(openId);
+  } catch (e) {
+    status.textContent = '❌ ' + e.message; status.style.color = '#993556';
+    btn.disabled = false; btn.textContent = editId ? 'Enregistrer' : 'Enregistrer le brouillon';
+  }
+}
+
+// ---- Détail / réponses / envoi ----
+async function openInvDetail(invId) {
+  $('modal-inv').hidden = false;
+  $('modal-inv-card').innerHTML = `<div class="modal-body" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--ink-muted);font-size:12px;margin-top:10px;">Chargement…</p></div>`;
+  try {
+    const res = await fetch(`/api/admin/invitation/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(invId)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    CURRENT_INV_DETAIL = data;
+    renderInvDetail(data);
+  } catch (e) {
+    $('modal-inv-card').innerHTML = `<div class="modal-body"><div class="banner danger">Erreur : ${escapeHtml(e.message)}</div><div style="text-align:right;margin-top:14px;"><button class="btn" onclick="closeInvDetailModal()">Fermer</button></div></div>`;
+  }
+}
+function closeInvDetailModal() { $('modal-inv').hidden = true; CURRENT_INV_DETAIL = null; }
+
+function renderInvDetail(data) {
+  const inv = data.invitation; const agg = data.agg || {}; const dests = data.destinataires || [];
+  const card = $('modal-inv-card');
+  const tone = INV_STATUT_TONE[inv.statut] || '';
+  const label = INV_STATUT_LABEL[inv.statut] || inv.statut;
+  const lieu = [inv.lieu_prelude, inv.lieu_adresse, [inv.lieu_cp, inv.lieu_ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+
+  let banner = '';
+  if (inv.statut === 'brouillon') banner = `<div class="banner warn"><b>Brouillon.</b>&nbsp;Valide l'invitation pour pouvoir l'envoyer. Un test est conseillé avant.</div>`;
+  else if (inv.statut === 'valide') banner = `<div class="banner success"><b>Validée.</b>&nbsp;Prête à envoyer${data.destinataires_estimes ? ' à ~' + data.destinataires_estimes + ' partenaires' : ''}. L'envoi est définitif.</div>`;
+  else if (inv.statut === 'envoye') banner = `<div class="banner info"><b>Envoyée${inv.envoye_le ? ' le ' + formatDate(inv.envoye_le) : ''}</b>${inv.nb_destinataires ? ' à ' + inv.nb_destinataires + ' invité' + (inv.nb_destinataires>1?'s':'') : ''}.</div>`;
+
+  let placesHtml = '';
+  if (inv.max_participants > 0) {
+    placesHtml = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;">
+      <div style="flex:1;min-width:120px;background:var(--bg-soft);border-radius:10px;padding:12px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:26px;color:var(--gold);">${agg.places_used || 0}</div><div style="font-size:10px;letter-spacing:1px;color:var(--ink-muted);text-transform:uppercase;">Places prises</div></div>
+      <div style="flex:1;min-width:120px;background:var(--bg-soft);border-radius:10px;padding:12px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:26px;color:var(--ink);">${agg.places_restantes != null ? agg.places_restantes : '∞'}</div><div style="font-size:10px;letter-spacing:1px;color:var(--ink-muted);text-transform:uppercase;">Restantes / ${inv.max_participants}</div></div>
+    </div>`;
+  }
+
+  let responsesHtml = '';
+  if (inv.statut === 'envoye') {
+    const rows = dests.filter(d => d.reponse).map(d => {
+      const nom = `${d.contact_prenom || ''} ${d.contact_nom || ''}`.trim() || d.contact_email;
+      const tag = d.reponse === 'present' ? `<span style="color:var(--green);font-weight:700;">✓ ${d.nb_personnes || 1} pers.</span>` : `<span style="color:var(--red);font-weight:700;">✕ Absent</span>`;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;"><div><b>${escapeHtml(nom)}</b>${d.partenaire_nom ? ` · <span style="color:var(--ink-soft);">${escapeHtml(d.partenaire_nom)}</span>` : ''}${d.commentaire ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;">${escapeHtml(d.commentaire)}</div>` : ''}</div>${tag}</div>`;
+    }).join('');
+    responsesHtml = `
+      <div style="display:flex;gap:8px;margin:14px 0;text-align:center;">
+        <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-size:24px;color:var(--green);">${agg.present || 0}</div><div style="font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1px;">Présents (${agg.total_personnes || 0} pers.)</div></div>
+        <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-size:24px;color:var(--red);">${agg.absent || 0}</div><div style="font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1px;">Absents</div></div>
+        <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-size:24px;color:var(--ink-muted);">${agg.sans_reponse || 0}</div><div style="font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1px;">Sans réponse</div></div>
+      </div>
+      ${rows ? `<div style="font-size:10px;letter-spacing:2px;color:var(--ink-soft);font-weight:700;margin:10px 0 4px;">RÉPONSES</div>${rows}` : '<div style="font-size:13px;color:var(--ink-soft);font-style:italic;text-align:center;padding:10px;">Aucune réponse pour le moment.</div>'}`;
+  }
+
+  const actions = [`<button class="btn ghost" onclick="closeInvDetailModal()">Fermer</button>`];
+  if (inv.statut === 'brouillon') {
+    actions.push(`<button class="btn" onclick="openInvEditFromDetail()">✎ Modifier</button>`);
+    actions.push(`<button class="btn" onclick="invTest()">✉ Test à moi</button>`);
+    actions.push(`<button class="btn success" onclick="invValidate()">✓ Valider</button>`);
+  } else if (inv.statut === 'valide') {
+    actions.push(`<button class="btn" onclick="openInvEditFromDetail()">✎ Modifier</button>`);
+    actions.push(`<button class="btn" onclick="invTest()">✉ Test à moi</button>`);
+    actions.push(`<button class="btn gold" onclick="invSend()">📣 Envoyer aux partenaires</button>`);
+  } else if (inv.statut === 'envoye') {
+    actions.push(`<button class="btn" onclick="invRelancer()">↻ Relancer les non-répondants</button>`);
+  }
+
+  card.innerHTML = `
+    <div class="modal-head">
+      <div class="row">
+        <div style="flex:1;min-width:0;">
+          <div class="eyebrow">Invitation</div>
+          <h2 class="display" style="margin:4px 0 6px;">${escapeHtml(inv.theme || inv.sujet)}</h2>
+          <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+        </div>
+        <button class="modal-close" onclick="closeInvDetailModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      ${banner}
+      <div style="background:var(--bg-soft);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--ink-soft);line-height:1.8;margin-bottom:6px;">
+        <div><b style="color:var(--ink);">Sujet :</b> ${escapeHtml(inv.sujet)}</div>
+        ${inv.date_event ? `<div><b style="color:var(--ink);">Date :</b> ${escapeHtml(inv.date_event)}${inv.heure ? ' · ' + escapeHtml(inv.heure) : ''}</div>` : ''}
+        ${lieu ? `<div><b style="color:var(--ink);">Lieu :</b> ${escapeHtml(lieu)}</div>` : ''}
+        ${inv.reponse_avant ? `<div><b style="color:var(--ink);">Réponse avant :</b> ${escapeHtml(_invDateFrJs(inv.reponse_avant))}</div>` : ''}
+        ${inv.date_relance ? `<div><b style="color:var(--ink);">Relance auto :</b> ${escapeHtml(_invDateFrJs(inv.date_relance))}${inv.relance_envoyee_le ? ' (envoyée ✓)' : ''}</div>` : ''}
+        ${inv.date_rappel ? `<div><b style="color:var(--ink);">Rappel auto :</b> ${escapeHtml(_invDateFrJs(inv.date_rappel))}${inv.rappel_envoye_le ? ' (envoyé ✓)' : ''}</div>` : ''}
+      </div>
+      ${placesHtml}
+      ${responsesHtml}
+    </div>
+    <div class="modal-foot">${actions.join('')}</div>
+  `;
+}
+function openInvEditFromDetail() {
+  if (!CURRENT_INV_DETAIL || !CURRENT_INV_DETAIL.invitation) return;
+  const inv = CURRENT_INV_DETAIL.invitation;
+  closeInvDetailModal();
+  openInvFormModal(inv);
+}
+async function invValidate() {
+  if (!CURRENT_INV_DETAIL) return;
+  const id = CURRENT_INV_DETAIL.invitation.id;
+  const ok = await confirmModal({ eyebrow: 'Validation', title: 'Valider cette invitation ?', message: 'Une fois validée, elle pourra être envoyée à tous les partenaires.', confirmText: 'Valider', confirmStyle: 'success' });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/validate`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Invitation validée', 'success'); await loadInvitations(); openInvDetail(id);
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+async function invTest() {
+  if (!CURRENT_INV_DETAIL) return;
+  const id = CURRENT_INV_DETAIL.invitation.id;
+  showToast('Envoi du test…', 'success');
+  try {
+    const res = await fetch(`/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/test`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✉ Test envoyé' + (data.sent_to ? ' à ' + data.sent_to : ''), 'success');
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+async function invSend() {
+  if (!CURRENT_INV_DETAIL) return;
+  const id = CURRENT_INV_DETAIL.invitation.id;
+  const confirm = await promptModal({ eyebrow: 'Envoi définitif', title: 'Envoyer l\'invitation à tous les partenaires ?', message: 'C\'est définitif. Pour confirmer, tape ENVOYER en majuscules.', inputLabel: 'Confirmation', inputPlaceholder: 'ENVOYER', confirmText: 'Envoyer maintenant', confirmStyle: 'gold' });
+  if (confirm === null) return;
+  if (confirm.trim().toUpperCase() !== 'ENVOYER') { showToast('Confirmation incorrecte — envoi annulé', 'error'); return; }
+  showToast('Envoi en cours…', 'success');
+  try {
+    const res = await fetch(`/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/send`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(`📣 Envoyée à ${data.nb_destinataires || 0} partenaire${(data.nb_destinataires||0)>1?'s':''}`, 'success');
+    await loadInvitations(); openInvDetail(id);
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+async function invRelancer() {
+  if (!CURRENT_INV_DETAIL) return;
+  const id = CURRENT_INV_DETAIL.invitation.id;
+  const ok = await confirmModal({ eyebrow: 'Relance', title: 'Relancer les non-répondants ?', message: 'Un email de relance partira à toutes les personnes qui n\'ont pas encore répondu.', confirmText: 'Relancer', confirmStyle: 'primary' });
+  if (!ok) return;
+  showToast('Relance en cours…', 'success');
+  try {
+    const res = await fetch(`/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/relancer`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast(`↻ ${data.nb_relances || 0} relance${(data.nb_relances||0)>1?'s':''} envoyée${(data.nb_relances||0)>1?'s':''}`, 'success');
+    openInvDetail(id);
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+// ============================================================================
 //  BOOT
 // ============================================================================
 document.addEventListener('keydown', (e) => {
@@ -3029,6 +3528,8 @@ document.addEventListener('keydown', (e) => {
     if (!$('modal-contact-form').hidden) closeContactFormModal();
     if (!$('modal-mail').hidden) closeMailDetailModal();
     if (!$('modal-mail-form').hidden) closeMailFormModal();
+    if (!$('modal-inv').hidden) closeInvDetailModal();
+    if (!$('modal-inv-form').hidden) closeInvFormModal();
   }
 });
 
