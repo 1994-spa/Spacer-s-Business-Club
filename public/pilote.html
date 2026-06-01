@@ -952,7 +952,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V9 — Spacer's Business Club  (+ Invitations RSVP)
+//  PILOTE ADMIN V10 — Spacer's Business Club  (+ Invitations RSVP + PDF fiche emploi)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -1465,6 +1465,7 @@ function renderOffreDetail(o) {
   else if (isRefuse) banner = `<div class="banner danger"><b>Annonce refusée.</b>&nbsp;${o.raison_refus ? 'Motif : <i>' + escapeHtml(o.raison_refus) + '</i>' : 'Pas de motif renseigné.'}</div>`;
   else if (isArchive) banner = `<div class="banner info"><b>Annonce archivée.</b></div>`;
   const actions = [`<button class="btn ghost" onclick="closeOffreModal()">Fermer</button>`];
+  actions.push(`<button class="btn" onclick="generateFichePdf('${o.id}')"><span class="ico">📄</span>PDF fiche</button>`);
   if (isAttente) {
     actions.push(`<button class="btn danger" onclick="quickReject('${o.id}')">Refuser</button>`);
     actions.push(`<button class="btn success" onclick="quickPublish('${o.id}')">Publier l'annonce</button>`);
@@ -1715,6 +1716,129 @@ async function buildAndDownloadCubePdf(offre) {
   const safeName = (offre.titre || 'annonce').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 50);
   const safePartner = (offre.partenaire || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 30);
   doc.save(`cube_${safePartner}_${safeName}.pdf`);
+}
+
+// ---- PDF "Fiche partenaire" A4 portrait (reproduit le template Minute de l'emploi) ----
+async function generateFichePdf(offreId) {
+  let offre = CURRENT_OFFRE_DETAIL && CURRENT_OFFRE_DETAIL.id === offreId ? CURRENT_OFFRE_DETAIL : null;
+  if (!offre) {
+    try {
+      const res = await fetch(`/api/admin/offre/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+      offre = data.offre;
+    } catch (e) { showToast('Erreur chargement : ' + e.message, 'error'); return; }
+  }
+  try {
+    showToast('Génération de la fiche…', 'success');
+    await buildAndDownloadFichePdf(offre);
+    showToast('✓ Fiche PDF téléchargée', 'success');
+  } catch (e) { console.error(e); showToast('Erreur PDF : ' + e.message, 'error'); }
+}
+
+async function buildAndDownloadFichePdf(offre) {
+  if (!window.jspdf) throw new Error('jsPDF non chargé');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' }); // 595 x 842
+  const W = 595.28, M = 48, CW = W - 2 * M;
+  const C = { ink: [10, 22, 40], gold: [200, 147, 43], goldSoft: [232, 201, 119], cream: [250, 247, 242], line: [229, 222, 209], muted: [138, 132, 120], white: [255, 255, 255] };
+  const meta = offre.metadata || {};
+
+  // — En-tête —
+  doc.setFillColor(...C.ink); doc.roundedRect(M, 44, 38, 38, 9, 9, 'F');
+  doc.setFont('times', 'bold'); doc.setFontSize(22); doc.setTextColor(...C.goldSoft);
+  doc.text('S', M + 19, 71, { align: 'center' });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...C.ink);
+  doc.text("SPACER'S BUSINESS CLUB", M + 50, 62);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...C.gold);
+  doc.text('TOULOUSE VOLLEY · SAISON 2026-2027', M + 50, 76, { charSpace: 1 });
+
+  // logo partenaire (si fourni) en haut à droite
+  if (meta.logo_b64) {
+    try {
+      const fmt = meta.logo_b64.startsWith('data:image/png') ? 'PNG' : /image\/jpe?g/.test(meta.logo_b64) ? 'JPEG' : null;
+      if (fmt) {
+        doc.setFillColor(...C.white); doc.setDrawColor(...C.line); doc.setLineWidth(0.8);
+        doc.roundedRect(W - M - 110, 40, 110, 56, 8, 8, 'FD');
+        doc.addImage(meta.logo_b64, fmt, W - M - 100, 48, 90, 40, undefined, 'FAST');
+      }
+    } catch (e) { console.warn('logo fiche:', e.message); }
+  }
+
+  // — Titre —
+  doc.setFont('times', 'bold'); doc.setFontSize(26); doc.setTextColor(...C.ink);
+  doc.text("Minute de l'emploi", M, 124);
+  doc.setFont('times', 'italic'); doc.setFontSize(11); doc.setTextColor(...C.muted);
+  doc.text("L'offre d'emploi qui s'écoute en direct du match", M, 142);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...C.muted);
+  doc.text('Diffusion micro pendant les rencontres · Réseau bénévoles & partenaires Spacers', M, 158);
+  doc.setDrawColor(...C.gold); doc.setLineWidth(2); doc.line(M, 170, M + 90, 170);
+
+  // — Bandeau section —
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...C.gold);
+  doc.text('FICHE PARTENAIRE', M, 192, { charSpace: 2 });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...C.ink);
+  doc.text((offre.partenaire || '—').toUpperCase().slice(0, 48), M, 210);
+
+  // — Helper champ —
+  function field(x, y, w, h, label, value, opts) {
+    opts = opts || {};
+    doc.setFillColor(...(opts.gold ? C.ink : C.cream));
+    doc.setDrawColor(...(opts.gold ? C.gold : C.line)); doc.setLineWidth(opts.gold ? 1.2 : 0.8);
+    doc.roundedRect(x, y, w, h, 6, 6, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...(opts.gold ? C.goldSoft : C.gold));
+    doc.text(String(label).toUpperCase(), x + 11, y + 15, { charSpace: 0.8 });
+    doc.setFont('helvetica', opts.big ? 'bold' : 'normal'); doc.setFontSize(opts.big ? 13 : 10.5);
+    doc.setTextColor(...(opts.gold ? C.white : C.ink));
+    const maxLines = Math.max(1, Math.floor((h - 22) / 13));
+    const lines = doc.splitTextToSize(value && String(value).trim() ? String(value) : '—', w - 22);
+    lines.slice(0, maxLines).forEach((ln, i) => doc.text(ln, x + 11, y + 31 + i * 13));
+  }
+
+  let y = 222;
+  const colL = M, colW = CW * 0.6 - 6, colR = M + CW * 0.6 + 6, colRW = CW * 0.4 - 6;
+  const halfL = M, halfW = CW / 2 - 6, halfR = M + CW / 2 + 6;
+
+  field(colL, y, colW, 46, "Nom de l'entreprise", offre.partenaire); 
+  field(colR, y, colRW, 46, 'Date / Match', meta.date_match); y += 56;
+  field(M, y, CW, 44, 'Poste recherché', offre.titre, { big: true }); y += 54;
+  field(M, y, CW, 66, 'Prérequis & profil recherché', offre.description || offre.experience_requise); y += 76;
+  field(halfL, y, halfW, 46, 'Lieu(x) de travail', offre.lieu);
+  field(halfR, y, halfW, 46, 'Heures / semaine', offre.duree); y += 56;
+  field(halfL, y, halfW, 46, 'Salaire indicatif', offre.salaire_indicatif);
+  field(halfR, y, halfW, 46, 'Type de contrat', offre.type_contrat); y += 56;
+  field(M, y, CW, 54, "Les + de l'offre", meta.les_plus); y += 64;
+  field(M, y, CW, 46, 'Email pour candidatures', offre.contact_email, { gold: true, big: true }); y += 62;
+
+  // — Comment ça marche —
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...C.gold);
+  doc.text('COMMENT ÇA MARCHE', M, y, { charSpace: 2 }); y += 16;
+  const steps = [
+    ['01', 'Le partenaire remplit', "Tous les champs + le logo de l'entreprise."],
+    ['02', 'Spacers valide', "L'équipe relit puis publie l'annonce."],
+    ['03', 'Diffusion', 'Annonce micro pendant les matchs + réseau bénévoles.'],
+  ];
+  const stepW = CW / 3 - 8;
+  steps.forEach((s, i) => {
+    const sx = M + i * (stepW + 12);
+    doc.setFont('times', 'bold'); doc.setFontSize(20); doc.setTextColor(...C.gold);
+    doc.text(s[0], sx, y + 16);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(...C.ink);
+    doc.text(s[1], sx + 26, y + 9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C.muted);
+    doc.splitTextToSize(s[2], stepW - 26).slice(0, 3).forEach((ln, j) => doc.text(ln, sx + 26, y + 21 + j * 10));
+  });
+
+  // — Pied —
+  doc.setDrawColor(...C.line); doc.setLineWidth(0.8); doc.line(M, 800, W - M, 800);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...C.ink);
+  doc.text("SPACER'S BUSINESS CLUB", M, 816);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...C.muted);
+  doc.text('Toulouse Volley · Palais des Sports André Brouat · Modèle v1 · Saison 2026-2027', M, 828);
+
+  const safeName = (offre.titre || 'annonce').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 50);
+  const safePartner = (offre.partenaire || 'partenaire').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 30);
+  doc.save(`fiche_${safePartner}_${safeName}.pdf`);
 }
 
 function drawSpacersLogo(doc, x, y, size, COLORS) {
