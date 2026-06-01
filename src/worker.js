@@ -3282,17 +3282,20 @@ function renderOneBlock(b) {
 
   switch (type) {
     case 'entete': {
-      const marque = escEmail(b.marque || "SPACER'S BUSINESS CLUB");
-      const sousMarque = escEmail(b.sous_marque || 'Toulouse Volley · Saison 2026–2027');
+      const marque = (b.marque != null ? b.marque : "SPACER'S BUSINESS CLUB");
+      const sousMarque = (b.sous_marque != null ? b.sous_marque : 'Toulouse Volley · Saison 2026–2027');
+      const logoCell = b.logo_url
+        ? `<td style="vertical-align:middle;"><img src="${escEmail(b.logo_url)}" alt="" height="46" style="display:block;height:46px;max-height:46px;width:auto;max-width:180px;border:0;" /></td>`
+        : `<td style="width:48px;vertical-align:top;"><div style="background:#C8932B;color:#0A1628;width:42px;height:42px;border-radius:10px;text-align:center;line-height:42px;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;">S</div></td>`;
+      const textCell = (marque || sousMarque)
+        ? `<td style="padding-left:14px;vertical-align:middle;">${marque ? `<div style="color:#E8C977;font-size:10px;font-weight:bold;letter-spacing:2px;line-height:1;">${escEmail(marque)}</div>` : ''}${sousMarque ? `<div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:4px;">${escEmail(sousMarque)}</div>` : ''}</td>`
+        : '';
       const eyebrow = b.eyebrow ? `<div style="color:#C8932B;font-size:10px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;">${escEmail(b.eyebrow)}</div>` : '';
       const titrePrincipal = b.titre ? `<div style="color:#FFFFFF;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:1.15;font-weight:500;">${escEmail(b.titre)}</div>` : '';
       const sousTitre = b.sous_titre ? `<div style="color:rgba(255,255,255,0.55);font-size:13px;margin-top:6px;">${escEmail(b.sous_titre)}</div>` : '';
       const bloc = (eyebrow || titrePrincipal || sousTitre) ? `<div style="margin-top:20px;">${eyebrow}${titrePrincipal}${sousTitre}</div>` : '';
       return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="background:#11203a;background-image:linear-gradient(135deg,#11203a 0%,#0A1628 100%);padding:26px 30px;">
-        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
-          <td style="width:48px;vertical-align:top;"><div style="background:#C8932B;color:#0A1628;width:42px;height:42px;border-radius:10px;text-align:center;line-height:42px;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;">S</div></td>
-          <td style="padding-left:14px;vertical-align:middle;"><div style="color:#E8C977;font-size:10px;font-weight:bold;letter-spacing:2px;line-height:1;">${marque}</div><div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:4px;">${sousMarque}</div></td>
-        </tr></table>${bloc}
+        <table cellpadding="0" cellspacing="0" border="0"><tr>${logoCell}${textCell}</tr></table>${bloc}
       </td></tr></table>`;
     }
     case 'titre': {
@@ -3364,11 +3367,12 @@ function renderOneBlock(b) {
     case 'adresse':
       return wrap(`<div style="text-align:center;font-size:11px;color:#8A8478;line-height:1.6;">${_nl2br(b.text || "Spacer's Toulouse Volley · Palais des Sports André Brouat")}</div>`, 'padding:10px 30px;');
     case 'pied': {
+      const logo = b.logo_url ? `<img src="${escEmail(b.logo_url)}" alt="" height="40" style="display:inline-block;height:40px;max-height:40px;width:auto;max-width:170px;border:0;margin-bottom:10px;" /><br/>` : '';
       const ligne1 = escEmail(b.ligne1 || "Spacer's Toulouse Volley · Palais des Sports André Brouat");
       const site = b.site ? `<a href="${escEmail(b.site_url || 'https://spacerstoulouse.fr')}" style="color:#C8932B;text-decoration:none;">${escEmail(b.site)}</a>` : '';
       const email = b.email ? `<a href="mailto:${escEmail(b.email)}" style="color:#C8932B;text-decoration:none;">${escEmail(b.email)}</a>` : '';
       const sep = (site && email) ? '&nbsp;·&nbsp;' : '';
-      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="background:#FAF7F2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;border-top:1px solid #E5DED1;">${ligne1}<br/>${site}${sep}${email}</td></tr></table>`;
+      return `<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="background:#FAF7F2;padding:18px 30px;text-align:center;font-size:11px;color:#8A8478;border-top:1px solid #E5DED1;">${logo}${ligne1}<br/>${site}${sep}${email}</td></tr></table>`;
     }
     case 'html':
       // Bloc HTML libre (admin de confiance) — inséré tel quel
