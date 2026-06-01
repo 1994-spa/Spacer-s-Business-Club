@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.25-stripe (Invitations payantes : Checkout + webhook Stripe)
+ * Spacers Business Club — Worker V4.26-annuaire (Annuaire partenaires : fiches partenaire + edition admin)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -256,6 +256,10 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts\/create$/);
       if (m) return await handleAdminContactCreate(m[1], m[2], body || {}, env);
 
+      // Admin — édition de la fiche annuaire de n'importe quel partenaire
+      m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/fiche$/);
+      if (m) return await handleAdminPartenaireFicheUpdate(m[1], m[2], body || {}, env);
+
       // ===== Sprint E.4 — Confirmation d'activation partenaire =====
       if (path === '/api/partner/confirm-activation') {
         return await handlePartnerConfirmActivation(request, env);
@@ -382,6 +386,9 @@ async function handleApi(request, env, path, ctx) {
 
     m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts$/);
     if (m) return await handleAdminContactsList(m[1], m[2], env);
+
+    m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/fiche$/);
+    if (m) return await handleAdminPartenaireFicheGet(m[1], m[2], env);
 
     m = path.match(/^\/api\/admin\/communication\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})$/);
     if (m) return await handleAdminCommunicationDetail(m[1], m[2], env);
@@ -2765,6 +2772,46 @@ async function handleAdminPartenairesList(token, env) {
     partenaires: result,
     meta: { version: 'V4.17-polish', generated_at: new Date().toISOString() },
   });
+}
+
+async function handleAdminPartenaireFicheGet(token, partenaireId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('partenaires',
+    `id=eq.${partenaireId}&select=id,raison_sociale,siren,siret,secteur,adresse,code_postal,ville,site_web,email_societe,logo_b64,niveau,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&limit=1`,
+    env);
+  if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
+  return jsonResponseNoCache({ fiche: rows[0] });
+}
+
+async function handleAdminPartenaireFicheUpdate(token, partenaireId, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const str = (v, max) => { const s = (v == null ? '' : String(v)).trim(); return s ? s.slice(0, max || 300) : null; };
+  const patch = {
+    secteur: str(body.secteur, 120),
+    adresse: str(body.adresse, 300),
+    code_postal: str(body.code_postal, 20),
+    ville: str(body.ville, 120),
+    site_web: str(body.site_web, 300),
+    email_societe: str(body.email_societe, 200),
+    siret: str(body.siret, 20),
+    siren: str(body.siren, 20),
+    representant: str(body.representant, 160),
+    representant_fonction: str(body.representant_fonction, 160),
+    representant_email: str(body.representant_email, 200),
+    representant_tel: str(body.representant_tel, 40),
+  };
+  // l'admin peut corriger la raison sociale (mais on n'efface pas si vide)
+  const rs = str(body.raison_sociale, 200);
+  if (rs) patch.raison_sociale = rs;
+  if (body.logo_b64 !== undefined) patch.logo_b64 = body.logo_b64 ? String(body.logo_b64).slice(0, 1500000) : null;
+  if (body.representant_photo_b64 !== undefined) patch.representant_photo_b64 = body.representant_photo_b64 ? String(body.representant_photo_b64).slice(0, 1500000) : null;
+  try {
+    await supabasePatch_('partenaires', `id=eq.${partenaireId}`, patch, env);
+    logAudit_(admin.id, 'partenaire.fiche.update', 'partenaires', partenaireId, {}, env);
+    return jsonResponseNoCache({ ok: true });
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur mise à jour', detail: e.message }, 500); }
 }
 
 async function handleAdminContactsList(token, partenaireId, env) {
