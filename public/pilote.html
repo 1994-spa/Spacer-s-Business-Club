@@ -3211,7 +3211,7 @@ async function loadInvitations(force=false) {
   try {
     const res = await fetch(`/api/admin/invitations/${encodeURIComponent(ADMIN_TOKEN)}`);
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    if (!res.ok || data.error) { const err = new Error(data.error || `Erreur ${res.status}`); err.detail = data.detail || ''; throw err; }
     INVS_CACHE = data.invitations || [];
     INVS_STATS = data.stats || {};
     renderInvStats();
@@ -3219,7 +3219,8 @@ async function loadInvitations(force=false) {
     const b = $('sb-badge-inv-brouillon');
     if (b) { if (INVS_STATS.brouillon > 0) { b.textContent = INVS_STATS.brouillon; b.hidden = false; } else b.hidden = true; }
   } catch (e) {
-    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}</div>`;
+    const extra = e.detail ? `<div style="font-size:11px;opacity:.85;margin-top:6px;font-family:monospace;">${escapeHtml(e.detail)}</div>` : '';
+    listEl.innerHTML = `<div class="banner danger">Erreur de chargement : ${escapeHtml(e.message)}${extra}</div>`;
   } finally {
     if (btn) btn.classList.remove('spinning');
   }
