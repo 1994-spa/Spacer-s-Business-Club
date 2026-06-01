@@ -794,7 +794,7 @@ textarea.input { resize: vertical; min-height: 80px; }
       <input id="af-raison-in" class="input" type="text" style="margin-bottom:12px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <div><label class="input-lbl">Secteur</label><input id="af-secteur" class="input" type="text"></div>
-        <div><label class="input-lbl">SIRET</label><input id="af-siret" class="input" type="text"></div>
+        <div><label class="input-lbl">SIRET</label><div style="display:flex;gap:6px;"><input id="af-siret" class="input" type="text"><button type="button" class="btn ghost" style="white-space:nowrap;padding:0 10px;" onclick="lookupAfSiret()">📡 Auto</button></div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <div><label class="input-lbl">Email société</label><input id="af-email" class="input" type="email"></div>
@@ -2835,6 +2835,23 @@ async function saveAdminFiche() {
     loadPartenaires(true);
   } catch (e) { status.textContent = '❌ ' + e.message; status.style.color = '#993556'; }
   finally { btn.disabled = false; btn.textContent = 'Enregistrer la fiche'; }
+}
+
+async function lookupAfSiret() {
+  const q = afVal('af-siret');
+  if (!q) return showToast("Saisis d'abord le SIRET", 'error');
+  showToast('Recherche en cours…');
+  try {
+    const res = await fetch(`/api/admin/siret-lookup/${encodeURIComponent(ADMIN_TOKEN)}?q=${encodeURIComponent(q)}`);
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || `Erreur ${res.status}`);
+    if (d.secteur) afSet('af-secteur', d.secteur);
+    if (d.adresse && !afVal('af-adresse')) afSet('af-adresse', d.adresse);
+    if (d.code_postal && !afVal('af-cp')) afSet('af-cp', d.code_postal);
+    if (d.ville && !afVal('af-ville')) afSet('af-ville', d.ville);
+    if (d.raison_sociale && !afVal('af-raison-in')) afSet('af-raison-in', d.raison_sociale);
+    showToast('✓ Récupéré' + (d.secteur ? ' : ' + d.secteur : ''), 'success');
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
 
 async function sendInvitation(contactId, event) {
