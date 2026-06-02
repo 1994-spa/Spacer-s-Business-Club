@@ -17,6 +17,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
     --bg: #FAF7F2;
@@ -450,8 +452,35 @@
       </div>
       <button onclick="openFicheModal()" style="background:var(--ink);color:var(--gold-soft);border:none;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;">✎ Ma fiche</button>
     </div>
-    <input id="annuaire-search" placeholder="Rechercher (entreprise, secteur, ville)…" oninput="renderAnnuaire()" style="width:100%;margin:14px 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+    <style>
+      .annu-filter { padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:12.5px; font-family:inherit; background:#fff; color:var(--ink); cursor:pointer; }
+      .annu-reset { padding:8px 12px; border:1px solid var(--line); border-radius:10px; font-size:12.5px; font-family:inherit; background:var(--bg-soft); color:var(--ink-soft); cursor:pointer; }
+      .annu-view { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+      .annu-view-btn { padding:7px 14px; border:none; background:#fff; color:var(--ink-soft); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+      .annu-view-btn.active { background:var(--ink); color:#fff; }
+      .annu-tag { display:inline-block; font-size:10px; background:var(--gold-tint); color:var(--bronze,#8a6d1f); border-radius:6px; padding:2px 7px; margin:3px 3px 0 0; }
+      #annuaire-map .leaflet-popup-content { font-family:inherit; font-size:12px; line-height:1.4; }
+    </style>
+    <input id="annuaire-search" placeholder="Rechercher (entreprise, secteur, ville, expertise…)" oninput="renderAnnuaire()" style="width:100%;margin:14px 0 10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+      <select id="af-secteur" class="annu-filter" onchange="renderAnnuaire()"><option value="">Tous secteurs</option></select>
+      <select id="af-taille" class="annu-filter" onchange="renderAnnuaire()">
+        <option value="">Toutes tailles</option>
+        <option value="1-10">1-10 sal.</option><option value="11-50">11-50 sal.</option><option value="51-250">51-250 sal.</option><option value="251-1000">251-1000 sal.</option><option value="1000+">1000+ sal.</option>
+      </select>
+      <select id="af-type" class="annu-filter" onchange="renderAnnuaire()"><option value="">Tous types</option></select>
+      <select id="af-niveau" class="annu-filter" onchange="renderAnnuaire()"><option value="">Tous niveaux</option></select>
+      <button type="button" class="annu-reset" onclick="resetAnnuaireFilters()">Réinitialiser</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div id="annuaire-count" style="font-size:12px;color:var(--ink-muted);"></div>
+      <div class="annu-view">
+        <button type="button" id="av-list" class="annu-view-btn active" onclick="switchAnnuaireView('list')">☰ Liste</button>
+        <button type="button" id="av-map" class="annu-view-btn" onclick="switchAnnuaireView('map')">🗺 Carte</button>
+      </div>
+    </div>
     <div id="annuaire-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;"></div>
+    <div id="annuaire-map" style="display:none;height:440px;border-radius:16px;overflow:hidden;border:1px solid var(--line);"></div>
   </section>
 
   <!-- CONTACT -->
@@ -687,6 +716,17 @@
     </div>
     <label class="fiche-lbl">Secteur d'activité</label>
     <input id="fiche-secteur" class="fiche-in" placeholder="ex. Carburants & énergie">
+    <label class="fiche-lbl">Taille (effectif)</label>
+    <select id="fiche-taille" class="fiche-in">
+      <option value="">—</option>
+      <option value="1-10">1 à 10 salariés</option>
+      <option value="11-50">11 à 50 salariés</option>
+      <option value="51-250">51 à 250 salariés</option>
+      <option value="251-1000">251 à 1000 salariés</option>
+      <option value="1000+">Plus de 1000 salariés</option>
+    </select>
+    <label class="fiche-lbl">Expertise / mots-clés <span style="color:var(--ink-muted);font-weight:400;">— séparés par des virgules</span></label>
+    <input id="fiche-expertise" class="fiche-in" placeholder="ex. comptabilité, conseil, paie">
     <label class="fiche-lbl">N° SIRET <span style="color:var(--ink-muted);font-weight:400;">— remplit secteur & adresse</span></label>
     <div style="display:flex;gap:8px;">
       <input id="fiche-siret" class="fiche-in" placeholder="14 chiffres" inputmode="numeric">
@@ -719,6 +759,8 @@
     <input id="fiche-resp-email" class="fiche-in" type="email" placeholder="prenom.nom@entreprise.fr">
     <label class="fiche-lbl">Téléphone du contact</label>
     <input id="fiche-resp-tel" class="fiche-in" inputmode="tel" placeholder="06 12 34 56 78">
+    <label class="fiche-lbl">LinkedIn du contact</label>
+    <input id="fiche-resp-linkedin" class="fiche-in" placeholder="https://linkedin.com/in/…">
 
     <div id="fiche-status" style="font-size:13px;margin:14px 0 0;text-align:center;"></div>
     <button id="fiche-save-btn" class="btn" onclick="saveFiche()" style="width:100%;margin-top:14px;justify-content:center;">Enregistrer ma fiche</button>
@@ -729,7 +771,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // =========================================================================
-//  Spacer's Business Club — PWA partenaire V7 (board partenaires + reponses)
+//  Spacer's Business Club — PWA partenaire V8 (annuaire enrichi : taille, LinkedIn, expertise, filtres, carte)
 // =========================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -1833,6 +1875,7 @@ async function loadAnnuaire() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     ANNUAIRE_DATA = data.fiches || [];
+    populateAnnuaireFilters();
     renderAnnuaire();
   } catch (e) {
     console.warn('loadAnnuaire error:', e.message);
@@ -1855,9 +1898,9 @@ function partTypeBadge(t) {
 
 function renderAnnuaire() {
   const el = $('annuaire-list'); if (!el) return;
-  const q = ($('annuaire-search') ? $('annuaire-search').value : '').toLowerCase().trim();
-  let list = ANNUAIRE_DATA;
-  if (q) list = list.filter(f => `${f.raison_sociale} ${f.secteur} ${f.ville} ${f.representant}`.toLowerCase().includes(q));
+  const list = getFilteredAnnuaire();
+  const cnt = $('annuaire-count'); if (cnt) cnt.textContent = `${list.length} partenaire${list.length > 1 ? 's' : ''}`;
+  if (ANNUAIRE_VIEW === 'map') renderAnnuaireMap(list);
   if (!list.length) { el.innerHTML = `<div style="color:var(--ink-muted);font-size:13px;padding:20px;grid-column:1/-1;">Aucun partenaire trouvé.</div>`; return; }
   el.innerHTML = list.map(f => {
     const logo = f.logo_b64
@@ -1875,6 +1918,7 @@ function renderAnnuaire() {
           <div style="display:flex;gap:10px;margin-top:4px;">
             ${f.representant_email ? `<a href="mailto:${encodeURIComponent(f.representant_email)}" title="${escapeHtml(f.representant_email)}" style="text-decoration:none;display:inline-flex;color:var(--gold);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></a>` : ''}
             ${f.representant_tel ? `<a href="tel:${escapeHtml((f.representant_tel || '').replace(/[^\d+]/g, ''))}" title="${escapeHtml(f.representant_tel)}" style="text-decoration:none;display:inline-flex;color:var(--gold);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+            ${f.representant_linkedin ? `<a href="${escapeHtml(normalizeUrl(f.representant_linkedin))}" target="_blank" rel="noopener" title="LinkedIn" style="text-decoration:none;display:inline-flex;color:var(--gold);"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.2 8h4.6v13H.2V8zm7.2 0h4.41v1.78h.06c.61-1.16 2.1-2.38 4.32-2.38 4.62 0 5.47 3.04 5.47 7V21h-4.6v-6.2c0-1.48-.03-3.38-2.06-3.38-2.06 0-2.38 1.61-2.38 3.27V21H7.4V8z"/></svg></a>` : ''}
           </div>
         </div>
       </div>` : '';
@@ -1888,14 +1932,104 @@ function renderAnnuaire() {
             ${partTypeBadge(f.type_partenariat)}
           </div>
         </div>
+        ${(f.taille || f.niveau) ? `<div style="margin-top:8px;">${f.taille ? `<span class="annu-tag">👥 ${escapeHtml(f.taille)} sal.</span>` : ''}${f.niveau ? `<span class="annu-tag">★ ${escapeHtml(f.niveau)}</span>` : ''}</div>` : ''}
         <div style="font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.8;">
           ${f.ville ? `<div>📍 ${escapeHtml(f.ville)}</div>` : ''}
           ${f.site_web ? `<div>🌐 <a href="${escapeHtml(normalizeUrl(f.site_web))}" target="_blank" rel="noopener" style="color:var(--ink-soft);">${escapeHtml(f.site_web)}</a></div>` : ''}
           ${f.email_societe ? `<div>✉️ <a href="mailto:${encodeURIComponent(f.email_societe)}" style="color:var(--ink-soft);">${escapeHtml(f.email_societe)}</a></div>` : ''}
         </div>
+        ${f.expertise ? `<div style="margin-top:8px;">${f.expertise.split(',').map(t => t.trim()).filter(Boolean).slice(0, 8).map(t => `<span class="annu-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
         ${resp}
       </div>`;
   }).join('');
+}
+
+// ---- Annuaire : filtres + vue carte ----
+let ANNUAIRE_VIEW = 'list';
+let ANNU_MAP = null;
+let ANNU_MARKERS = [];
+let ANNU_MAP_TOKEN = 0;
+const GEO_CACHE = {};
+
+function populateAnnuaireFilters() {
+  const fill = (id, values, allLabel) => {
+    const sel = $(id); if (!sel) return;
+    const cur = sel.value;
+    const uniq = [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'fr'));
+    sel.innerHTML = `<option value="">${allLabel}</option>` + uniq.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    if (uniq.includes(cur)) sel.value = cur;
+  };
+  fill('af-secteur', ANNUAIRE_DATA.map(f => f.secteur), 'Tous secteurs');
+  fill('af-type', ANNUAIRE_DATA.map(f => f.type_partenariat), 'Tous types');
+  fill('af-niveau', ANNUAIRE_DATA.map(f => f.niveau), 'Tous niveaux');
+}
+
+function resetAnnuaireFilters() {
+  ['af-secteur', 'af-taille', 'af-type', 'af-niveau'].forEach(id => { const e = $(id); if (e) e.value = ''; });
+  const s = $('annuaire-search'); if (s) s.value = '';
+  renderAnnuaire();
+}
+
+function getFilteredAnnuaire() {
+  const q = ($('annuaire-search') ? $('annuaire-search').value : '').toLowerCase().trim();
+  const fs = $('af-secteur') ? $('af-secteur').value : '';
+  const ft = $('af-taille') ? $('af-taille').value : '';
+  const fty = $('af-type') ? $('af-type').value : '';
+  const fn = $('af-niveau') ? $('af-niveau').value : '';
+  return ANNUAIRE_DATA.filter(f => {
+    if (fs && f.secteur !== fs) return false;
+    if (ft && f.taille !== ft) return false;
+    if (fty && f.type_partenariat !== fty) return false;
+    if (fn && f.niveau !== fn) return false;
+    if (q && !`${f.raison_sociale} ${f.secteur} ${f.ville} ${f.representant} ${f.representant_fonction} ${f.expertise}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function switchAnnuaireView(v) {
+  ANNUAIRE_VIEW = v;
+  const lb = $('av-list'), mb = $('av-map'), ll = $('annuaire-list'), mm = $('annuaire-map');
+  if (lb) lb.classList.toggle('active', v === 'list');
+  if (mb) mb.classList.toggle('active', v === 'map');
+  if (ll) ll.style.display = v === 'list' ? 'grid' : 'none';
+  if (mm) mm.style.display = v === 'map' ? 'block' : 'none';
+  if (v === 'map') renderAnnuaireMap(getFilteredAnnuaire());
+}
+
+async function geocode(q) {
+  if (q in GEO_CACHE) return GEO_CACHE[q];
+  try {
+    await new Promise(r => setTimeout(r, 1100)); // respecte la limite Nominatim (~1 req/s)
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=fr&q=${encodeURIComponent(q)}`, { headers: { 'Accept': 'application/json' } });
+    const arr = await res.json();
+    if (arr && arr.length) { const c = { lat: parseFloat(arr[0].lat), lon: parseFloat(arr[0].lon) }; GEO_CACHE[q] = c; return c; }
+  } catch (_) { }
+  GEO_CACHE[q] = null; return null;
+}
+
+async function renderAnnuaireMap(list) {
+  const box = $('annuaire-map'); if (!box) return;
+  if (typeof L === 'undefined') { box.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink-muted);font-size:13px;">Carte indisponible (hors-ligne).</div>'; return; }
+  if (!ANNU_MAP) {
+    ANNU_MAP = L.map('annuaire-map', { scrollWheelZoom: false }).setView([43.6045, 1.4440], 11); // Toulouse
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(ANNU_MAP);
+  }
+  setTimeout(() => { try { ANNU_MAP.invalidateSize(); } catch (_) { } }, 120);
+  ANNU_MARKERS.forEach(m => { try { ANNU_MAP.removeLayer(m); } catch (_) { } }); ANNU_MARKERS = [];
+  const token = ++ANNU_MAP_TOKEN;
+  const pts = [];
+  for (const f of list) {
+    if (token !== ANNU_MAP_TOKEN) return; // un rendu plus récent a démarré
+    const addr = [f.adresse, f.code_postal, f.ville].filter(Boolean).join(', ');
+    if (!addr) continue;
+    const c = await geocode(addr);
+    if (token !== ANNU_MAP_TOKEN) return;
+    if (!c) continue;
+    const popup = `<b>${escapeHtml(f.raison_sociale || '')}</b>${f.secteur ? '<br>' + escapeHtml(f.secteur) : ''}${f.ville ? '<br>📍 ' + escapeHtml(f.ville) : ''}`;
+    const mk = L.marker([c.lat, c.lon]).addTo(ANNU_MAP).bindPopup(popup);
+    ANNU_MARKERS.push(mk); pts.push([c.lat, c.lon]);
+    if (pts.length) { try { ANNU_MAP.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch (_) { } }
+  }
 }
 
 async function openFicheModal() {
@@ -1910,9 +2044,11 @@ async function openFicheModal() {
     const f = data.fiche || {};
     $('fiche-raison').textContent = f.raison_sociale || 'Ma fiche';
     setVal('fiche-secteur', f.secteur); setVal('fiche-siret', f.siret); setVal('fiche-email', f.email_societe);
+    setVal('fiche-taille', f.taille); setVal('fiche-expertise', f.expertise);
     setVal('fiche-web', f.site_web); setVal('fiche-adresse', f.adresse); setVal('fiche-cp', f.code_postal); setVal('fiche-ville', f.ville);
     setVal('fiche-resp', f.representant); setVal('fiche-resp-fonction', f.representant_fonction);
     setVal('fiche-resp-email', f.representant_email); setVal('fiche-resp-tel', f.representant_tel);
+    setVal('fiche-resp-linkedin', f.representant_linkedin);
     showFicheImg('fiche-logo-preview', f.logo_b64, '🏢', false);
     showFicheImg('fiche-photo-preview', f.representant_photo_b64, '👤', true);
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
@@ -1969,10 +2105,12 @@ async function saveFiche() {
   if (!MAGIC_TOKEN) return;
   const btn = $('fiche-save-btn'); const status = $('fiche-status');
   const payload = {
-    secteur: val('fiche-secteur'), siret: val('fiche-siret'), email_societe: val('fiche-email'),
+    secteur: val('fiche-secteur'), taille: val('fiche-taille'), siret: val('fiche-siret'), email_societe: val('fiche-email'),
     site_web: val('fiche-web'), adresse: val('fiche-adresse'), code_postal: val('fiche-cp'), ville: val('fiche-ville'),
+    expertise: val('fiche-expertise'),
     representant: val('fiche-resp'), representant_fonction: val('fiche-resp-fonction'),
     representant_email: val('fiche-resp-email'), representant_tel: val('fiche-resp-tel'),
+    representant_linkedin: val('fiche-resp-linkedin'),
   };
   if (FICHE_LOGO_B64 !== undefined) payload.logo_b64 = FICHE_LOGO_B64;
   if (FICHE_PHOTO_B64 !== undefined) payload.representant_photo_b64 = FICHE_PHOTO_B64;
