@@ -401,6 +401,13 @@
     <div id="mes-pubs" style="margin-top:24px;"></div>
   </section>
 
+  <!-- ACTUALITÉS DU CLUB (LinkedIn) -->
+  <section class="fade-in delay-2" id="news-section">
+    <h3 class="display">Les <em>actualités</em> du club</h3>
+    <p class="section-desc">Les derniers posts LinkedIn de Spacers Toulouse Volley</p>
+    <div id="news-list" style="display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 0 8px;-webkit-overflow-scrolling:touch;"></div>
+  </section>
+
   <!-- LE RÉSEAU PARTENAIRES (board partagé — Sprint B.3) -->
   <section class="fade-in delay-3" id="board-section">
     <h3 class="display">Le <em>réseau partenaires</em></h3>
@@ -454,6 +461,7 @@
   <button title="Boutique" onclick="showSoon('Boutique','Achat de places en ligne et boutique partenaire en préparation.')">🛍</button>
   <button title="Réseau partenaires" onclick="document.getElementById('board-section')?.scrollIntoView({behavior:'smooth'})">💬</button>
   <button title="Annuaire partenaires" onclick="document.getElementById('annuaire-section')?.scrollIntoView({behavior:'smooth'})">📇</button>
+  <button title="Actualités du club" onclick="document.getElementById('news-section')?.scrollIntoView({behavior:'smooth'})">📰</button>
 </nav>
 
 <!-- MODAL "Bientôt" -->
@@ -894,6 +902,7 @@ function renderDashboard(data) {
   loadMesPubs();
   loadBoard();
   loadAnnuaire();
+  loadSocialFeed();
   loadPartnerCommunications();
 }
 
@@ -1678,6 +1687,44 @@ async function openRepView(pubId) {
   }
 }
 function closeRepViewModal() { $('repview-modal').hidden = true; }
+
+// =========================================================================
+//  ACTUALITÉS DU CLUB (LinkedIn)
+// =========================================================================
+async function loadSocialFeed() {
+  if (!MAGIC_TOKEN) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/social-feed`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    renderSocialFeed(data.posts || []);
+  } catch (e) {
+    console.warn('loadSocialFeed error:', e.message);
+    const el = $('news-list'); if (el) el.innerHTML = `<div style="color:var(--ink-muted);font-size:13px;padding:8px;">Actualités indisponibles pour le moment.</div>`;
+  }
+}
+function renderSocialFeed(posts) {
+  const el = $('news-list'); if (!el) return;
+  if (!posts.length) { el.innerHTML = `<div style="color:var(--ink-muted);font-size:13px;padding:8px;">Aucune actualité pour le moment.</div>`; return; }
+  el.innerHTML = posts.map(p => {
+    const img = p.image ? `<img src="${escapeHtml(p.image)}" alt="" style="width:100%;border-radius:12px;margin-top:10px;display:block;">` : '';
+    const txt = escapeHtml(p.contenu || '').replace(/\n/g, '<br>');
+    const link = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:12px;font-weight:600;color:#0A66C2;text-decoration:none;">Voir sur LinkedIn ↗</a>` : '';
+    return `
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:300px;flex:0 0 auto;scroll-snap-align:start;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:34px;height:34px;border-radius:8px;background:#0A66C2;color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;font-family:Arial,sans-serif;">in</div>
+          <div style="min-width:0;">
+            <div style="font-weight:600;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.auteur || 'Spacers Toulouse Volley')}</div>
+            <div style="font-size:11px;color:var(--ink-muted);">${escapeHtml(formatDate(p.published_at))}</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin-top:10px;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;">${txt}</div>
+        ${img}
+        ${link}
+      </div>`;
+  }).join('');
+}
 
 // =========================================================================
 //  ANNUAIRE DES PARTENAIRES (networking B2B)
