@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.32-secteurs (+ 4 types de partenariat editables)
+ * Spacers Business Club — Worker V4.33-interne (entité interne / double casquette + annuaire filtré)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -4292,7 +4292,7 @@ async function handlePartnerAnnuaire(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `select=id,raison_sociale,secteur,ville,adresse,site_web,email_societe,logo_b64,niveau,type_partenariat,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&order=raison_sociale.asc&limit=500`,
+    `interne=eq.false&select=id,raison_sociale,secteur,ville,adresse,site_web,email_societe,logo_b64,niveau,type_partenariat,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&order=raison_sociale.asc&limit=500`,
     env);
   const fiches = (rows || []).map(p => ({
     id: p.id,
