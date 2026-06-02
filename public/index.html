@@ -421,6 +421,13 @@
     <div id="news-list" style="display:block;"></div>
   </section>
 
+  <!-- MES PLACES VIP (Sprint Tickie) -->
+  <section class="fade-in delay-2" id="places-section" hidden>
+    <h3 class="display">Mes <em>places VIP</em></h3>
+    <p class="section-desc">Vos places par rencontre — le retrait s'ouvre environ 15 jours avant le match</p>
+    <div id="places-list" style="margin-top:14px;"></div>
+  </section>
+
   <!-- LE RÉSEAU PARTENAIRES (board partagé — Sprint B.3) -->
   <section class="fade-in delay-3" id="board-section">
     <h3 class="display">Le <em>réseau partenaires</em></h3>
@@ -470,7 +477,7 @@
 <nav class="bottom-nav">
   <button class="active" title="Accueil" onclick="window.scrollTo({top:0,behavior:'smooth'})">🏠</button>
   <button title="Mon contrat" onclick="ouvrirContrat()">📄</button>
-  <button title="Billetterie" onclick="showSoon('Billetterie','La gestion de vos invitations VIP arrive bientôt — synchronisation avec Tickie en cours.')">🎫</button>
+  <button title="Mes places VIP" onclick="(function(){var s=document.getElementById('places-section'); if(s && !s.hidden){s.scrollIntoView({behavior:'smooth'});} else {showSoon('Mes places VIP','Aucune rencontre ouverte pour le moment. Le retrait des places VIP s\'ouvre environ 15 jours avant chaque match.');}})()">🎫</button>
   <button title="Boutique" onclick="showSoon('Boutique','Achat de places en ligne et boutique partenaire en préparation.')">🛍</button>
   <button title="Réseau partenaires" onclick="document.getElementById('board-section')?.scrollIntoView({behavior:'smooth'})">💬</button>
   <button title="Annuaire partenaires" onclick="document.getElementById('annuaire-section')?.scrollIntoView({behavior:'smooth'})">📇</button>
@@ -917,6 +924,7 @@ function renderDashboard(data) {
   loadAnnuaire();
   loadSocialFeed();
   loadPartnerCommunications();
+  loadPlaces();
 }
 
 // =========================================================================
@@ -1572,6 +1580,43 @@ const BOARD_TYPE_META = {
   proposition: { label: '◈ Proposition', dataLabels: { remise: 'Avantage', conditions: 'Conditions', validite: 'Valable jusqu\'au' } },
   echange: { label: '⌬ Demande', dataLabels: { urgence: 'Délai', budget: 'Budget' } },
 };
+
+async function loadPlaces() {
+  if (!MAGIC_TOKEN) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/places`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderPlaces(data.places || []);
+  } catch (e) { console.warn('loadPlaces error:', e.message); }
+}
+
+function renderPlaces(places) {
+  const sec = document.getElementById('places-section');
+  const list = document.getElementById('places-list');
+  if (!list) return;
+  if (!places.length) { if (sec) sec.hidden = true; return; }
+  if (sec) sec.hidden = false;
+  const esc = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmt = (s) => { const d = new Date(s); return isNaN(d.getTime()) ? (s||'—') : d.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'}) + ' · ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); };
+  list.innerHTML = places.map(p => {
+    const restantes = Math.max(0, (p.nb_places||0) - (p.nb_retires||0));
+    const cta = p.tickie_url
+      ? `<a href="${p.tickie_url}" target="_blank" rel="noopener" class="bc-btn" style="text-decoration:none;display:inline-block;">Accéder à mes places</a>`
+      : `<button class="bc-btn" disabled title="Disponible à l'ouverture sur Tickie">Retrait via Tickie (bientôt)</button>`;
+    return `<div class="board-card">
+      <div class="bc-top"><span class="bc-type">Place VIP</span><span class="bc-part">${esc(p.competition||'')}</span></div>
+      <div class="bc-titre">Spacers — ${esc(p.adversaire)}</div>
+      <div class="bc-desc" style="white-space:normal;">${fmt(p.date_match)}</div>
+      <div class="bc-data">
+        <span class="bc-chip">${p.nb_places||0} places</span>
+        <span class="bc-chip">${p.nb_retires||0} retirées</span>
+        <span class="bc-chip">${restantes} restantes</span>
+      </div>
+      <div class="bc-foot"><span class="bc-date">Retrait ouvert</span>${cta}</div>
+    </div>`;
+  }).join('');
+}
 
 async function loadBoard() {
   if (!MAGIC_TOKEN) return;
