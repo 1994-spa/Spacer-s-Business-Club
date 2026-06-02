@@ -456,8 +456,9 @@ textarea.input { resize: vertical; min-height: 80px; }
       <button class="sb-link" data-tab="actus" onclick="switchTab('actus')">
         <span class="ico">📰</span><span class="label">Actualités</span>
       </button>
-      <button class="sb-link soon" data-tab="tickie" onclick="switchTab('tickie')">
-        <span class="ico">⌬</span><span class="label">Tickie</span>
+      <button class="sb-link" data-tab="tickie" onclick="switchTab('tickie')">
+        <span class="ico">⌬</span><span class="label">Rencontres</span>
+        <span class="badge" id="sb-badge-renc-ouverte" hidden>0</span>
       </button>
     </nav>
 
@@ -665,19 +666,19 @@ textarea.input { resize: vertical; min-height: 80px; }
       </div>
     </section>
 
-    <!-- ===== TAB : Tickie (placeholder) ===== -->
+    <!-- ===== TAB : Rencontres (places VIP) ===== -->
     <section id="tab-tickie" class="tab-section">
-      <div class="page-head"><h1 class="display">Bille<em>tterie</em> Tickie</h1></div>
-      <div class="placeholder-tab">
-        <div class="ico">🎫</div>
-        <h3>Onglet à venir — Sprint Tickie 3</h3>
-        <p>Génération automatique des billets VIP par match depuis les packs places des partenaires.</p>
-        <div class="routes">
-          <b>GET</b>  /api/admin/tickie/ping/:token<br>
-          <b>GET</b>  /api/admin/tickie/customers/:token<br>
-          <b>GET</b>  /api/admin/tickie/events/:token
+      <div class="page-head">
+        <div>
+          <h1 class="display">Rencon<em>tres</em></h1>
+          <p class="desc">Matchs domicile · ouverture des places VIP ~15 jours avant · attribution depuis les packs partenaires (push Tickie à venir)</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn primary" onclick="openRencCreate()"><span class="ico">+</span>&nbsp;Nouvelle rencontre</button>
+          <button class="refresh-btn" onclick="loadRencontres(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
         </div>
       </div>
+      <div id="rencontres-list" class="list"><div class="list-empty">Chargement…</div></div>
     </section>
 
     <section id="tab-actus" class="tab-section">
@@ -695,6 +696,37 @@ textarea.input { resize: vertical; min-height: 80px; }
     </section>
 
   </main>
+</div>
+
+<!-- ===== MODAL : Création rencontre ===== -->
+<div id="modal-renc-create" class="modal-ov" hidden onclick="if(event.target.id==='modal-renc-create')closeRencCreate()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="eyebrow">Nouvelle rencontre</div>
+      <h2 class="display" style="margin:4px 0 0;">Créer un match</h2>
+      <button class="modal-close" onclick="closeRencCreate()">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="input-lbl" for="renc-adversaire">Adversaire *</label>
+      <input id="renc-adversaire" class="input" type="text" placeholder="ex: Tours VB" style="margin-bottom:12px;">
+      <label class="input-lbl" for="renc-competition">Compétition</label>
+      <input id="renc-competition" class="input" type="text" placeholder="ex: Ligue A" style="margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><label class="input-lbl" for="renc-date">Date du match *</label><input id="renc-date" class="input" type="datetime-local"></div>
+        <div><label class="input-lbl" for="renc-ouverture">Ouverture (auto J-15 si vide)</label><input id="renc-ouverture" class="input" type="datetime-local"></div>
+      </div>
+      <div id="renc-create-status" style="font-size:12px;text-align:center;min-height:18px;margin:6px 0;color:var(--ink-soft,#8A8478);"></div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line,#E5DED1);">
+      <button class="btn ghost" onclick="closeRencCreate()">Annuler</button>
+      <button class="btn primary" id="renc-create-btn" onclick="submitRencontre()">Créer (brouillon)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL : Allocations rencontre ===== -->
+<div id="modal-renc-alloc" class="modal-ov" hidden onclick="if(event.target.id==='modal-renc-alloc')closeRencAlloc()">
+  <div class="modal-card" id="modal-renc-alloc-card"></div>
 </div>
 
 <!-- ===== MODAL : Detail offre ===== -->
@@ -1414,6 +1446,146 @@ function switchTab(tab) {
   if (tab === 'mails' && MAILS_CACHE.length === 0) loadMails();
   if (tab === 'invitations' && INVS_CACHE.length === 0) loadInvitations();
   if (tab === 'actus' && SOCIAL_CACHE.length === 0) loadSocialPosts();
+  if (tab === 'tickie' && RENCONTRES_CACHE.length === 0) loadRencontres();
+}
+
+// ============================================================================
+//  RENCONTRES (places VIP) — Sprint Tickie
+// ============================================================================
+let RENCONTRES_CACHE = [];
+
+function escHtmlRenc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _fmtDateRenc(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleDateString('fr-FR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }) +
+         ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+
+async function loadRencontres(force=false) {
+  if (RENCONTRES_CACHE.length && !force) { renderRencontresList(); return; }
+  const listEl = $('rencontres-list');
+  listEl.innerHTML = '<div class="list-empty">Chargement…</div>';
+  try {
+    const res = await fetch(`/api/admin/rencontres/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    RENCONTRES_CACHE = data.rencontres || [];
+    renderRencontresList();
+    const b = $('sb-badge-renc-ouverte');
+    const nbOuv = RENCONTRES_CACHE.filter(r => r.statut === 'ouverte').length;
+    if (b) { if (nbOuv > 0) { b.textContent = nbOuv; b.hidden = false; } else b.hidden = true; }
+  } catch (e) {
+    listEl.innerHTML = '<div class="list-empty">Erreur de chargement</div>';
+  }
+}
+
+function renderRencontresList() {
+  const listEl = $('rencontres-list');
+  if (!RENCONTRES_CACHE.length) { listEl.innerHTML = '<div class="list-empty">Aucune rencontre. Crée la première.</div>'; return; }
+  const badge = (st) => {
+    const map = { brouillon:['Brouillon','#8A8478'], ouverte:['Ouverte','#1f8a4c'], fermee:['Fermée','#b04632'] };
+    const e = map[st] || [st,'#8A8478'];
+    return `<span style="font-size:11px;font-weight:700;color:${e[1]};border:1px solid ${e[1]}33;background:${e[1]}14;border-radius:999px;padding:2px 10px;margin-left:8px;">${e[0]}</span>`;
+  };
+  listEl.innerHTML = RENCONTRES_CACHE.map(r => {
+    const s = r.stats || {};
+    const actions = [];
+    if (r.statut === 'brouillon') actions.push(`<button class="btn primary" onclick="ouvrirRencontre('${r.id}')">Ouvrir</button>`);
+    if (r.statut === 'ouverte')   actions.push(`<button class="btn ghost" onclick="fermerRencontre('${r.id}')">Fermer</button>`);
+    actions.push(`<button class="btn ghost" onclick="openRencAllocations('${r.id}', '${escHtmlRenc(r.adversaire).replace(/'/g,"\\'")}')">Allocations</button>`);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid var(--line,#E5DED1);border-radius:12px;margin-bottom:10px;background:#fff;">
+      <div style="min-width:0;">
+        <div style="font-weight:700;color:var(--ink,#0A1628);">Spacers — ${escHtmlRenc(r.adversaire)}${badge(r.statut)}</div>
+        <div style="font-size:13px;color:var(--ink-soft,#8A8478);margin-top:3px;">${escHtmlRenc(r.competition||'')}${r.competition?' · ':''}${_fmtDateRenc(r.date_match)}</div>
+        <div style="font-size:12px;color:var(--ink-soft,#8A8478);margin-top:3px;">Ouverture ${_fmtDateRenc(r.date_ouverture)} · ${s.nb_partenaires||0} partenaires · ${s.total_places||0} places · ${s.total_retires||0} retirées</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">${actions.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function openRencCreate() {
+  $('renc-adversaire').value=''; $('renc-competition').value=''; $('renc-date').value=''; $('renc-ouverture').value='';
+  $('renc-create-status').textContent='';
+  $('modal-renc-create').hidden = false;
+}
+function closeRencCreate() { $('modal-renc-create').hidden = true; }
+
+async function submitRencontre() {
+  const adversaire = $('renc-adversaire').value.trim();
+  const date_match = $('renc-date').value;
+  if (!adversaire) { $('renc-create-status').textContent='Adversaire obligatoire'; return; }
+  if (!date_match) { $('renc-create-status').textContent='Date du match obligatoire'; return; }
+  const btn = $('renc-create-btn'); btn.disabled = true;
+  try {
+    const res = await fetch(`/api/admin/rencontres/${encodeURIComponent(ADMIN_TOKEN)}/create`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ adversaire, competition: $('renc-competition').value.trim()||null, date_match, date_ouverture: $('renc-ouverture').value||null }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Erreur');
+    closeRencCreate(); showToast('Rencontre créée'); loadRencontres(true);
+  } catch (e) { $('renc-create-status').textContent = e.message || 'Erreur'; }
+  finally { btn.disabled = false; }
+}
+
+async function ouvrirRencontre(rid) {
+  if (!confirm('Ouvrir cette rencontre ? Les places VIP seront attribuées à chaque partenaire depuis son pack.')) return;
+  try {
+    const res = await fetch(`/api/admin/rencontre/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(rid)}/ouvrir`, { method:'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Erreur');
+    showToast(`Ouverte · ${data.allocations_creees} allocation(s)`); loadRencontres(true);
+  } catch (e) { showToast(e.message || 'Erreur', 'error'); }
+}
+
+async function fermerRencontre(rid) {
+  if (!confirm('Fermer cette rencontre ? Elle disparaîtra de l\'espace partenaire.')) return;
+  try {
+    const res = await fetch(`/api/admin/rencontre/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(rid)}/fermer`, { method:'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Erreur');
+    showToast('Rencontre fermée'); loadRencontres(true);
+  } catch (e) { showToast(e.message || 'Erreur', 'error'); }
+}
+
+async function openRencAllocations(rid, adversaire) {
+  const card = $('modal-renc-alloc-card');
+  card.innerHTML = `<div class="modal-head"><div class="eyebrow">Allocations VIP</div><h2 class="display" style="margin:4px 0 0;">Spacers — ${escHtmlRenc(adversaire||'')}</h2><button class="modal-close" onclick="closeRencAlloc()">✕</button></div><div class="modal-body"><div class="list-empty">Chargement…</div></div>`;
+  $('modal-renc-alloc').hidden = false;
+  try {
+    const res = await fetch(`/api/admin/rencontre/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(rid)}/allocations`);
+    const data = await res.json();
+    const allocs = data.allocations || [];
+    const safeAdv = escHtmlRenc(adversaire||'').replace(/'/g,"\\'");
+    const body = allocs.length ? allocs.map(a => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line,#E5DED1);border-radius:10px;margin-bottom:8px;">
+        <div style="font-weight:600;color:var(--ink,#0A1628);">${escHtmlRenc(a.raison_sociale)}</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft,#8A8478);">
+          <span>${a.nb_places} places</span><span>·</span>
+          <label>retirées <input type="number" min="0" value="${a.nb_retires}" id="alloc-ret-${a.id}" class="input" style="width:64px;display:inline-block;"></label>
+          <button class="btn ghost" onclick="saveAllocRetires('${a.id}','${rid}','${safeAdv}')">OK</button>
+        </div>
+      </div>`).join('')
+      : '<div class="list-empty">Aucune allocation (rencontre non ouverte, ou aucun partenaire avec pack VIP).</div>';
+    card.querySelector('.modal-body').innerHTML = body;
+  } catch (e) {
+    card.querySelector('.modal-body').innerHTML = '<div class="list-empty">Erreur de chargement</div>';
+  }
+}
+function closeRencAlloc() { $('modal-renc-alloc').hidden = true; }
+
+async function saveAllocRetires(aid, rid, adversaire) {
+  const val = parseInt($('alloc-ret-'+aid).value, 10) || 0;
+  try {
+    const res = await fetch(`/api/admin/allocation/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(aid)}/update`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nb_retires: val }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Erreur');
+    showToast('Mis à jour'); openRencAllocations(rid, adversaire); loadRencontres(true);
+  } catch (e) { showToast(e.message || 'Erreur', 'error'); }
 }
 
 // ============================================================================
