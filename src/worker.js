@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.33-interne (entité interne / double casquette + annuaire filtré)
+ * Spacers Business Club — Worker V4.34-tickie (rencontres + allocations places VIP, push Tickie stub)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -213,6 +213,19 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/communications\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
       if (m) return await handleAdminCommunicationArchive(m[1], m[2], env);
 
+      // ===== Sprint Tickie — Rencontres + places VIP (POST) =====
+      m = path.match(/^\/api\/admin\/rencontres\/([a-zA-Z0-9_-]{16,})\/create$/);
+      if (m) return await handleAdminRencontreCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/rencontre\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/ouvrir$/);
+      if (m) return await handleAdminRencontreOuvrir(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/rencontre\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/fermer$/);
+      if (m) return await handleAdminRencontreFermer(m[1], m[2], env);
+
+      m = path.match(/^\/api\/admin\/allocation\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminAllocationUpdate(m[1], m[2], body || {}, env);
+
       // ===== Sprint Mails — campagnes email aux partenaires =====
       m = path.match(/^\/api\/admin\/mails\/([a-zA-Z0-9_-]{16,})\/create$/);
       if (m) return await handleAdminMailCreate(m[1], body || {}, env);
@@ -368,6 +381,16 @@ async function handleApi(request, env, path, ctx) {
     // Public — liste des annonces publiées (Sprint C.1, sans auth, pour app bénévole + page publique)
     m = path.match(/^\/api\/public\/offres-emploi$/);
     if (m) return await handlePublicOffresList(url.searchParams, env);
+
+    // ===== Sprint Tickie — Rencontres + places VIP (GET) =====
+    m = path.match(/^\/api\/admin\/rencontres\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminRencontresList(m[1], env);
+
+    m = path.match(/^\/api\/admin\/rencontre\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/allocations$/);
+    if (m) return await handleAdminRencontreAllocations(m[1], m[2], env);
+
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/places$/);
+    if (m) return await handlePartnerPlaces(m[1], env);
 
     // Public — détail offre + incrément vues_count
     m = path.match(/^\/api\/public\/offre\/([0-9a-f-]{36})$/);
@@ -4691,4 +4714,204 @@ async function handlePartnerPublicationReponses(token, pubId, env) {
 
   const reps = await supabaseQuery('reponses_publications', `publication_id=eq.${pubId}&select=partenaire_nom,contact_nom,contact_email,message,created_at&order=created_at.desc&limit=200`, env);
   return jsonResponseNoCache({ publication: { id: pub.id, titre: pub.titre, type: pub.type }, reponses: reps || [] });
+}
+
+// ============================================================================
+//  SPRINT TICKIE — Rencontres (matchs) + allocations places VIP
+//  Push Tickie en STUB (branché une fois l'API provider confirmée).
+// ============================================================================
+
+const SAISON_ACTIVE_TICKIE = '2026-2027';
+
+// Stub : sera branché plus tard pour créer l'event Tickie + attribuer le contingent.
+async function pushRencontreToTickie_(rencontreId, env) {
+  // TODO Tickie :
+  //  1) créer/retrouver l'event Tickie -> rencontres.tickie_event_id
+  //  2) pour chaque rencontre_allocations : attribuer le contingent -> tickie_allocation_id
+  // En attente des réponses provider (allocation par compte/match via API + fenêtre d'ouverture).
+  return { stub: true, message: 'Push Tickie non branché (en attente API provider)' };
+}
+
+// --- ADMIN : liste des rencontres de la saison + stats d'allocations ---
+async function handleAdminRencontresList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const rows = await supabaseQuery('rencontres',
+    `saison=eq.${SAISON_ACTIVE_TICKIE}&select=id,adversaire,competition,date_match,date_ouverture,lieu,statut,tickie_event_id&order=date_match.asc&limit=200`,
+    env);
+
+  const ids = (rows || []).map(r => r.id);
+  const statsByRen = {};
+  if (ids.length) {
+    const allocs = await supabaseQuery('rencontre_allocations',
+      `rencontre_id=in.(${ids.join(',')})&select=rencontre_id,nb_places,nb_retires`, env);
+    for (const a of (allocs || [])) {
+      const k = a.rencontre_id;
+      if (!statsByRen[k]) statsByRen[k] = { nb_partenaires: 0, total_places: 0, total_retires: 0 };
+      statsByRen[k].nb_partenaires += 1;
+      statsByRen[k].total_places += Number(a.nb_places || 0);
+      statsByRen[k].total_retires += Number(a.nb_retires || 0);
+    }
+  }
+
+  const rencontres = (rows || []).map(r => ({
+    id: r.id,
+    adversaire: r.adversaire || '',
+    competition: r.competition || '',
+    date_match: r.date_match,
+    date_ouverture: r.date_ouverture,
+    lieu: r.lieu || 'domicile',
+    statut: r.statut || 'brouillon',
+    tickie_event_id: r.tickie_event_id || null,
+    stats: statsByRen[r.id] || { nb_partenaires: 0, total_places: 0, total_retires: 0 },
+  }));
+  return jsonResponseNoCache({ saison: SAISON_ACTIVE_TICKIE, count: rencontres.length, rencontres });
+}
+
+// --- ADMIN : créer une rencontre (J-15 auto si date_ouverture absente) ---
+async function handleAdminRencontreCreate(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const adversaire = String(body.adversaire || '').trim();
+  if (!adversaire) return jsonResponseNoCache({ error: 'Adversaire obligatoire' }, 400);
+  const dateMatch = String(body.date_match || '').trim();
+  if (!dateMatch) return jsonResponseNoCache({ error: 'Date du match obligatoire' }, 400);
+
+  let dateOuverture = body.date_ouverture ? String(body.date_ouverture).trim() : null;
+  if (!dateOuverture) {
+    const d = new Date(dateMatch);
+    if (!isNaN(d.getTime())) { d.setDate(d.getDate() - 15); dateOuverture = d.toISOString(); }
+  }
+
+  const insertData = {
+    saison: SAISON_ACTIVE_TICKIE,
+    adversaire,
+    competition: body.competition ? String(body.competition).trim() : null,
+    date_match: dateMatch,
+    date_ouverture: dateOuverture,
+    lieu: body.lieu ? String(body.lieu).trim() : 'domicile',
+    statut: 'brouillon',
+    notes: body.notes ? String(body.notes).trim() : null,
+  };
+  try {
+    const arr = await supabaseInsert_('rencontres', insertData, env);
+    return jsonResponseNoCache({ ok: true, rencontre: Array.isArray(arr) ? arr[0] : arr });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur création rencontre', detail: e.message }, 500);
+  }
+}
+
+// --- ADMIN : ouvrir une rencontre = générer les allocations depuis les packs VIP ---
+async function handleAdminRencontreOuvrir(token, rid, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  const renRows = await supabaseQuery('rencontres', `id=eq.${rid}&select=id,saison,statut&limit=1`, env);
+  if (!renRows || !renRows.length) return jsonResponseNoCache({ error: 'Rencontre introuvable' }, 404);
+  const ren = renRows[0];
+
+  const contrats = await supabaseQuery('contrats',
+    `saison=eq.${ren.saison}&select=id,partenaire_id,packs_places(id,alloues)`, env);
+
+  const existing = await supabaseQuery('rencontre_allocations', `rencontre_id=eq.${rid}&select=contrat_id`, env);
+  const deja = new Set((existing || []).map(a => a.contrat_id));
+
+  const toInsert = [];
+  for (const c of (contrats || [])) {
+    if (deja.has(c.id)) continue;
+    const pack = Array.isArray(c.packs_places) ? c.packs_places[0] : c.packs_places;
+    const nb = pack ? Number(pack.alloues || 0) : 0;
+    if (nb <= 0) continue;
+    toInsert.push({
+      rencontre_id: rid,
+      contrat_id: c.id,
+      partenaire_id: c.partenaire_id,
+      pack_id: pack ? pack.id : null,
+      nb_places: nb,
+      statut: 'ouverte',
+    });
+  }
+
+  let created = 0;
+  if (toInsert.length) {
+    const arr = await supabaseInsert_('rencontre_allocations', toInsert, env);
+    created = Array.isArray(arr) ? arr.length : 0;
+  }
+
+  await supabasePatch_('rencontres', `id=eq.${rid}`,
+    { statut: 'ouverte', updated_at: new Date().toISOString() }, env);
+
+  const tickie = await pushRencontreToTickie_(rid, env);
+  return jsonResponseNoCache({ ok: true, allocations_creees: created, statut: 'ouverte', tickie });
+}
+
+// --- ADMIN : fermer une rencontre (masque côté partenaire) ---
+async function handleAdminRencontreFermer(token, rid, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  await supabasePatch_('rencontres', `id=eq.${rid}`,
+    { statut: 'fermee', updated_at: new Date().toISOString() }, env);
+  return jsonResponseNoCache({ ok: true, statut: 'fermee' });
+}
+
+// --- ADMIN : allocations d'une rencontre (avec raison sociale) ---
+async function handleAdminRencontreAllocations(token, rid, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('rencontre_allocations',
+    `rencontre_id=eq.${rid}&select=id,contrat_id,partenaire_id,nb_places,nb_retires,statut,tickie_allocation_id,partenaires(raison_sociale)&order=nb_places.desc`,
+    env);
+  const allocations = (rows || []).map(a => ({
+    id: a.id,
+    contrat_id: a.contrat_id,
+    partenaire_id: a.partenaire_id,
+    raison_sociale: a.partenaires?.raison_sociale || '',
+    nb_places: Number(a.nb_places || 0),
+    nb_retires: Number(a.nb_retires || 0),
+    statut: a.statut || '',
+  }));
+  return jsonResponseNoCache({ rencontre_id: rid, count: allocations.length, allocations });
+}
+
+// --- ADMIN : ajuster une allocation (places / retirées / statut) ---
+async function handleAdminAllocationUpdate(token, aid, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const patch = {};
+  if (body.nb_places != null)  patch.nb_places  = Math.max(0, parseInt(body.nb_places, 10) || 0);
+  if (body.nb_retires != null) patch.nb_retires = Math.max(0, parseInt(body.nb_retires, 10) || 0);
+  if (body.statut) patch.statut = String(body.statut).trim();
+  if (Object.keys(patch).length === 0) return jsonResponseNoCache({ error: 'Rien à mettre à jour' }, 400);
+  patch.updated_at = new Date().toISOString();
+  try {
+    const arr = await supabasePatch_('rencontre_allocations', `id=eq.${aid}`, patch, env);
+    return jsonResponseNoCache({ ok: true, allocation: Array.isArray(arr) ? arr[0] : arr });
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur MAJ allocation', detail: e.message }, 500);
+  }
+}
+
+// --- PARTENAIRE : mes places VIP sur les rencontres ouvertes ---
+async function handlePartnerPlaces(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const rows = await supabaseQuery('rencontre_allocations',
+    `contrat_id=eq.${partner.contrat_id}&select=id,nb_places,nb_retires,statut,tickie_allocation_id,rencontres(id,adversaire,competition,date_match,date_ouverture,statut,tickie_event_id)&order=created_at.desc`,
+    env);
+  const places = (rows || [])
+    .filter(a => a.rencontres && a.rencontres.statut === 'ouverte')
+    .map(a => ({
+      allocation_id: a.id,
+      adversaire: a.rencontres.adversaire || '',
+      competition: a.rencontres.competition || '',
+      date_match: a.rencontres.date_match,
+      nb_places: Number(a.nb_places || 0),
+      nb_retires: Number(a.nb_retires || 0),
+      tickie_event_id: a.rencontres.tickie_event_id || null,
+      tickie_url: null, // rempli quand le provider aura confirmé l'espace de retrait
+    }))
+    .sort((x, y) => new Date(x.date_match) - new Date(y.date_match));
+  return jsonResponseNoCache({ contrat_id: partner.contrat_id, count: places.length, places });
 }
