@@ -1790,6 +1790,18 @@ async function loadAnnuaire() {
   }
 }
 
+function partTypeBadge(t) {
+  const s = (t || '').toLowerCase();
+  if (!s) return '';
+  let label, bg, color;
+  if (s.includes('compétence') || s.includes('competence')) { label = 'Mécénat compétence'; bg = '#EDE7F6'; color = '#5E35B1'; }
+  else if (s.includes('mécén') || s.includes('mecen')) { label = 'Mécénat financier'; bg = '#E8F0E3'; color = '#3F6B2E'; }
+  else if (s.includes('échange') || s.includes('echange') || s.includes('marchandise')) { label = 'Sponsor échange'; bg = '#E3EEF6'; color = '#0A66C2'; }
+  else if (s.includes('sponsor') || s.includes('financ')) { label = 'Sponsor financier'; bg = 'var(--gold-tint)'; color = 'var(--gold)'; }
+  else { label = t; bg = 'var(--gold-tint)'; color = 'var(--gold)'; }
+  return `<span style="display:inline-block;margin-top:4px;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:${bg};color:${color};">${escapeHtml(label)}</span>`;
+}
+
 function renderAnnuaire() {
   const el = $('annuaire-list'); if (!el) return;
   const q = ($('annuaire-search') ? $('annuaire-search').value : '').toLowerCase().trim();
@@ -1822,6 +1834,7 @@ function renderAnnuaire() {
           <div style="min-width:0;flex:1;">
             <div style="font-family:'Fraunces',serif;font-size:16px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.raison_sociale || '—')}${f.is_mine ? ' <span style="font-size:9px;background:var(--gold);color:#fff;padding:2px 6px;border-radius:6px;vertical-align:middle;">VOUS</span>' : ''}</div>
             ${f.secteur ? `<div style="font-size:11px;color:var(--gold);font-weight:600;">${escapeHtml(f.secteur)}</div>` : ''}
+            ${partTypeBadge(f.type_partenariat)}
           </div>
         </div>
         <div style="font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.8;">
