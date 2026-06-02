@@ -546,7 +546,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <button class="refresh-btn" onclick="loadPartenaires(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
       </div>
       <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
-        <input type="text" id="part-search" placeholder="🔍 Rechercher une société…" class="input" oninput="filterPartenaires()" style="max-width:380px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <input type="text" id="part-search" placeholder="🔍 Rechercher une société…" class="input" oninput="filterPartenaires()" style="max-width:380px;flex:1;">
+          <button class="btn" onclick="enrichSecteurs()" title="Récupère le secteur d'activité depuis le SIREN/SIRET via l'API entreprises">🔎 Compléter les secteurs</button>
+        </div>
       </div>
       <div id="partenaires-list" class="list">
         <div class="list-empty">Chargement…</div>
@@ -1074,7 +1077,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V13 — Spacer's Business Club  (+ Actualites LinkedIn du club)
+//  PILOTE ADMIN V14 — Spacer's Business Club  (+ completion secteurs SIREN)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -2908,6 +2911,18 @@ async function lookupAfSiret() {
     if (d.ville && !afVal('af-ville')) afSet('af-ville', d.ville);
     if (d.raison_sociale && !afVal('af-raison-in')) afSet('af-raison-in', d.raison_sociale);
     showToast('✓ Récupéré' + (d.secteur ? ' : ' + d.secteur : ''), 'success');
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
+}
+
+async function enrichSecteurs() {
+  if (!confirm("Récupérer le secteur d'activité des partenaires (sans secteur) depuis leur SIREN/SIRET ?")) return;
+  showToast('Recherche en cours…');
+  try {
+    const res = await fetch(`/api/admin/partenaires/${encodeURIComponent(ADMIN_TOKEN)}/enrich-secteurs`, { method: 'POST' });
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || `Erreur ${res.status}`);
+    showToast(`✓ ${d.updated} secteur(s) complété(s)`, 'success');
+    loadPartenaires(true);
   } catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
 
