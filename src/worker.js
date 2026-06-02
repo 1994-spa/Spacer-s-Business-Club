@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.37-networking (suggestions + mises en relation / warm intro)
+ * Spacers Business Club — Worker V4.38-stories (success stories : soumission partenaire + modération)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -198,6 +198,13 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/intro\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
       if (m) return await handleAdminIntroUpdate(m[1], m[2], body || {}, env);
 
+      // Success stories — soumission partenaire + modération admin
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/success-story$/);
+      if (m) return await handlePartnerSuccessStoryCreate(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/success-story\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminSuccessStoryUpdate(m[1], m[2], body || {}, env);
+
       // Partenaire — répondre à une publication du board (Sprint B.3)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponse$/);
       if (m) return await handlePartnerPublicationRespond(m[1], m[2], body || {}, env, ctx);
@@ -383,6 +390,13 @@ async function handleApi(request, env, path, ctx) {
 
     m = path.match(/^\/api\/admin\/intros\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminIntrosList(m[1], env);
+
+    // Success stories — showcase partenaire + liste admin
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/success-stories$/);
+    if (m) return await handlePartnerSuccessStories(m[1], env);
+
+    m = path.match(/^\/api\/admin\/success-stories\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminSuccessStoriesList(m[1], env);
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
     if (m) return await handlePartnerFicheGet(m[1], env);
@@ -4475,6 +4489,102 @@ async function handleAdminIntroUpdate(token, id, body, env) {
   if (statut && statut !== 'nouvelle') { patch.traite_at = new Date().toISOString(); patch.traite_par = `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null; }
   if (!Object.keys(patch).length) return jsonResponseNoCache({ error: 'rien à mettre à jour' }, 400);
   try { await supabasePatch_('mises_en_relation', `id=eq.${id}`, patch, env); return jsonResponseNoCache({ ok: true }); }
+  catch (e) { return jsonResponseNoCache({ error: 'Erreur', detail: e.message }, 500); }
+}
+
+// ===== Success stories (preuve sociale) — soumises par les partenaires, validées par le club =====
+
+async function resolvePartenairesByIds_(ids, env, withLogo) {
+  const uniq = [...new Set((ids || []).filter(Boolean))];
+  if (!uniq.length) return {};
+  const sel = withLogo ? 'id,raison_sociale,secteur,logo_b64' : 'id,raison_sociale,secteur';
+  const parts = await supabaseQuery('partenaires', `id=in.(${uniq.join(',')})&select=${sel}`, env) || [];
+  return Object.fromEntries(parts.map(p => [p.id, p]));
+}
+
+async function handlePartnerSuccessStories(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const published = await supabaseQuery('success_stories',
+    `statut=eq.publiee&select=id,titre,temoignage,montant,created_at,demandeur_partenaire_id,partenaire_cible_id&order=created_at.desc&limit=100`, env) || [];
+  const mine = await supabaseQuery('success_stories',
+    `demandeur_partenaire_id=eq.${partner.partenaire_id}&select=id,titre,temoignage,montant,statut,created_at,partenaire_cible_id&order=created_at.desc&limit=50`, env) || [];
+  const realizedReqs = await supabaseQuery('mises_en_relation',
+    `demandeur_partenaire_id=eq.${partner.partenaire_id}&statut=eq.realisee&select=cible_partenaire_id&order=created_at.desc`, env) || [];
+  const byId = await resolvePartenairesByIds_(
+    [...published.flatMap(s => [s.demandeur_partenaire_id, s.partenaire_cible_id]), ...mine.map(s => s.partenaire_cible_id), ...realizedReqs.map(r => r.cible_partenaire_id)], env, true);
+  const mapStory = s => ({
+    id: s.id, titre: s.titre || '', temoignage: s.temoignage || '', montant: s.montant != null ? Number(s.montant) : null,
+    statut: s.statut || 'publiee', created_at: s.created_at,
+    demandeur: s.demandeur_partenaire_id ? (byId[s.demandeur_partenaire_id] || { raison_sociale: '?' }) : null,
+    cible: s.partenaire_cible_id ? (byId[s.partenaire_cible_id] || { raison_sociale: '?' }) : null,
+  });
+  const seen = new Set(); const realized_partners = [];
+  for (const r of realizedReqs) { const p = byId[r.cible_partenaire_id]; if (p && !seen.has(p.id)) { seen.add(p.id); realized_partners.push({ id: p.id, raison_sociale: p.raison_sociale }); } }
+  return jsonResponseNoCache({
+    published: published.map(mapStory),
+    mine: mine.map(s => ({ ...mapStory(s), demandeur: null })),
+    realized_partners,
+  });
+}
+
+async function handlePartnerSuccessStoryCreate(token, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const titre = (body.titre == null ? '' : String(body.titre)).trim().slice(0, 160);
+  const temoignage = (body.temoignage == null ? '' : String(body.temoignage)).trim().slice(0, 2000);
+  if (!titre || !temoignage) return jsonResponseNoCache({ error: 'Titre et témoignage requis' }, 400);
+  let cible = String(body.cible_partenaire_id || '').trim(); if (cible && !/^[0-9a-f-]{36}$/.test(cible)) cible = '';
+  let intro_id = String(body.intro_id || '').trim(); if (intro_id && !/^[0-9a-f-]{36}$/.test(intro_id)) intro_id = '';
+  let montant = null;
+  if (body.montant != null && body.montant !== '') { const n = Number(body.montant); if (isFinite(n) && n >= 0) montant = n; }
+  try {
+    await supabaseInsert_('success_stories', {
+      demandeur_partenaire_id: partner.partenaire_id,
+      partenaire_cible_id: cible || null,
+      intro_id: intro_id || null,
+      titre, temoignage, montant, statut: 'en_attente',
+    }, env);
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500); }
+  try { await notifyAdminsNewStory_(env, { auteur: partner.raison_sociale, titre }); } catch (_) { }
+  return jsonResponseNoCache({ ok: true });
+}
+
+async function notifyAdminsNewStory_(env, { auteur, titre }) {
+  const admins = await supabaseQuery('admins', `actif=eq.true&select=email&limit=10`, env) || [];
+  const to = admins.map(a => a.email).filter(Boolean); if (!to.length) return;
+  const html = emailLayout('Success story', 'Nouvelle réussite à valider', escEmail(auteur),
+    `<p><b>${escEmail(auteur)}</b> a partagé une réussite : « ${escEmail(titre)} ».</p><p>À valider dans Pilote → <b>Success stories</b>.</p>`);
+  for (const addr of to) { try { await sendEmailViaResend(env, { to: addr, subject: `Success story à valider — ${auteur}`, html }); } catch (_) { } }
+}
+
+async function handleAdminSuccessStoriesList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
+  const rows = await supabaseQuery('success_stories',
+    `select=id,titre,temoignage,montant,statut,note_admin,created_at,traite_at,traite_par,demandeur_partenaire_id,partenaire_cible_id&order=created_at.desc&limit=500`, env) || [];
+  const byId = await resolvePartenairesByIds_(rows.flatMap(r => [r.demandeur_partenaire_id, r.partenaire_cible_id]), env, false);
+  const stories = rows.map(r => ({
+    id: r.id, titre: r.titre || '', temoignage: r.temoignage || '', montant: r.montant != null ? Number(r.montant) : null,
+    statut: r.statut, note_admin: r.note_admin || '', created_at: r.created_at, traite_at: r.traite_at, traite_par: r.traite_par || '',
+    demandeur: byId[r.demandeur_partenaire_id] || { raison_sociale: '?' },
+    cible: r.partenaire_cible_id ? (byId[r.partenaire_cible_id] || { raison_sociale: '?' }) : null,
+  }));
+  return jsonResponseNoCache({ stories, count: stories.length });
+}
+
+async function handleAdminSuccessStoryUpdate(token, id, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
+  if (!/^[0-9a-f-]{36}$/.test(id)) return jsonResponseNoCache({ error: 'id invalide' }, 400);
+  const allowed = ['en_attente', 'publiee', 'refusee'];
+  const statut = allowed.includes(body.statut) ? body.statut : null;
+  const patch = {};
+  if (statut) patch.statut = statut;
+  if (body.note_admin !== undefined) patch.note_admin = body.note_admin ? String(body.note_admin).slice(0, 1000) : null;
+  if (statut && statut !== 'en_attente') { patch.traite_at = new Date().toISOString(); patch.traite_par = `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null; }
+  if (!Object.keys(patch).length) return jsonResponseNoCache({ error: 'rien à mettre à jour' }, 400);
+  try { await supabasePatch_('success_stories', `id=eq.${id}`, patch, env); return jsonResponseNoCache({ ok: true }); }
   catch (e) { return jsonResponseNoCache({ error: 'Erreur', detail: e.message }, 500); }
 }
 
