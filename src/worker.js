@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.36-geo (annuaire: géocodage BAN à la sauvegarde + backfill, lat/lng stockées)
+ * Spacers Business Club — Worker V4.37-networking (suggestions + mises en relation / warm intro)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -191,6 +191,13 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
       if (m) return await handlePartnerFicheUpdate(m[1], body || {}, env);
 
+      // Networking — demande de mise en relation (partenaire) + traitement (admin)
+      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/intro-request$/);
+      if (m) return await handlePartnerIntroRequest(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/intro\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
+      if (m) return await handleAdminIntroUpdate(m[1], m[2], body || {}, env);
+
       // Partenaire — répondre à une publication du board (Sprint B.3)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponse$/);
       if (m) return await handlePartnerPublicationRespond(m[1], m[2], body || {}, env, ctx);
@@ -366,6 +373,16 @@ async function handleApi(request, env, path, ctx) {
     // Annuaire — backfill géocodage des adresses déjà en base (admin ; ouvrir l'URL dans le navigateur)
     m = path.match(/^\/api\/admin\/geocode-backfill\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminGeocodeBackfill(m[1], env);
+
+    // Networking — suggestions + mes demandes de mise en relation
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/suggestions$/);
+    if (m) return await handlePartnerSuggestions(m[1], env);
+
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/mes-intros$/);
+    if (m) return await handlePartnerMesIntros(m[1], env);
+
+    m = path.match(/^\/api\/admin\/intros\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminIntrosList(m[1], env);
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
     if (m) return await handlePartnerFicheGet(m[1], env);
@@ -4346,6 +4363,119 @@ async function handlePartnerAnnuaire(token, env) {
     longitude: p.longitude,
   }));
   return jsonResponseNoCache({ fiches, count: fiches.length });
+}
+
+// ===== Mise en relation (networking) — suggestions + demandes (warm intro) =====
+
+// Suggestions "à découvrir" : exclut soi-même, l'entité interne et les partenaires déjà sollicités.
+// Score business : +2 expertise commune, +1 même ville, +1 secteur complémentaire (différent).
+async function handlePartnerSuggestions(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const meId = partner.partenaire_id;
+  const meRows = await supabaseQuery('partenaires', `id=eq.${meId}&select=secteur,ville,expertise&limit=1`, env);
+  const me = (meRows && meRows[0]) || {};
+  const myTags = (me.expertise || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  const all = await supabaseQuery('partenaires',
+    `interne=eq.false&id=neq.${meId}&select=id,raison_sociale,secteur,ville,logo_b64,expertise,representant,representant_fonction&order=raison_sociale.asc&limit=500`, env) || [];
+  const reqs = await supabaseQuery('mises_en_relation', `demandeur_partenaire_id=eq.${meId}&select=cible_partenaire_id`, env) || [];
+  const already = new Set(reqs.map(r => r.cible_partenaire_id));
+  const scored = all.filter(p => !already.has(p.id)).map(p => {
+    let score = 0, reason = 'À découvrir';
+    const tags = (p.expertise || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+    const shared = tags.filter(t => myTags.includes(t));
+    if (shared.length) { score += 2; reason = 'Expertise commune : ' + shared[0]; }
+    if (me.ville && p.ville && me.ville.toLowerCase() === p.ville.toLowerCase()) { score += 1; if (score < 2) reason = 'Même ville : ' + p.ville; }
+    if (me.secteur && p.secteur && me.secteur.toLowerCase() !== p.secteur.toLowerCase()) { score += 1; if (score === 1) reason = 'Secteur complémentaire'; }
+    return { p, score, reason };
+  });
+  scored.sort((a, b) => (b.score - a.score) || (Math.random() - 0.5));
+  const top = scored.slice(0, 3).map(({ p, reason }) => ({
+    id: p.id, raison_sociale: p.raison_sociale, secteur: p.secteur || '', ville: p.ville || '',
+    logo_b64: p.logo_b64 || null, representant: p.representant || '', representant_fonction: p.representant_fonction || '', reason,
+  }));
+  return jsonResponseNoCache({ suggestions: top, count: top.length });
+}
+
+// Le partenaire demande au club une mise en relation (warm intro) avec un autre partenaire.
+async function handlePartnerIntroRequest(token, body, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const cible = String(body.cible_partenaire_id || '').trim();
+  if (!/^[0-9a-f-]{36}$/.test(cible)) return jsonResponseNoCache({ error: 'Cible invalide' }, 400);
+  if (cible === partner.partenaire_id) return jsonResponseNoCache({ error: 'Impossible de se demander soi-même' }, 400);
+  const cibleRows = await supabaseQuery('partenaires', `id=eq.${cible}&interne=eq.false&select=id,raison_sociale&limit=1`, env);
+  if (!cibleRows || !cibleRows.length) return jsonResponseNoCache({ error: 'Partenaire cible introuvable' }, 404);
+  const existing = await supabaseQuery('mises_en_relation',
+    `demandeur_partenaire_id=eq.${partner.partenaire_id}&cible_partenaire_id=eq.${cible}&statut=in.(nouvelle,en_cours)&select=id&limit=1`, env);
+  if (existing && existing.length) return jsonResponseNoCache({ error: 'Demande déjà en cours pour ce partenaire', already: true }, 409);
+  const message = (body.message == null ? '' : String(body.message)).trim().slice(0, 1000) || null;
+  try {
+    await supabaseInsert_('mises_en_relation', {
+      demandeur_partenaire_id: partner.partenaire_id,
+      demandeur_contrat_id: partner.contrat_id || null,
+      cible_partenaire_id: cible,
+      message,
+      statut: 'nouvelle',
+    }, env);
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500); }
+  try { await notifyAdminsNewIntro_(env, { demandeur: partner.raison_sociale, cible: cibleRows[0].raison_sociale, message }); } catch (_) { }
+  return jsonResponseNoCache({ ok: true });
+}
+
+async function notifyAdminsNewIntro_(env, { demandeur, cible, message }) {
+  const admins = await supabaseQuery('admins', `actif=eq.true&select=email&limit=10`, env) || [];
+  const to = admins.map(a => a.email).filter(Boolean);
+  if (!to.length) return;
+  const html = emailLayout('Mise en relation', 'Nouvelle demande', `${escEmail(demandeur)} → ${escEmail(cible)}`,
+    `<p><b>${escEmail(demandeur)}</b> souhaite être mis en relation avec <b>${escEmail(cible)}</b>.</p>${message ? `<p style="color:#555;font-style:italic;">« ${escEmail(message)} »</p>` : ''}<p>Traite la demande dans Pilote → <b>Mises en relation</b>.</p>`);
+  for (const addr of to) { try { await sendEmailViaResend(env, { to: addr, subject: `Demande de mise en relation — ${demandeur}`, html }); } catch (_) { } }
+}
+
+// Le partenaire voit l'état de ses propres demandes (pour griser les boutons déjà sollicités).
+async function handlePartnerMesIntros(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const rows = await supabaseQuery('mises_en_relation',
+    `demandeur_partenaire_id=eq.${partner.partenaire_id}&select=cible_partenaire_id,statut,created_at&order=created_at.desc&limit=200`, env) || [];
+  return jsonResponseNoCache({ intros: rows });
+}
+
+// Admin : liste des demandes de mise en relation (avec noms/contacts résolus).
+async function handleAdminIntrosList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
+  const rows = await supabaseQuery('mises_en_relation',
+    `select=id,message,statut,note_admin,created_at,traite_at,traite_par,demandeur_partenaire_id,cible_partenaire_id&order=created_at.desc&limit=500`, env) || [];
+  const ids = [...new Set(rows.flatMap(r => [r.demandeur_partenaire_id, r.cible_partenaire_id]).filter(Boolean))];
+  let byId = {};
+  if (ids.length) {
+    const parts = await supabaseQuery('partenaires', `id=in.(${ids.join(',')})&select=id,raison_sociale,representant,representant_email,representant_tel`, env) || [];
+    byId = Object.fromEntries(parts.map(p => [p.id, p]));
+  }
+  const intros = rows.map(r => ({
+    id: r.id, message: r.message || '', statut: r.statut, note_admin: r.note_admin || '',
+    created_at: r.created_at, traite_at: r.traite_at, traite_par: r.traite_par || '',
+    demandeur: byId[r.demandeur_partenaire_id] || { raison_sociale: '?' },
+    cible: byId[r.cible_partenaire_id] || { raison_sociale: '?' },
+  }));
+  return jsonResponseNoCache({ intros, count: intros.length });
+}
+
+// Admin : met à jour le statut/la note d'une demande.
+async function handleAdminIntroUpdate(token, id, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
+  if (!/^[0-9a-f-]{36}$/.test(id)) return jsonResponseNoCache({ error: 'id invalide' }, 400);
+  const allowed = ['nouvelle', 'en_cours', 'realisee', 'refusee'];
+  const statut = allowed.includes(body.statut) ? body.statut : null;
+  const patch = {};
+  if (statut) patch.statut = statut;
+  if (body.note_admin !== undefined) patch.note_admin = body.note_admin ? String(body.note_admin).slice(0, 1000) : null;
+  if (statut && statut !== 'nouvelle') { patch.traite_at = new Date().toISOString(); patch.traite_par = `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null; }
+  if (!Object.keys(patch).length) return jsonResponseNoCache({ error: 'rien à mettre à jour' }, 400);
+  try { await supabasePatch_('mises_en_relation', `id=eq.${id}`, patch, env); return jsonResponseNoCache({ ok: true }); }
+  catch (e) { return jsonResponseNoCache({ error: 'Erreur', detail: e.message }, 500); }
 }
 
 async function handlePartnerFicheGet(token, env) {
