@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.29-actus (+ ingestion webhook Make pour le feed LinkedIn)
+ * Spacers Business Club — Worker V4.30-secteurs (+ complétion en masse des secteurs via SIREN)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -266,6 +266,10 @@ async function handleApi(request, env, path, ctx) {
       // Admin — actualités du club (posts LinkedIn)
       m = path.match(/^\/api\/admin\/social-posts\/([a-zA-Z0-9_-]{16,})$/);
       if (m) return await handleAdminSocialUpsert(m[1], body || {}, env);
+
+      // Admin — complétion en masse des secteurs depuis SIREN/SIRET
+      m = path.match(/^\/api\/admin\/partenaires\/([a-zA-Z0-9_-]{16,})\/enrich-secteurs$/);
+      if (m) return await handleAdminEnrichSecteurs(m[1], env);
 
       m = path.match(/^\/api\/admin\/social-post\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/delete$/);
       if (m) return await handleAdminSocialDelete(m[1], m[2], env);
@@ -4422,6 +4426,31 @@ async function handleAdminSiretLookup(token, searchParams, env) {
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
   const out = await lookupSiret_(searchParams.get('q'), env);
   return jsonResponseNoCache(out, out.error ? 422 : 200);
+}
+
+// Complète en masse le secteur (+ CP/ville manquants) de tous les partenaires depuis leur SIREN/SIRET
+async function handleAdminEnrichSecteurs(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('partenaires',
+    `select=id,raison_sociale,secteur,siret,siren,code_postal,ville&limit=500`, env);
+  const results = [];
+  for (const p of (rows || [])) {
+    const hasSecteur = p.secteur && String(p.secteur).trim();
+    const key = (p.siret && String(p.siret).trim()) || (p.siren && String(p.siren).trim());
+    if (hasSecteur || !key) { results.push({ raison_sociale: p.raison_sociale, skipped: true }); continue; }
+    const out = await lookupSiret_(key, env);
+    if (out.error || !out.secteur) { results.push({ raison_sociale: p.raison_sociale, error: out.error || 'secteur introuvable' }); continue; }
+    const patch = { secteur: out.secteur };
+    if (out.code_postal && !p.code_postal) patch.code_postal = out.code_postal;
+    if (out.ville && !p.ville) patch.ville = out.ville;
+    try {
+      await supabasePatch_('partenaires', `id=eq.${p.id}`, patch, env);
+      results.push({ raison_sociale: p.raison_sociale, secteur: out.secteur });
+    } catch (e) { results.push({ raison_sociale: p.raison_sociale, error: e.message }); }
+  }
+  logAudit_(admin.id, 'partenaires.enrich_secteurs', 'partenaires', null, {}, env);
+  return jsonResponseNoCache({ ok: true, updated: results.filter(r => r.secteur).length, results });
 }
 
 // ============================================================================
