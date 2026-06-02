@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.35-annuaire (profils enrichis: taille, LinkedIn, expertise/tags)
+ * Spacers Business Club — Worker V4.36-geo (annuaire: géocodage BAN à la sauvegarde + backfill, lat/lng stockées)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -362,6 +362,10 @@ async function handleApi(request, env, path, ctx) {
     // Partner — Annuaire des partenaires (networking) + sa propre fiche
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/annuaire$/);
     if (m) return await handlePartnerAnnuaire(m[1], env);
+
+    // Annuaire — backfill géocodage des adresses déjà en base (admin ; ouvrir l'URL dans le navigateur)
+    m = path.match(/^\/api\/admin\/geocode-backfill\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminGeocodeBackfill(m[1], env);
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
     if (m) return await handlePartnerFicheGet(m[1], env);
@@ -4315,7 +4319,7 @@ async function handlePartnerAnnuaire(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `interne=eq.false&select=id,raison_sociale,secteur,taille,ville,adresse,code_postal,site_web,email_societe,logo_b64,niveau,type_partenariat,expertise,representant,representant_fonction,representant_email,representant_tel,representant_linkedin,representant_photo_b64&order=raison_sociale.asc&limit=500`,
+    `interne=eq.false&select=id,raison_sociale,secteur,taille,ville,adresse,code_postal,site_web,email_societe,logo_b64,niveau,type_partenariat,expertise,representant,representant_fonction,representant_email,representant_tel,representant_linkedin,representant_photo_b64,latitude,longitude&order=raison_sociale.asc&limit=500`,
     env);
   const fiches = (rows || []).map(p => ({
     id: p.id,
@@ -4338,6 +4342,8 @@ async function handlePartnerAnnuaire(token, env) {
     representant_tel: p.representant_tel || '',
     representant_linkedin: p.representant_linkedin || '',
     representant_photo_b64: p.representant_photo_b64 || null,
+    latitude: p.latitude,
+    longitude: p.longitude,
   }));
   return jsonResponseNoCache({ fiches, count: fiches.length });
 }
@@ -4350,6 +4356,46 @@ async function handlePartnerFicheGet(token, env) {
     env);
   if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Fiche introuvable' }, 404);
   return jsonResponseNoCache({ fiche: rows[0] });
+}
+
+// Géocodage via l'API Adresse de l'État (BAN) — gratuit, France, sans clé.
+async function geocodeBAN_(q) {
+  try {
+    if (!q) return null;
+    const res = await fetch(`https://api-adresse.data.gouv.fr/search/?limit=1&q=${encodeURIComponent(q)}`,
+      { headers: { 'User-Agent': 'SpacersBusinessClub/1.0 (contact@spacerstoulouse.fr)' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const feat = data && data.features && data.features[0];
+    if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
+      const [lon, lat] = feat.geometry.coordinates;
+      if (isFinite(lat) && isFinite(lon)) return { lat, lon };
+    }
+  } catch (_) { }
+  return null;
+}
+
+// Backfill : géocode par lots de 20 les partenaires ayant une ville mais pas encore de coordonnées.
+// Déclenchable en ouvrant l'URL ; relancer jusqu'à "more": false.
+async function handleAdminGeocodeBackfill(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
+  const rows = await supabaseQuery('partenaires',
+    `latitude=is.null&ville=not.is.null&select=id,adresse,code_postal,ville&limit=20`, env);
+  let geocoded = 0, failed = 0;
+  for (const p of (rows || [])) {
+    const q = [p.adresse, p.code_postal, p.ville].filter(Boolean).join(' ');
+    const geo = await geocodeBAN_(q);
+    if (geo) {
+      try { await supabasePatch_('partenaires', `id=eq.${p.id}`, { latitude: geo.lat, longitude: geo.lon }, env); geocoded++; }
+      catch (_) { failed++; }
+    } else { failed++; }
+  }
+  const batch = rows ? rows.length : 0;
+  return jsonResponseNoCache({
+    ok: true, batch, geocoded, failed, more: batch === 20,
+    note: batch === 20 ? 'Lot de 20 traité — relance la même URL pour le lot suivant.' : "Terminé : plus d'adresses à géocoder.",
+  });
 }
 
 async function handlePartnerFicheUpdate(token, body, env) {
@@ -4375,9 +4421,17 @@ async function handlePartnerFicheUpdate(token, body, env) {
   // Images : ne toucher que si le champ est fourni (string = nouvelle/actuelle, null = effacer)
   if (body.logo_b64 !== undefined) patch.logo_b64 = body.logo_b64 ? String(body.logo_b64).slice(0, 1500000) : null;
   if (body.representant_photo_b64 !== undefined) patch.representant_photo_b64 = body.representant_photo_b64 ? String(body.representant_photo_b64).slice(0, 1500000) : null;
+  // Géocodage à la sauvegarde : on calcule lat/lng une seule fois ici (pas en direct sur la carte).
+  const addrStr = [patch.adresse, patch.code_postal, patch.ville].filter(Boolean).join(' ');
+  if (addrStr) {
+    const geo = await geocodeBAN_(addrStr);
+    if (geo) { patch.latitude = geo.lat; patch.longitude = geo.lon; }
+  } else {
+    patch.latitude = null; patch.longitude = null;
+  }
   try {
     await supabasePatch_('partenaires', `id=eq.${partner.partenaire_id}`, patch, env);
-    return jsonResponseNoCache({ ok: true });
+    return jsonResponseNoCache({ ok: true, geocoded: patch.latitude != null });
   } catch (e) { return jsonResponseNoCache({ error: 'Erreur mise à jour', detail: e.message }, 500); }
 }
 
