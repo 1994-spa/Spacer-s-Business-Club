@@ -1473,6 +1473,7 @@ function renderApp() {
   $('sb-admin-role').textContent = (CURRENT_ADMIN.role || 'pilote').toUpperCase();
   $('sb-admin-av').textContent = initials(name);
   loadDashboard();
+  initTour(PILOTE_TOUR_STEPS, 'bc_tour_pilote_v1');
 }
 
 // ============================================================================
@@ -1689,6 +1690,105 @@ async function storyNote(id) {
     const data = await res.json(); if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('✓ Note enregistrée', 'success'); loadStories(true);
   } catch (e) { showToast('❌ ' + e.message, 'error'); }
+}
+
+// ============================================================================
+//  ONBOARDING — tour guidé (bulles), au 1er passage, rejouable
+// ============================================================================
+const PILOTE_TOUR_STEPS = [
+  { title: "Bienvenue dans le Pilote 👋", text: "Le tableau de bord d'administration du Business Club. On vous montre les sections clés en une minute." },
+  { selector: '.sb-link[data-tab="dashboard"]', title: "Tableau de bord", text: "Vue d'ensemble : partenaires actifs, chiffre signé, packs VIP, modérations en attente." },
+  { selector: '.sb-link[data-tab="partenaires"]', title: "Partenaires", text: "Gérez les fiches partenaires et envoyez les invitations d'accès à l'application." },
+  { selector: '.sb-link[data-tab="publications"]', title: "Publications", text: "Modérez le forum, les propositions et les demandes avant publication sur le board." },
+  { selector: '.sb-link[data-tab="offres"]', title: "Annonces emploi", text: "Validez et gérez les annonces d'emploi du réseau." },
+  { selector: '.sb-link[data-tab="communications"]', title: "Communications & invitations", text: "Envoyez communications et invitations aux partenaires, avec suivi des réponses (RSVP)." },
+  { selector: '.sb-link[data-tab="tickie"]', title: "Rencontres & places VIP", text: "Ouvrez les matchs et attribuez les contingents de places VIP par partenaire." },
+  { selector: '.sb-link[data-tab="relations"]', title: "Mises en relation", text: "Les demandes d'intro des partenaires : réalisez la mise en relation et suivez le statut." },
+  { selector: '.sb-link[data-tab="stories"]', title: "Success stories", text: "Validez les témoignages : une fois publiés, ils s'affichent dans l'application partenaire." },
+  { title: "Prêt 🚀", text: "Vous pouvez rejouer ce guide à tout moment via le bouton « ? » en bas à gauche. Bon pilotage !" },
+];
+
+function tourInjectCss() {
+  if (document.getElementById('tour-css')) return;
+  const st = document.createElement('style'); st.id = 'tour-css';
+  st.textContent = `
+    .tour-ov{position:fixed;inset:0;z-index:9998;transition:background .2s;}
+    .tour-spot{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(10,22,40,.62);transition:all .25s ease;pointer-events:none;}
+    .tour-bub{position:fixed;z-index:9999;max-width:330px;background:#fff;border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(10,22,40,.35);font-family:inherit;}
+    .tour-step{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#C8932B;font-weight:700;}
+    .tour-title{font-family:'Fraunces',serif;font-size:18px;margin:4px 0 6px;color:#0A1628;}
+    .tour-text{font-size:13.5px;color:#5B6573;line-height:1.5;}
+    .tour-btns{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px;}
+    .tour-btns button{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:8px 14px;cursor:pointer;border:1px solid #E5DED1;}
+    .tour-next{background:#0A1628;color:#C8932B;border:none;}
+    .tour-prev{background:#fff;color:#0A1628;}
+    .tour-skip{background:none;border:none;color:#8A8478;padding:8px 6px;}
+    .tour-help{position:fixed;bottom:18px;left:18px;z-index:90;width:40px;height:40px;border-radius:50%;border:1px solid #E5DED1;background:#fff;color:#0A1628;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(10,22,40,.15);font-family:inherit;}`;
+  document.head.appendChild(st);
+}
+
+function runTour(steps, key, force) {
+  if (!force) { try { if (localStorage.getItem(key)) return; } catch (_) { } }
+  tourInjectCss();
+  let i = 0;
+  const ov = document.createElement('div'); ov.className = 'tour-ov';
+  const spot = document.createElement('div'); spot.className = 'tour-spot';
+  const bub = document.createElement('div'); bub.className = 'tour-bub';
+  ov.appendChild(spot); document.body.appendChild(ov); document.body.appendChild(bub);
+  function end() { ov.remove(); bub.remove(); document.removeEventListener('keydown', onKey); try { localStorage.setItem(key, '1'); } catch (_) { } }
+  function onKey(e) { if (e.key === 'Escape') end(); else if (e.key === 'ArrowRight') next(); else if (e.key === 'ArrowLeft') prev(); }
+  function next() { if (i < steps.length - 1) { i++; show(); } else end(); }
+  function prev() { if (i > 0) { i--; show(); } }
+  function show() {
+    const s = steps[i];
+    const el = s.selector ? document.querySelector(s.selector) : null;
+    const visible = el && el.offsetParent !== null && el.getClientRects().length;
+    if (visible) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => place(el, s), 240); }
+    else place(null, s);
+  }
+  function place(el, s) {
+    if (el) {
+      const r = el.getBoundingClientRect(), pad = 8;
+      ov.style.background = 'transparent'; spot.style.display = 'block';
+      spot.style.top = (r.top - pad) + 'px'; spot.style.left = (r.left - pad) + 'px';
+      spot.style.width = (r.width + pad * 2) + 'px'; spot.style.height = (r.height + pad * 2) + 'px';
+    } else { spot.style.display = 'none'; ov.style.background = 'rgba(10,22,40,.62)'; }
+    bub.innerHTML = `
+      <div class="tour-step">${i + 1} / ${steps.length}</div>
+      <div class="tour-title">${s.title}</div>
+      <div class="tour-text">${s.text}</div>
+      <div class="tour-btns">
+        <button class="tour-skip" id="tour-skip">Passer</button>
+        <div style="display:flex;gap:8px;">
+          ${i > 0 ? '<button class="tour-prev" id="tour-prev">Précédent</button>' : ''}
+          <button class="tour-next" id="tour-next">${i === steps.length - 1 ? 'Terminer' : 'Suivant'}</button>
+        </div>
+      </div>`;
+    bub.style.display = 'block';
+    const bw = bub.offsetWidth, bh = bub.offsetHeight;
+    let top, left;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      top = r.bottom + 14; if (top + bh > window.innerHeight - 10) top = Math.max(10, r.top - bh - 14);
+      left = Math.min(Math.max(10, r.left), window.innerWidth - bw - 10);
+    } else { top = (window.innerHeight - bh) / 2; left = (window.innerWidth - bw) / 2; }
+    bub.style.top = top + 'px'; bub.style.left = left + 'px';
+    $('tour-skip').onclick = end;
+    const nx = $('tour-next'); if (nx) nx.onclick = next;
+    const pv = $('tour-prev'); if (pv) pv.onclick = prev;
+  }
+  document.addEventListener('keydown', onKey);
+  show();
+}
+
+function initTour(steps, key) {
+  tourInjectCss();
+  if (!document.querySelector('.tour-help')) {
+    const b = document.createElement('button'); b.className = 'tour-help'; b.textContent = '?'; b.title = 'Revoir le guide';
+    b.onclick = () => runTour(steps, key, true);
+    document.body.appendChild(b);
+  }
+  setTimeout(() => runTour(steps, key, false), 900);
 }
 
 // ============================================================================
