@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.28-actus (Annuaire + SIRET + actualites LinkedIn du club)
+ * Spacers Business Club — Worker V4.29-actus (+ ingestion webhook Make pour le feed LinkedIn)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -259,6 +259,9 @@ async function handleApi(request, env, path, ctx) {
       // Admin — édition de la fiche annuaire de n'importe quel partenaire
       m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/fiche$/);
       if (m) return await handleAdminPartenaireFicheUpdate(m[1], m[2], body || {}, env);
+
+      // Ingestion automatique (Make.com / RSS) — protégée par SOCIAL_INGEST_SECRET
+      if (path === '/api/ingest/social') return await handleSocialIngest(request, body || {}, env);
 
       // Admin — actualités du club (posts LinkedIn)
       m = path.match(/^\/api\/admin\/social-posts\/([a-zA-Z0-9_-]{16,})$/);
@@ -4488,6 +4491,49 @@ async function handleAdminSocialDelete(token, id, env) {
     logAudit_(admin.id, 'social.delete', 'social_posts', id, {}, env);
     return jsonResponseNoCache({ ok: true });
   } catch (e) { return jsonResponseNoCache({ error: 'Erreur suppression', detail: e.message }, 500); }
+}
+
+function stripHtml_(s) {
+  return String(s || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Ingestion automatique (Make.com / RSS) — protégée par SOCIAL_INGEST_SECRET, dédoublonnée par url
+async function handleSocialIngest(request, body, env) {
+  const secret = request.headers.get('x-ingest-secret') || new URL(request.url).searchParams.get('secret') || '';
+  if (!env.SOCIAL_INGEST_SECRET || secret !== env.SOCIAL_INGEST_SECRET) {
+    return jsonResponseNoCache({ error: 'Unauthorized' }, 401);
+  }
+  const str = (v, max) => { const s = (v == null ? '' : String(v)).trim(); return s ? s.slice(0, max || 6000) : null; };
+  const rec = {
+    source: str(body.source, 40) || 'linkedin',
+    url: str(body.url, 600),
+    contenu: str(stripHtml_(body.contenu), 6000),
+    image_url: str(body.image_url, 600),
+    auteur: str(body.auteur, 160) || 'Spacers Toulouse Volley',
+    visible: body.visible === false ? false : true,
+  };
+  if (body.published_at) { const d = new Date(body.published_at); if (!isNaN(d.getTime())) rec.published_at = d.toISOString(); }
+  if (!rec.published_at) rec.published_at = new Date().toISOString();
+  if (!rec.url && !rec.contenu) return jsonResponseNoCache({ error: 'url ou contenu requis' }, 400);
+  try {
+    if (rec.url) {
+      const existing = await supabaseQuery('social_posts', `url=eq.${encodeURIComponent(rec.url)}&select=id&limit=1`, env);
+      if (existing && existing.length) {
+        await supabasePatch_('social_posts', `id=eq.${existing[0].id}`, rec, env);
+        return jsonResponseNoCache({ ok: true, action: 'updated', id: existing[0].id });
+      }
+    }
+    const created = await supabaseInsert_('social_posts', rec, env);
+    const id = Array.isArray(created) ? (created[0] && created[0].id) : (created && created.id);
+    return jsonResponseNoCache({ ok: true, action: 'created', id });
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur ingestion', detail: e.message }, 500); }
 }
 
 async function handlePartnerBoard(token, queryParams, env) {
