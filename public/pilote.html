@@ -851,6 +851,14 @@ textarea.input { resize: vertical; min-height: 80px; }
       </div>
       <label class="input-lbl">Raison sociale</label>
       <input id="af-raison-in" class="input" type="text" style="margin-bottom:12px;">
+      <label class="input-lbl">Type de partenariat</label>
+      <select id="af-type" class="input" style="margin-bottom:12px;">
+        <option value="">— Non défini —</option>
+        <option>Sponsoring Financier</option>
+        <option>Sponsoring échange marchandise</option>
+        <option>Mécénat Financier</option>
+        <option>Mécénat de compétence</option>
+      </select>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <div><label class="input-lbl">Secteur</label><input id="af-secteur" class="input" type="text"></div>
         <div><label class="input-lbl">SIRET</label><div style="display:flex;gap:6px;"><input id="af-siret" class="input" type="text"><button type="button" class="btn ghost" style="white-space:nowrap;padding:0 10px;" onclick="lookupAfSiret()">📡 Auto</button></div></div>
@@ -1077,7 +1085,7 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 <script>
 // =============================================================================
-//  PILOTE ADMIN V14 — Spacer's Business Club  (+ completion secteurs SIREN)
+//  PILOTE ADMIN V15 — Spacer's Business Club  (+ type de partenariat)
 // =============================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -2838,6 +2846,7 @@ async function openAdminFiche(partenaireId) {
     const f = data.fiche || {};
     $('af-raison').textContent = f.raison_sociale || 'Fiche partenaire';
     afSet('af-raison-in', f.raison_sociale); afSet('af-secteur', f.secteur); afSet('af-siret', f.siret);
+    afSetType(f.type_partenariat);
     afSet('af-email', f.email_societe); afSet('af-web', f.site_web); afSet('af-adresse', f.adresse);
     afSet('af-cp', f.code_postal); afSet('af-ville', f.ville);
     afSet('af-resp', f.representant); afSet('af-resp-fonction', f.representant_fonction);
@@ -2847,6 +2856,16 @@ async function openAdminFiche(partenaireId) {
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); closeAdminFiche(); }
 }
 function closeAdminFiche() { $('modal-admin-fiche').hidden = true; AF_PARTENAIRE_ID = null; }
+function afSetType(v) {
+  // Mappe les anciennes valeurs ("Echange", "Sponsoring financier"…) vers les 4 options officielles
+  const s = (v || '').toLowerCase(); const sel = $('af-type'); if (!sel) return;
+  let target = '';
+  if (s.includes('compétence') || s.includes('competence')) target = 'Mécénat de compétence';
+  else if (s.includes('mécén') || s.includes('mecen')) target = 'Mécénat Financier';
+  else if (s.includes('échange') || s.includes('echange') || s.includes('marchandise')) target = 'Sponsoring échange marchandise';
+  else if (s.includes('sponsor') || s.includes('financ')) target = 'Sponsoring Financier';
+  sel.value = target;
+}
 function afSet(id, v) { const el = $(id); if (el) el.value = v || ''; }
 function afVal(id) { const el = $(id); return el ? el.value.trim() : ''; }
 function afImg(id, src, fb, round) { const el = $(id); if (!el) return; el.innerHTML = src ? `<img src="${src}" style="width:100%;height:100%;object-fit:${round ? 'cover' : 'contain'};">` : fb; }
@@ -2876,6 +2895,7 @@ async function saveAdminFiche() {
   const btn = $('af-save-btn'); const status = $('af-status');
   const payload = {
     raison_sociale: afVal('af-raison-in'), secteur: afVal('af-secteur'), siret: afVal('af-siret'),
+    type_partenariat: ($('af-type') ? $('af-type').value : ''),
     email_societe: afVal('af-email'), site_web: afVal('af-web'), adresse: afVal('af-adresse'),
     code_postal: afVal('af-cp'), ville: afVal('af-ville'),
     representant: afVal('af-resp'), representant_fonction: afVal('af-resp-fonction'),
