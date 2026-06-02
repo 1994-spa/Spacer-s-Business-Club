@@ -4431,7 +4431,7 @@ async function handlePartnerSocialFeed(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('social_posts',
-    `visible=eq.true&order=published_at.desc&limit=12&select=id,source,url,contenu,image_b64,image_url,auteur,published_at`,
+    `visible=eq.true&order=published_at.desc&limit=50&select=id,source,url,contenu,image_b64,image_url,auteur,published_at`,
     env);
   const posts = (rows || []).map(p => ({
     id: p.id,
