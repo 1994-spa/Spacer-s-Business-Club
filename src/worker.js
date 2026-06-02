@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.30-secteurs (+ complétion en masse des secteurs via SIREN)
+ * Spacers Business Club — Worker V4.32-secteurs (+ 4 types de partenariat editables)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -2804,7 +2804,7 @@ async function handleAdminPartenaireFicheGet(token, partenaireId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `id=eq.${partenaireId}&select=id,raison_sociale,siren,siret,secteur,adresse,code_postal,ville,site_web,email_societe,logo_b64,niveau,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&limit=1`,
+    `id=eq.${partenaireId}&select=id,raison_sociale,siren,siret,secteur,adresse,code_postal,ville,site_web,email_societe,logo_b64,niveau,type_partenariat,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&limit=1`,
     env);
   if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Partenaire introuvable' }, 404);
   return jsonResponseNoCache({ fiche: rows[0] });
@@ -2823,6 +2823,7 @@ async function handleAdminPartenaireFicheUpdate(token, partenaireId, body, env) 
     email_societe: str(body.email_societe, 200),
     siret: str(body.siret, 20),
     siren: str(body.siren, 20),
+    type_partenariat: str(body.type_partenariat, 60),
     representant: str(body.representant, 160),
     representant_fonction: str(body.representant_fonction, 160),
     representant_email: str(body.representant_email, 200),
@@ -4291,13 +4292,14 @@ async function handlePartnerAnnuaire(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `select=id,raison_sociale,secteur,ville,adresse,site_web,email_societe,logo_b64,niveau,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&order=raison_sociale.asc&limit=500`,
+    `select=id,raison_sociale,secteur,ville,adresse,site_web,email_societe,logo_b64,niveau,type_partenariat,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&order=raison_sociale.asc&limit=500`,
     env);
   const fiches = (rows || []).map(p => ({
     id: p.id,
     is_mine: p.id === partner.partenaire_id,
     raison_sociale: p.raison_sociale || '',
     secteur: p.secteur || '',
+    type_partenariat: p.type_partenariat || '',
     ville: p.ville || '',
     adresse: p.adresse || '',
     site_web: p.site_web || '',
