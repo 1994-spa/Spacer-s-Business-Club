@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.34-tickie (rencontres + allocations places VIP, push Tickie stub)
+ * Spacers Business Club — Worker V4.35-annuaire (profils enrichis: taille, LinkedIn, expertise/tags)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -4315,16 +4315,19 @@ async function handlePartnerAnnuaire(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `interne=eq.false&select=id,raison_sociale,secteur,ville,adresse,site_web,email_societe,logo_b64,niveau,type_partenariat,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&order=raison_sociale.asc&limit=500`,
+    `interne=eq.false&select=id,raison_sociale,secteur,taille,ville,adresse,code_postal,site_web,email_societe,logo_b64,niveau,type_partenariat,expertise,representant,representant_fonction,representant_email,representant_tel,representant_linkedin,representant_photo_b64&order=raison_sociale.asc&limit=500`,
     env);
   const fiches = (rows || []).map(p => ({
     id: p.id,
     is_mine: p.id === partner.partenaire_id,
     raison_sociale: p.raison_sociale || '',
     secteur: p.secteur || '',
+    taille: p.taille || '',
     type_partenariat: p.type_partenariat || '',
+    expertise: p.expertise || '',
     ville: p.ville || '',
     adresse: p.adresse || '',
+    code_postal: p.code_postal || '',
     site_web: p.site_web || '',
     email_societe: p.email_societe || '',
     logo_b64: p.logo_b64 || null,
@@ -4333,6 +4336,7 @@ async function handlePartnerAnnuaire(token, env) {
     representant_fonction: p.representant_fonction || '',
     representant_email: p.representant_email || '',
     representant_tel: p.representant_tel || '',
+    representant_linkedin: p.representant_linkedin || '',
     representant_photo_b64: p.representant_photo_b64 || null,
   }));
   return jsonResponseNoCache({ fiches, count: fiches.length });
@@ -4342,7 +4346,7 @@ async function handlePartnerFicheGet(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `id=eq.${partner.partenaire_id}&select=id,raison_sociale,siren,siret,secteur,adresse,code_postal,ville,site_web,email_societe,logo_b64,niveau,representant,representant_fonction,representant_email,representant_tel,representant_photo_b64&limit=1`,
+    `id=eq.${partner.partenaire_id}&select=id,raison_sociale,siren,siret,secteur,taille,adresse,code_postal,ville,site_web,email_societe,logo_b64,niveau,expertise,representant,representant_fonction,representant_email,representant_tel,representant_linkedin,representant_photo_b64&limit=1`,
     env);
   if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Fiche introuvable' }, 404);
   return jsonResponseNoCache({ fiche: rows[0] });
@@ -4354,16 +4358,19 @@ async function handlePartnerFicheUpdate(token, body, env) {
   const str = (v, max) => { const s = (v == null ? '' : String(v)).trim(); return s ? s.slice(0, max || 300) : null; };
   const patch = {
     secteur: str(body.secteur, 120),
+    taille: str(body.taille, 40),
     adresse: str(body.adresse, 300),
     code_postal: str(body.code_postal, 20),
     ville: str(body.ville, 120),
     site_web: str(body.site_web, 300),
     email_societe: str(body.email_societe, 200),
     siret: str(body.siret, 20),
+    expertise: str(body.expertise, 500),
     representant: str(body.representant, 160),
     representant_fonction: str(body.representant_fonction, 160),
     representant_email: str(body.representant_email, 200),
     representant_tel: str(body.representant_tel, 40),
+    representant_linkedin: str(body.representant_linkedin, 300),
   };
   // Images : ne toucher que si le champ est fourni (string = nouvelle/actuelle, null = effacer)
   if (body.logo_b64 !== undefined) patch.logo_b64 = body.logo_b64 ? String(body.logo_b64).slice(0, 1500000) : null;
