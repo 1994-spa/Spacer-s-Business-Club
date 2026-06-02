@@ -491,6 +491,19 @@
     <div id="annuaire-map-info" style="font-size:11px;color:var(--ink-muted);margin-top:6px;"></div>
   </section>
 
+  <!-- SUCCESS STORIES -->
+  <section class="fade-in delay-3" id="stories-section">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+      <div>
+        <h3 class="display">Success <em>stories</em></h3>
+        <p class="section-desc">Les deals nés du réseau — partagez les vôtres</p>
+      </div>
+      <button onclick="openStoryModal()" style="background:var(--ink);color:var(--gold);border:none;border-radius:12px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">✎ Partager une réussite</button>
+    </div>
+    <div id="stories-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px;"></div>
+    <div id="stories-mine"></div>
+  </section>
+
   <!-- CONTACT -->
   <section class="fade-in delay-3">
     <h3 class="display">Mon <em>contact club</em></h3>
@@ -789,10 +802,33 @@
   </div>
 </div>
 
+<style>
+  #story-modal .story-lbl { font-size:12px; color:var(--ink-soft); font-weight:600; display:block; margin:10px 0 4px; }
+  #story-modal .story-in { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; box-sizing:border-box; }
+</style>
+<div id="story-modal" class="modal" hidden onclick="if(event.target.id==='story-modal')closeStoryModal()">
+  <div class="modal-card" style="text-align:left;max-width:460px;">
+    <div class="modal-eyebrow">Success story</div>
+    <h3 style="font-size:22px;text-align:center;">Partager une réussite</h3>
+    <p style="text-align:center;">Un deal, une collaboration née du réseau ? Racontez-la — elle sera validée par le club avant publication.</p>
+    <label class="story-lbl">Titre *</label>
+    <input id="story-titre" class="story-in" placeholder="ex. Nouveau contrat signé grâce au club">
+    <label class="story-lbl">Votre témoignage *</label>
+    <textarea id="story-temoignage" rows="4" class="story-in" placeholder="Ce que la mise en relation vous a apporté…"></textarea>
+    <label class="story-lbl">Partenaire concerné (optionnel)</label>
+    <select id="story-cible" class="story-in"><option value="">— Aucun / autre —</option></select>
+    <label class="story-lbl">Volume d'affaires en € (optionnel)</label>
+    <input id="story-montant" class="story-in" inputmode="numeric" placeholder="ex. 12000">
+    <div id="story-status" style="font-size:13px;margin:10px 0 0;text-align:center;"></div>
+    <button id="story-send-btn" class="btn" onclick="submitStory()" style="width:100%;margin-top:12px;justify-content:center;">Envoyer au club</button>
+    <button onclick="closeStoryModal()" style="width:100%;margin-top:8px;background:none;border:none;color:var(--ink-muted);font-size:13px;cursor:pointer;font-family:inherit;padding:8px;">Annuler</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // =========================================================================
-//  Spacer's Business Club — PWA partenaire V10 (suggestions + demande de mise en relation)
+//  Spacer's Business Club — PWA partenaire V11 (success stories : showcase + soumission)
 // =========================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -994,6 +1030,7 @@ function renderDashboard(data) {
   loadSocialFeed();
   loadPartnerCommunications();
   loadPlaces();
+  loadStories();
 }
 
 // =========================================================================
@@ -2123,6 +2160,79 @@ async function submitIntroRequest() {
     renderSuggestions(); renderAnnuaire();
   } catch (e) { if (status) { status.textContent = '❌ ' + e.message; status.style.color = 'var(--red)'; } }
   finally { btn.disabled = false; btn.textContent = 'Envoyer la demande au club'; }
+}
+
+// ---- Success stories ----
+let STORIES_PUBLISHED = [], STORIES_MINE = [], STORY_REALIZED = [];
+
+async function loadStories() {
+  if (!MAGIC_TOKEN) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/success-stories`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    STORIES_PUBLISHED = data.published || []; STORIES_MINE = data.mine || []; STORY_REALIZED = data.realized_partners || [];
+  } catch (_) { STORIES_PUBLISHED = []; STORIES_MINE = []; STORY_REALIZED = []; }
+  renderStories();
+}
+
+function fmtMontant(n) { return n != null ? new Intl.NumberFormat('fr-FR').format(n) + ' €' : ''; }
+
+function renderStories() {
+  const list = $('stories-list'); if (!list) return;
+  if (!STORIES_PUBLISHED.length) {
+    list.innerHTML = `<div style="grid-column:1/-1;color:var(--ink-muted);font-size:13px;padding:18px;border:1px dashed var(--line);border-radius:14px;text-align:center;">Aucune réussite publiée pour l'instant. Soyez le premier à partager la vôtre ✨</div>`;
+  } else {
+    list.innerHTML = STORIES_PUBLISHED.map(s => {
+      const who = s.demandeur ? escapeHtml(s.demandeur.raison_sociale) : '';
+      const via = s.cible ? ` <span style="color:var(--gold);">↔</span> ${escapeHtml(s.cible.raison_sociale)}` : '';
+      return `
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;">
+          <div style="font-size:30px;line-height:.6;color:var(--gold);font-family:'Fraunces',serif;">“</div>
+          <div style="font-family:'Fraunces',serif;font-size:15px;color:var(--ink);margin-bottom:6px;">${escapeHtml(s.titre)}</div>
+          <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;">${escapeHtml(s.temoignage)}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);">
+            <div style="font-size:11px;color:var(--ink-muted);font-weight:600;">${who}${via}</div>
+            ${s.montant != null ? `<span class="annu-tag">💶 ${escapeHtml(fmtMontant(s.montant))}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+  const mine = $('stories-mine');
+  if (mine) {
+    const pending = STORIES_MINE.filter(s => s.statut === 'en_attente');
+    mine.innerHTML = pending.length
+      ? `<div style="font-size:12px;color:var(--ink-muted);margin-top:10px;">⏳ ${pending.length} de vos réussite(s) en attente de validation par le club.</div>` : '';
+  }
+}
+
+function openStoryModal() {
+  if (!MAGIC_TOKEN) return showToast('Session expirée — reconnectez-vous', 'error');
+  const sel = $('story-cible');
+  if (sel) sel.innerHTML = `<option value="">— Aucun / autre —</option>` + STORY_REALIZED.map(p => `<option value="${p.id}">${escapeHtml(p.raison_sociale)}</option>`).join('');
+  ['story-titre', 'story-temoignage', 'story-montant'].forEach(id => { const e = $(id); if (e) e.value = ''; });
+  const st = $('story-status'); if (st) st.textContent = '';
+  $('story-modal').hidden = false;
+}
+function closeStoryModal() { $('story-modal').hidden = true; }
+
+async function submitStory() {
+  if (!MAGIC_TOKEN) return;
+  const btn = $('story-send-btn'), status = $('story-status');
+  const titre = ($('story-titre') ? $('story-titre').value : ''), temoignage = ($('story-temoignage') ? $('story-temoignage').value : '');
+  if (!titre.trim() || !temoignage.trim()) { if (status) { status.textContent = '❌ Titre et témoignage requis'; status.style.color = 'var(--red)'; } return; }
+  btn.disabled = true; btn.textContent = '⏳ Envoi…';
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/success-story`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titre, temoignage, cible_partenaire_id: ($('story-cible') ? $('story-cible').value : ''), montant: ($('story-montant') ? $('story-montant').value : '') })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Réussite envoyée au club pour validation', 'success');
+    closeStoryModal(); loadStories();
+  } catch (e) { if (status) { status.textContent = '❌ ' + e.message; status.style.color = 'var(--red)'; } }
+  finally { btn.disabled = false; btn.textContent = 'Envoyer au club'; }
 }
 
 async function openFicheModal() {
