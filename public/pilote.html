@@ -464,6 +464,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">🤝</span><span class="label">Mises en relation</span>
         <span class="badge" id="sb-badge-intros" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="stories" onclick="switchTab('stories')">
+        <span class="ico">🏆</span><span class="label">Success stories</span>
+        <span class="badge" id="sb-badge-stories" hidden>0</span>
+      </button>
     </nav>
 
     <div class="sb-admin">
@@ -722,6 +726,25 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
       </div>
       <div id="rel-list" class="list"><div class="list-empty">Chargement…</div></div>
+    </section>
+
+    <section id="tab-stories" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Success <em>stories</em></h1>
+          <p class="desc">Témoignages des partenaires — validez avant publication dans l'appli</p>
+        </div>
+        <button class="refresh-btn" onclick="loadStories(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+      </div>
+      <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
+        <div class="segs" id="story-statut-segs">
+          <button class="seg on" data-statut="all" onclick="setStoryStatutFilter('all',this)">Toutes <span class="count" id="cnt-story-all">·</span></button>
+          <button class="seg warn" data-statut="en_attente" onclick="setStoryStatutFilter('en_attente',this)">En attente <span class="count" id="cnt-story-attente">·</span></button>
+          <button class="seg success" data-statut="publiee" onclick="setStoryStatutFilter('publiee',this)">Publiées</button>
+          <button class="seg danger" data-statut="refusee" onclick="setStoryStatutFilter('refusee',this)">Refusées</button>
+        </div>
+      </div>
+      <div id="story-list" class="list"><div class="list-empty">Chargement…</div></div>
     </section>
 
   </main>
@@ -1477,6 +1500,7 @@ function switchTab(tab) {
   if (tab === 'actus' && SOCIAL_CACHE.length === 0) loadSocialPosts();
   if (tab === 'tickie' && RENCONTRES_CACHE.length === 0) loadRencontres();
   if (tab === 'relations' && RELATIONS_CACHE.length === 0) loadRelations();
+  if (tab === 'stories' && STORIES_CACHE.length === 0) loadStories();
 }
 
 // ============================================================================
@@ -1577,6 +1601,93 @@ async function relNote(id) {
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('✓ Note enregistrée', 'success');
     loadRelations(true);
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
+}
+
+// ============================================================================
+//  SUCCESS STORIES (modération)
+// ============================================================================
+let STORIES_CACHE = [];
+let CURRENT_STORY_STATUT = 'all';
+const STORY_LABEL = { en_attente: 'En attente', publiee: 'Publiée', refusee: 'Refusée' };
+const STORY_TONE = { en_attente: 'warn', publiee: 'success', refusee: 'danger' };
+const STORY_BORDER = { en_attente: 'attente', publiee: 'publie', refusee: 'refuse' };
+const STORY_BTN = 'padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);';
+
+function fmtEuro(n) { return n != null ? new Intl.NumberFormat('fr-FR').format(n) + ' €' : ''; }
+
+async function loadStories(force) {
+  const listEl = $('story-list');
+  if (force) listEl.innerHTML = '<div class="list-empty">Chargement…</div>';
+  try {
+    const res = await fetch(`/api/admin/success-stories/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    STORIES_CACHE = data.stories || [];
+  } catch (e) { listEl.innerHTML = `<div class="list-empty"><h3>Erreur</h3><p>${escapeHtml(e.message)}</p></div>`; return; }
+  const cAll = STORIES_CACHE.length, cAtt = STORIES_CACHE.filter(s => s.statut === 'en_attente').length;
+  const eAll = $('cnt-story-all'), eAtt = $('cnt-story-attente'); if (eAll) eAll.textContent = cAll; if (eAtt) eAtt.textContent = cAtt;
+  const badge = $('sb-badge-stories'); if (badge) { if (cAtt > 0) { badge.textContent = cAtt; badge.hidden = false; } else badge.hidden = true; }
+  renderStories();
+}
+
+function setStoryStatutFilter(s, btn) {
+  CURRENT_STORY_STATUT = s;
+  document.querySelectorAll('#story-statut-segs .seg').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  renderStories();
+}
+
+function renderStories() {
+  const listEl = $('story-list');
+  let list = STORIES_CACHE;
+  if (CURRENT_STORY_STATUT !== 'all') list = list.filter(s => s.statut === CURRENT_STORY_STATUT);
+  if (!list.length) { listEl.innerHTML = `<div class="list-empty"><h3>Aucune réussite</h3><p>${CURRENT_STORY_STATUT === 'en_attente' ? 'Aucune en attente — tout est traité ✓' : 'Aucune pour ce filtre.'}</p></div>`; return; }
+  listEl.innerHTML = list.map(s => {
+    const tone = STORY_TONE[s.statut] || '', label = STORY_LABEL[s.statut] || s.statut;
+    const d = s.demandeur || {}, c = s.cible;
+    return `
+      <div class="offre-row ${STORY_BORDER[s.statut] || ''}">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            <span style="font-size:11px;color:var(--ink-muted);">Reçue ${formatRelative(s.created_at)}</span>
+            ${s.montant != null ? `<span class="tag">💶 ${escapeHtml(fmtEuro(s.montant))}</span>` : ''}
+          </div>
+          <div class="offre-titre">${escapeHtml(s.titre)}</div>
+          <div style="margin-top:6px;font-style:italic;color:var(--ink-soft);">« ${escapeHtml(s.temoignage)} »</div>
+          <div class="offre-meta" style="margin-top:8px;">${escapeHtml(d.raison_sociale || '?')}${c ? ` <span style="color:var(--gold);">↔</span> ${escapeHtml(c.raison_sociale)}` : ''}</div>
+          ${s.note_admin ? `<div style="margin-top:6px;font-size:12px;color:var(--ink-muted);">Note : ${escapeHtml(s.note_admin)}</div>` : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+            <button style="${STORY_BTN}" onclick="storyAction('${s.id}','publiee')">✓ Publier</button>
+            <button style="${STORY_BTN}" onclick="storyAction('${s.id}','refusee')">✕ Refuser</button>
+            <button style="${STORY_BTN}" onclick="storyAction('${s.id}','en_attente')">↩ En attente</button>
+            <button style="${STORY_BTN}" onclick="storyNote('${s.id}')">✎ Note</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function storyAction(id, statut) {
+  try {
+    const res = await fetch(`/api/admin/success-story/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut })
+    });
+    const data = await res.json(); if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Mis à jour', 'success'); loadStories(true);
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
+}
+
+async function storyNote(id) {
+  const rec = STORIES_CACHE.find(s => s.id === id) || {};
+  const note = prompt('Note interne :', rec.note_admin || ''); if (note === null) return;
+  try {
+    const res = await fetch(`/api/admin/success-story/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note_admin: note })
+    });
+    const data = await res.json(); if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Note enregistrée', 'success'); loadStories(true);
   } catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
 
