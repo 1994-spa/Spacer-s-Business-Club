@@ -455,6 +455,10 @@
       </div>
       <button onclick="openFicheModal()" style="background:var(--ink);color:var(--gold-soft);border:none;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;">✎ Ma fiche</button>
     </div>
+    <div id="suggestions-block" style="display:none;margin-top:14px;">
+      <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:8px;">À découvrir · suggestions de mise en relation</div>
+      <div id="suggestions-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;"></div>
+    </div>
     <style>
       .annu-filter { padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:12.5px; font-family:inherit; background:#fff; color:var(--ink); cursor:pointer; }
       .annu-reset { padding:8px 12px; border:1px solid var(--line); border-radius:10px; font-size:12.5px; font-family:inherit; background:var(--bg-soft); color:var(--ink-soft); cursor:pointer; }
@@ -772,10 +776,23 @@
   </div>
 </div>
 
+<div id="intro-modal" class="modal" hidden onclick="if(event.target.id==='intro-modal')closeIntroModal()">
+  <div class="modal-card" style="text-align:left;">
+    <div class="modal-eyebrow">Mise en relation</div>
+    <h3 style="font-size:22px;text-align:center;">Demander une intro</h3>
+    <p style="text-align:center;">Le club te présentera à <b id="intro-cible-name">—</b> — une mise en relation chaleureuse, pas du démarchage à froid.</p>
+    <label style="font-size:12px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:4px;">Message au club (optionnel)</label>
+    <textarea id="intro-message" rows="3" placeholder="Pourquoi aimerais-tu être mis en relation ?" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></textarea>
+    <div id="intro-status" style="font-size:13px;margin:10px 0 0;text-align:center;"></div>
+    <button id="intro-send-btn" class="btn" onclick="submitIntroRequest()" style="width:100%;margin-top:12px;justify-content:center;">Envoyer la demande au club</button>
+    <button onclick="closeIntroModal()" style="width:100%;margin-top:8px;background:none;border:none;color:var(--ink-muted);font-size:13px;cursor:pointer;font-family:inherit;padding:8px;">Annuler</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // =========================================================================
-//  Spacer's Business Club — PWA partenaire V9 (annuaire: carte sur coordonnées stockées + clustering)
+//  Spacer's Business Club — PWA partenaire V10 (suggestions + demande de mise en relation)
 // =========================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -1880,7 +1897,9 @@ async function loadAnnuaire() {
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     ANNUAIRE_DATA = data.fiches || [];
     populateAnnuaireFilters();
+    await loadMesIntros();
     renderAnnuaire();
+    loadSuggestions();
   } catch (e) {
     console.warn('loadAnnuaire error:', e.message);
     const el = $('annuaire-list');
@@ -1944,6 +1963,9 @@ function renderAnnuaire() {
         </div>
         ${f.expertise ? `<div style="margin-top:8px;">${f.expertise.split(',').map(t => t.trim()).filter(Boolean).slice(0, 8).map(t => `<span class="annu-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
         ${resp}
+        ${f.is_mine ? '' : (MES_INTROS.has(f.id)
+          ? `<div style="margin-top:12px;font-size:12px;color:var(--ink-muted);text-align:center;">✓ Mise en relation demandée</div>`
+          : `<button onclick="openIntroModal('${f.id}')" style="margin-top:12px;width:100%;padding:9px;border:1px solid var(--gold);background:var(--gold-tint);color:var(--ink);border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">🤝 Demander une mise en relation</button>`)}
       </div>`;
   }).join('');
 }
@@ -2022,6 +2044,85 @@ function renderAnnuaireMap(list) {
   });
   if (info) info.textContent = missing ? `${placed} sur la carte · ${missing} adresse(s) pas encore géolocalisée(s)` : (placed ? `${placed} sur la carte` : 'Aucune adresse géolocalisée pour le moment.');
   if (pts.length) { try { ANNU_MAP.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch (_) { } }
+}
+
+// ---- Mise en relation (networking) ----
+let SUGGESTIONS = [];
+let MES_INTROS = new Set();
+let INTRO_TARGET = null;
+
+async function loadMesIntros() {
+  if (!MAGIC_TOKEN) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/mes-intros`);
+    const data = await res.json();
+    if (res.ok && Array.isArray(data.intros)) MES_INTROS = new Set(data.intros.map(i => i.cible_partenaire_id));
+  } catch (_) { }
+}
+
+async function loadSuggestions() {
+  if (!MAGIC_TOKEN) return;
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/suggestions`);
+    const data = await res.json();
+    SUGGESTIONS = (res.ok && data.suggestions) ? data.suggestions : [];
+  } catch (_) { SUGGESTIONS = []; }
+  renderSuggestions();
+}
+
+function renderSuggestions() {
+  const block = $('suggestions-block'), list = $('suggestions-list');
+  if (!block || !list) return;
+  const items = SUGGESTIONS.filter(s => !MES_INTROS.has(s.id));
+  if (!items.length) { block.style.display = 'none'; return; }
+  block.style.display = 'block';
+  list.innerHTML = items.map(s => {
+    const logo = s.logo_b64
+      ? `<img src="${escapeHtml(s.logo_b64)}" alt="" style="width:40px;height:40px;border-radius:9px;object-fit:contain;background:#fff;border:1px solid var(--line);">`
+      : `<div style="width:40px;height:40px;border-radius:9px;background:var(--gold-tint);display:grid;place-items:center;font-size:18px;">🏢</div>`;
+    return `
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;">
+        <div style="display:flex;gap:10px;align-items:center;">
+          ${logo}
+          <div style="min-width:0;flex:1;">
+            <div style="font-family:'Fraunces',serif;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.raison_sociale)}</div>
+            ${s.secteur ? `<div style="font-size:10px;color:var(--ink-muted);">${escapeHtml(s.secteur)}</div>` : ''}
+          </div>
+        </div>
+        <div style="margin-top:8px;"><span class="annu-tag">✨ ${escapeHtml(s.reason)}</span></div>
+        <button onclick="openIntroModal('${s.id}')" style="margin-top:10px;width:100%;padding:8px;border:1px solid var(--gold);background:var(--gold-tint);color:var(--ink);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🤝 Demander une intro</button>
+      </div>`;
+  }).join('');
+}
+
+function openIntroModal(id) {
+  if (!MAGIC_TOKEN) return showToast('Session expirée — reconnectez-vous', 'error');
+  const f = ANNUAIRE_DATA.find(x => x.id === id) || SUGGESTIONS.find(x => x.id === id) || {};
+  INTRO_TARGET = id;
+  const n = $('intro-cible-name'); if (n) n.textContent = f.raison_sociale || 'ce partenaire';
+  const m = $('intro-message'); if (m) m.value = '';
+  const s = $('intro-status'); if (s) s.textContent = '';
+  $('intro-modal').hidden = false;
+}
+function closeIntroModal() { $('intro-modal').hidden = true; }
+
+async function submitIntroRequest() {
+  if (!MAGIC_TOKEN || !INTRO_TARGET) return;
+  const btn = $('intro-send-btn'), status = $('intro-status');
+  btn.disabled = true; btn.textContent = '⏳ Envoi…';
+  try {
+    const res = await fetch(`/api/partner/${encodeURIComponent(MAGIC_TOKEN)}/intro-request`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cible_partenaire_id: INTRO_TARGET, message: ($('intro-message') ? $('intro-message').value : '') }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    MES_INTROS.add(INTRO_TARGET);
+    showToast('✓ Demande transmise au club', 'success');
+    closeIntroModal();
+    renderSuggestions(); renderAnnuaire();
+  } catch (e) { if (status) { status.textContent = '❌ ' + e.message; status.style.color = 'var(--red)'; } }
+  finally { btn.disabled = false; btn.textContent = 'Envoyer la demande au club'; }
 }
 
 async function openFicheModal() {
