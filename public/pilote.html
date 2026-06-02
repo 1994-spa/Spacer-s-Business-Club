@@ -460,6 +460,10 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">⌬</span><span class="label">Rencontres</span>
         <span class="badge" id="sb-badge-renc-ouverte" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="relations" onclick="switchTab('relations')">
+        <span class="ico">🤝</span><span class="label">Mises en relation</span>
+        <span class="badge" id="sb-badge-intros" hidden>0</span>
+      </button>
     </nav>
 
     <div class="sb-admin">
@@ -698,6 +702,26 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
       </div>
       <div id="actus-list" class="list"><div class="list-empty">Chargement…</div></div>
+    </section>
+
+    <section id="tab-relations" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Mises en <em>relation</em></h1>
+          <p class="desc">Demandes des partenaires — réalise l'intro et suis le statut</p>
+        </div>
+        <button class="refresh-btn" onclick="loadRelations(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
+      </div>
+      <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
+        <div class="segs" id="rel-statut-segs">
+          <button class="seg on" data-statut="all" onclick="setRelStatutFilter('all',this)">Toutes <span class="count" id="cnt-rel-all">·</span></button>
+          <button class="seg warn" data-statut="nouvelle" onclick="setRelStatutFilter('nouvelle',this)">Nouvelles <span class="count" id="cnt-rel-nouvelle">·</span></button>
+          <button class="seg" data-statut="en_cours" onclick="setRelStatutFilter('en_cours',this)">En cours</button>
+          <button class="seg success" data-statut="realisee" onclick="setRelStatutFilter('realisee',this)">Réalisées</button>
+          <button class="seg danger" data-statut="refusee" onclick="setRelStatutFilter('refusee',this)">Refusées</button>
+        </div>
+      </div>
+      <div id="rel-list" class="list"><div class="list-empty">Chargement…</div></div>
     </section>
 
   </main>
@@ -1452,6 +1476,108 @@ function switchTab(tab) {
   if (tab === 'invitations' && INVS_CACHE.length === 0) loadInvitations();
   if (tab === 'actus' && SOCIAL_CACHE.length === 0) loadSocialPosts();
   if (tab === 'tickie' && RENCONTRES_CACHE.length === 0) loadRencontres();
+  if (tab === 'relations' && RELATIONS_CACHE.length === 0) loadRelations();
+}
+
+// ============================================================================
+//  MISES EN RELATION (networking)
+// ============================================================================
+let RELATIONS_CACHE = [];
+let CURRENT_REL_STATUT = 'all';
+const REL_LABEL = { nouvelle: 'Nouvelle', en_cours: 'En cours', realisee: 'Réalisée', refusee: 'Refusée' };
+const REL_TONE = { nouvelle: 'warn', en_cours: '', realisee: 'success', refusee: 'danger' };
+const REL_BORDER = { nouvelle: 'attente', en_cours: '', realisee: 'publie', refusee: 'refuse' };
+const REL_BTN = 'padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);';
+
+async function loadRelations(force) {
+  const listEl = $('rel-list');
+  if (force) listEl.innerHTML = '<div class="list-empty">Chargement…</div>';
+  try {
+    const res = await fetch(`/api/admin/intros/${encodeURIComponent(ADMIN_TOKEN)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    RELATIONS_CACHE = data.intros || [];
+  } catch (e) {
+    listEl.innerHTML = `<div class="list-empty"><h3>Erreur</h3><p>${escapeHtml(e.message)}</p></div>`;
+    return;
+  }
+  const cAll = RELATIONS_CACHE.length, cNew = RELATIONS_CACHE.filter(r => r.statut === 'nouvelle').length;
+  const eAll = $('cnt-rel-all'), eNew = $('cnt-rel-nouvelle'); if (eAll) eAll.textContent = cAll; if (eNew) eNew.textContent = cNew;
+  const badge = $('sb-badge-intros'); if (badge) { if (cNew > 0) { badge.textContent = cNew; badge.hidden = false; } else badge.hidden = true; }
+  renderRelations();
+}
+
+function setRelStatutFilter(s, btn) {
+  CURRENT_REL_STATUT = s;
+  document.querySelectorAll('#rel-statut-segs .seg').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  renderRelations();
+}
+
+function renderRelations() {
+  const listEl = $('rel-list');
+  let list = RELATIONS_CACHE;
+  if (CURRENT_REL_STATUT !== 'all') list = list.filter(r => r.statut === CURRENT_REL_STATUT);
+  if (!list.length) { listEl.innerHTML = `<div class="list-empty"><h3>Aucune demande</h3><p>${CURRENT_REL_STATUT === 'nouvelle' ? 'Aucune nouvelle demande — tout est traité ✓' : 'Aucune demande pour ce filtre.'}</p></div>`; return; }
+  const contact = (p) => [
+    p.representant ? escapeHtml(p.representant) : '',
+    p.representant_email ? `<a href="mailto:${encodeURIComponent(p.representant_email)}">${escapeHtml(p.representant_email)}</a>` : '',
+    p.representant_tel ? `<a href="tel:${escapeHtml((p.representant_tel || '').replace(/[^\d+]/g, ''))}">${escapeHtml(p.representant_tel)}</a>` : '',
+  ].filter(Boolean).join(' · ');
+  listEl.innerHTML = list.map(r => {
+    const tone = REL_TONE[r.statut] || '';
+    const label = REL_LABEL[r.statut] || r.statut;
+    const d = r.demandeur || {}, c = r.cible || {};
+    return `
+      <div class="offre-row ${REL_BORDER[r.statut] || ''}">
+        <div class="offre-main">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
+            <span style="font-size:11px;color:var(--ink-muted);">Reçue ${formatRelative(r.created_at)}</span>
+          </div>
+          <div class="offre-titre" style="font-size:15px;">${escapeHtml(d.raison_sociale || '?')} <span style="color:var(--gold);">→</span> ${escapeHtml(c.raison_sociale || '?')}</div>
+          <div class="offre-meta" style="margin-top:6px;line-height:1.7;">
+            <div><b>Demandeur :</b> ${contact(d) || '—'}</div>
+            <div><b>Cible :</b> ${contact(c) || '—'}</div>
+          </div>
+          ${r.message ? `<div style="margin-top:8px;font-style:italic;color:var(--ink-soft);">« ${escapeHtml(r.message)} »</div>` : ''}
+          ${r.note_admin ? `<div style="margin-top:6px;font-size:12px;color:var(--ink-muted);">Note : ${escapeHtml(r.note_admin)}</div>` : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+            <button style="${REL_BTN}" onclick="relAction('${r.id}','en_cours')">▶ En cours</button>
+            <button style="${REL_BTN}" onclick="relAction('${r.id}','realisee')">✓ Réalisée</button>
+            <button style="${REL_BTN}" onclick="relAction('${r.id}','refusee')">✕ Refuser</button>
+            <button style="${REL_BTN}" onclick="relNote('${r.id}')">✎ Note</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function relAction(id, statut) {
+  try {
+    const res = await fetch(`/api/admin/intro/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Statut mis à jour', 'success');
+    loadRelations(true);
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
+}
+
+async function relNote(id) {
+  const rec = RELATIONS_CACHE.find(r => r.id === id) || {};
+  const note = prompt('Note interne sur cette mise en relation :', rec.note_admin || '');
+  if (note === null) return;
+  try {
+    const res = await fetch(`/api/admin/intro/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note_admin: note })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('✓ Note enregistrée', 'success');
+    loadRelations(true);
+  } catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
 
 // ============================================================================
