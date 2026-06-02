@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.27-annuaire (Annuaire + auto-remplissage SIRET via API publique entreprises)
+ * Spacers Business Club — Worker V4.28-actus (Annuaire + SIRET + actualites LinkedIn du club)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -260,6 +260,13 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/fiche$/);
       if (m) return await handleAdminPartenaireFicheUpdate(m[1], m[2], body || {}, env);
 
+      // Admin — actualités du club (posts LinkedIn)
+      m = path.match(/^\/api\/admin\/social-posts\/([a-zA-Z0-9_-]{16,})$/);
+      if (m) return await handleAdminSocialUpsert(m[1], body || {}, env);
+
+      m = path.match(/^\/api\/admin\/social-post\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/delete$/);
+      if (m) return await handleAdminSocialDelete(m[1], m[2], env);
+
       // ===== Sprint E.4 — Confirmation d'activation partenaire =====
       if (path === '/api/partner/confirm-activation') {
         return await handlePartnerConfirmActivation(request, env);
@@ -342,6 +349,9 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/siret-lookup$/);
     if (m) return await handlePartnerSiretLookup(m[1], url.searchParams, env);
 
+    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/social-feed$/);
+    if (m) return await handlePartnerSocialFeed(m[1], env);
+
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponses$/);
     if (m) return await handlePartnerPublicationReponses(m[1], m[2], env);
 
@@ -389,6 +399,9 @@ async function handleApi(request, env, path, ctx) {
 
     m = path.match(/^\/api\/admin\/siret-lookup\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminSiretLookup(m[1], url.searchParams, env);
+
+    m = path.match(/^\/api\/admin\/social-posts\/([a-zA-Z0-9_-]{16,})$/);
+    if (m) return await handleAdminSocialList(m[1], env);
 
     m = path.match(/^\/api\/admin\/partenaire\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/contacts$/);
     if (m) return await handleAdminContactsList(m[1], m[2], env);
@@ -4406,6 +4419,75 @@ async function handleAdminSiretLookup(token, searchParams, env) {
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
   const out = await lookupSiret_(searchParams.get('q'), env);
   return jsonResponseNoCache(out, out.error ? 422 : 200);
+}
+
+// ============================================================================
+//  ACTUALITÉS DU CLUB (posts LinkedIn / réseaux sociaux)
+// ============================================================================
+async function handlePartnerSocialFeed(token, env) {
+  const partner = await authPartner_(token, env);
+  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
+  const rows = await supabaseQuery('social_posts',
+    `visible=eq.true&order=published_at.desc&limit=12&select=id,source,url,contenu,image_b64,image_url,auteur,published_at`,
+    env);
+  const posts = (rows || []).map(p => ({
+    id: p.id,
+    source: p.source || 'linkedin',
+    url: p.url || '',
+    contenu: p.contenu || '',
+    image: p.image_b64 || p.image_url || null,
+    auteur: p.auteur || 'Spacers Toulouse Volley',
+    published_at: p.published_at || null,
+  }));
+  return jsonResponseNoCache({ posts, count: posts.length });
+}
+
+async function handleAdminSocialList(token, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  const rows = await supabaseQuery('social_posts',
+    `order=published_at.desc&limit=300&select=id,source,url,contenu,image_b64,image_url,auteur,published_at,visible,created_at`,
+    env);
+  return jsonResponseNoCache({ posts: rows || [] });
+}
+
+async function handleAdminSocialUpsert(token, body, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  if (body.id && !/^[0-9a-f-]{36}$/i.test(String(body.id))) return jsonResponseNoCache({ error: 'id invalide' }, 400);
+  const str = (v, max) => { const s = (v == null ? '' : String(v)).trim(); return s ? s.slice(0, max || 5000) : null; };
+  const rec = {
+    source: str(body.source, 40) || 'linkedin',
+    url: str(body.url, 600),
+    contenu: str(body.contenu, 6000),
+    auteur: str(body.auteur, 160) || 'Spacers Toulouse Volley',
+    visible: body.visible === false ? false : true,
+  };
+  if (body.published_at) { const d = new Date(body.published_at); if (!isNaN(d.getTime())) rec.published_at = d.toISOString(); }
+  if (body.image_b64 !== undefined) rec.image_b64 = body.image_b64 ? String(body.image_b64).slice(0, 1500000) : null;
+  if (body.image_url !== undefined) rec.image_url = str(body.image_url, 600);
+  try {
+    if (body.id) {
+      await supabasePatch_('social_posts', `id=eq.${body.id}`, rec, env);
+      logAudit_(admin.id, 'social.update', 'social_posts', body.id, {}, env);
+      return jsonResponseNoCache({ ok: true, id: body.id });
+    }
+    if (!rec.published_at) rec.published_at = new Date().toISOString();
+    const created = await supabaseInsert_('social_posts', rec, env);
+    const id = Array.isArray(created) ? (created[0] && created[0].id) : (created && created.id);
+    logAudit_(admin.id, 'social.create', 'social_posts', id, {}, env);
+    return jsonResponseNoCache({ ok: true, id });
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur enregistrement', detail: e.message }, 500); }
+}
+
+async function handleAdminSocialDelete(token, id, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/social_posts?id=eq.${id}`, { method: 'DELETE', headers: supabaseHeaders(env) });
+    logAudit_(admin.id, 'social.delete', 'social_posts', id, {}, env);
+    return jsonResponseNoCache({ ok: true });
+  } catch (e) { return jsonResponseNoCache({ error: 'Erreur suppression', detail: e.message }, 500); }
 }
 
 async function handlePartnerBoard(token, queryParams, env) {
