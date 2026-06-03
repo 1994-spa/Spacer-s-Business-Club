@@ -1895,7 +1895,7 @@ function socialCard(p, src) {
     const txt = escapeHtml((p.contenu || '').slice(0, 90)).replace(/\n/g, ' ') + ((p.contenu || '').length > 90 ? '…' : '');
     return `
       <div class="news-card has-img">
-        <div class="nc-img"><img src="${escapeHtml(p.image)}" alt=""></div>
+        <div class="nc-img"><img src="${escapeHtml(p.image)}" alt="" onerror="this.parentElement.style.display='none'"></div>
         <div class="nc-body"><div class="nc-date">${date}</div><div class="nc-text">${txt}</div>${link}</div>
       </div>`;
   }
