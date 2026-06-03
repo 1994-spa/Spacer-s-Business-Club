@@ -828,7 +828,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // =========================================================================
-//  Spacer's Business Club — PWA partenaire V12 (onboarding guidé + success stories)
+//  Spacer's Business Club — PWA partenaire V13 (onboarding pédagogique : accueil + visite + checklist)
 // =========================================================================
 
 const $ = (id) => document.getElementById(id);
@@ -1031,7 +1031,7 @@ function renderDashboard(data) {
   loadPartnerCommunications();
   loadPlaces();
   loadStories();
-  initTour(PARTNER_TOUR_STEPS, 'bc_tour_partner_v1');
+  onbInit();
 }
 
 // =========================================================================
@@ -1237,22 +1237,19 @@ async function injectLogoutButton() {
     document.body.appendChild(badge);
   }
 
-  // 8. Toast bienvenue à la 1ère connexion (flag localStorage)
+  // 8. Astuce admin (bascule de rôle) — une seule fois, jamais en même temps que l'accueil guidé
   try {
-    const seen = localStorage.getItem('bc_welcome_seen_partner');
-    if (!seen) {
+    let onbSeen = false; try { onbSeen = !!JSON.parse(localStorage.getItem('bc_onb_partner_v2') || '{}').welcomeSeen; } catch (_) { }
+    if (roles.is_admin && onbSeen && !localStorage.getItem('bc_welcome_seen_partner')) {
       setTimeout(() => {
         const toast = document.createElement('div');
         toast.id = 'welcome-toast';
-        toast.innerHTML = `<strong>Bienvenue ${escapeHtml(roles.prenom || '')} ✦</strong><br>${roles.is_admin ? 'Vous pouvez basculer entre votre espace partenaire et le pilote admin via l\'avatar en haut à droite.' : 'Voici votre espace partenaire dédié.'}`;
+        toast.innerHTML = `<strong>Astuce ✦</strong><br>Basculez entre votre espace partenaire et le Pilote admin via l'avatar en haut à droite.`;
         document.body.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
-        setTimeout(() => {
-          toast.classList.remove('show');
-          setTimeout(() => toast.remove(), 400);
-        }, 6500);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 6500);
         localStorage.setItem('bc_welcome_seen_partner', '1');
-      }, 800);
+      }, 1000);
     }
   } catch (_) {}
 }
@@ -2157,6 +2154,7 @@ async function submitIntroRequest() {
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     MES_INTROS.add(INTRO_TARGET);
     showToast('✓ Demande transmise au club', 'success');
+    markTask('intro');
     closeIntroModal();
     renderSuggestions(); renderAnnuaire();
   } catch (e) { if (status) { status.textContent = '❌ ' + e.message; status.style.color = 'var(--red)'; } }
@@ -2237,103 +2235,189 @@ async function submitStory() {
 }
 
 // =========================================================================
-//  ONBOARDING — tour guidé (bulles), au 1er passage, rejouable
+//  ONBOARDING — accueil pédagogique : bienvenue + visite guidée + checklist
 // =========================================================================
-const PARTNER_TOUR_STEPS = [
-  { title: "Bienvenue 👋", text: "Bienvenue dans votre espace partenaire du Spacer's Business Club. En une minute, découvrez tout ce que vous pouvez y faire." },
-  { selector: ".contract-card", title: "Votre contrat", text: "Le statut, les dates et le nombre de prestations de votre partenariat, en un coup d'œil." },
-  { selector: "#prestations-list", title: "Vos prestations", text: "Le suivi de chaque prestation contractuelle : ce qui est livré et ce qui reste à venir." },
-  { selector: "#pack-vip-card", title: "Vos invitations VIP", text: "Vos crédits hospitalité : alloués, utilisés et restants pour la saison." },
-  { selector: "#board-section", title: "Le réseau partenaires", text: "Forum, propositions et demandes de services entre partenaires. Publiez depuis les cartes, répondez aux annonces des autres." },
-  { selector: "#ma-fiche-btn", title: "Complétez votre fiche", text: "Saisissez votre SIRET : l'adresse se remplit toute seule. Ajoutez votre expertise et votre LinkedIn → vous apparaissez dans l'annuaire et sur la carte." },
-  { selector: "#annuaire-section", title: "L'annuaire & la carte", text: "Tous les partenaires : recherche, filtres, vue carte. Et demandez une mise en relation chaleureuse via le club avec le bouton 🤝." },
-  { selector: "#stories-section", title: "Success stories", text: "Les deals nés du réseau. Partagez les vôtres pour inspirer les autres partenaires." },
-  { selector: ".bottom-nav", title: "Navigation", text: "Accédez rapidement à chaque section depuis cette barre." },
-  { title: "C'est à vous ! 🚀", text: "Vous pouvez rejouer ce guide à tout moment via le bouton « ? » en bas à gauche. Bonne navigation !" },
+const ONB_KEY = 'bc_onb_partner_v2';
+const ONB_WELCOME = {
+  eyebrow: "Spacer's Business Club",
+  title: "Bienvenue dans votre club d'affaires",
+  intro: "Ici, les partenaires des Spacers font du business ensemble. En une minute, on vous montre comment en profiter pleinement.",
+  points: [
+    { ico: '🤝', t: 'Réseauter', d: 'Trouvez et contactez les autres partenaires du club' },
+    { ico: '💼', t: 'Faire du business', d: 'Proposez vos services, captez des opportunités' },
+    { ico: '🎟️', t: 'Vos avantages', d: 'Suivez vos prestations et vos invitations VIP' },
+  ],
+};
+const ONB_STEPS = [
+  { selector: '.contract-card', ico: '📄', title: 'Votre contrat', text: "Le statut, les dates et le nombre de prestations de votre partenariat.", tip: "Tout est tenu à jour automatiquement par le club." },
+  { selector: '#prestations-list', ico: '✅', title: 'Vos prestations', text: "Prestation par prestation : ce qui est déjà livré et ce qui reste à venir." },
+  { selector: '#pack-vip-card', ico: '🎟️', title: 'Vos invitations VIP', text: "Vos places hospitalité : allouées, utilisées et restantes pour la saison.", tip: "Vous êtes prévenu dès que le stock devient faible." },
+  { selector: '#board-section', ico: '💬', title: 'Le réseau partenaires', text: "Forum, propositions et demandes de services entre membres du club.", tip: "À faire : publiez votre première annonce depuis les cartes." },
+  { selector: '#ma-fiche-btn', ico: '✏️', title: 'Complétez votre fiche', text: "Saisissez votre SIRET (l'adresse se remplit toute seule), votre expertise et votre LinkedIn.", tip: "C'est ce qui vous rend visible et trouvable par les autres." },
+  { selector: '#annuaire-section', ico: '🔎', title: "L'annuaire & la carte", text: "Tous les partenaires, avec recherche, filtres et vue carte.", tip: "Bouton 🤝 : demandez une mise en relation, le club vous présente." },
+  { selector: '#stories-section', ico: '⭐', title: 'Success stories', text: "Les deals nés du réseau — et vous pouvez partager les vôtres.", tip: "La preuve concrète que le club fait gagner du business." },
+  { selector: '.bottom-nav', ico: '🧭', title: 'Navigation', text: "Revenez à chaque section en un seul tap depuis cette barre." },
+];
+const ONB_TASKS = [
+  { id: 'fiche', label: 'Complétez votre fiche', hint: 'SIRET + expertise → vous devenez visible', run: () => { openFicheModal(); } },
+  { id: 'annuaire', label: "Explorez l'annuaire", hint: 'Découvrez les autres partenaires', run: () => { onbScrollTo('annuaire-section'); markTask('annuaire'); } },
+  { id: 'intro', label: 'Demandez une mise en relation', hint: 'Le club vous présente un partenaire', run: () => { onbScrollTo('annuaire-section'); } },
+  { id: 'story', label: 'Voyez les success stories', hint: 'Les deals nés du réseau', run: () => { onbScrollTo('stories-section'); markTask('story'); } },
 ];
 
-function tourInjectCss() {
-  if (document.getElementById('tour-css')) return;
-  const st = document.createElement('style'); st.id = 'tour-css';
+function onbGet() { try { return JSON.parse(localStorage.getItem(ONB_KEY) || '{}'); } catch (_) { return {}; } }
+function onbSet(o) { try { localStorage.setItem(ONB_KEY, JSON.stringify(o)); } catch (_) { } }
+function markTask(id) { const o = onbGet(); if (!o.tasks) o.tasks = {}; if (!o.tasks[id]) { o.tasks[id] = true; onbSet(o); onbRenderLauncher(); } }
+function onbScrollTo(id) { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function onbCountDone() { const t = onbGet().tasks || {}; return ONB_TASKS.filter(x => t[x.id]).length; }
+
+function onbInjectCss() {
+  if (document.getElementById('onb-css')) return;
+  const st = document.createElement('style'); st.id = 'onb-css';
   st.textContent = `
-    .tour-ov{position:fixed;inset:0;z-index:9998;transition:background .2s;}
-    .tour-spot{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(10,22,40,.62);transition:all .25s ease;pointer-events:none;}
-    .tour-bub{position:fixed;z-index:9999;max-width:330px;background:#fff;border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(10,22,40,.35);font-family:inherit;}
-    .tour-step{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#C8932B;font-weight:700;}
-    .tour-title{font-family:'Fraunces',serif;font-size:18px;margin:4px 0 6px;color:#0A1628;}
-    .tour-text{font-size:13.5px;color:#5B6573;line-height:1.5;}
-    .tour-btns{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px;}
-    .tour-btns button{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:8px 14px;cursor:pointer;border:1px solid #E5DED1;}
-    .tour-next{background:#0A1628;color:#C8932B;border:none;}
-    .tour-prev{background:#fff;color:#0A1628;}
-    .tour-skip{background:none;border:none;color:#8A8478;padding:8px 6px;}
-    .tour-help{position:fixed;bottom:18px;left:18px;z-index:90;width:40px;height:40px;border-radius:50%;border:1px solid #E5DED1;background:#fff;color:#0A1628;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(10,22,40,.15);font-family:inherit;}`;
+    .onb-ov{position:fixed;inset:0;z-index:9998;transition:background .2s;}
+    .onb-spot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(10,22,40,.66);transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none;}
+    .onb-bub{position:fixed;z-index:9999;width:330px;max-width:calc(100vw - 32px);background:#fff;border-radius:18px;padding:20px;box-shadow:0 24px 70px rgba(10,22,40,.4);font-family:inherit;animation:onbPop .25s ease;}
+    @keyframes onbPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+    @keyframes onbFade{from{opacity:0}to{opacity:1}}
+    .onb-prog{height:4px;background:#EFE9DD;border-radius:2px;overflow:hidden;margin-bottom:12px;}
+    .onb-prog>div{height:100%;background:linear-gradient(90deg,#C8932B,#E0B85F);transition:width .3s ease;}
+    .onb-ico{font-size:24px;line-height:1;margin-bottom:6px;}
+    .onb-ey{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#C8932B;font-weight:700;}
+    .onb-ti{font-family:'Fraunces',serif;font-size:19px;margin:2px 0 6px;color:#0A1628;line-height:1.2;}
+    .onb-tx{font-size:13.5px;color:#5B6573;line-height:1.55;}
+    .onb-tip{font-size:12.5px;color:#0A1628;background:#FAF5EA;border-left:3px solid #C8932B;border-radius:0 8px 8px 0;padding:8px 10px;margin-top:10px;}
+    .onb-btns{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:8px;}
+    .onb-btns button{font-family:inherit;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;}
+    .onb-next{background:#0A1628;color:#E0B85F;border:none;padding:9px 16px;}
+    .onb-prev{background:#fff;color:#0A1628;border:1px solid #E5DED1;padding:9px 13px;}
+    .onb-skip{background:none;border:none;color:#9A9488;padding:8px 4px;font-size:12.5px;}
+    .onb-modal{position:fixed;inset:0;z-index:10000;background:rgba(10,22,40,.6);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px;animation:onbFade .25s ease;}
+    .onb-card{background:#fff;border-radius:22px;max-width:420px;width:100%;padding:30px 26px;text-align:center;box-shadow:0 30px 80px rgba(10,22,40,.4);animation:onbPop .3s ease;}
+    .onb-card h2{font-family:'Fraunces',serif;font-size:25px;color:#0A1628;margin:6px 0 8px;line-height:1.15;}
+    .onb-card .onb-intro{font-size:14px;color:#5B6573;line-height:1.5;margin-bottom:18px;}
+    .onb-pts{display:grid;gap:12px;text-align:left;margin-bottom:22px;}
+    .onb-pt{display:flex;gap:12px;align-items:flex-start;}
+    .onb-pt .e{font-size:22px;line-height:1;}
+    .onb-pt b{font-size:14px;color:#0A1628;display:block;}
+    .onb-pt span{font-size:12.5px;color:#5B6573;}
+    .onb-cta{width:100%;background:#0A1628;color:#E0B85F;border:none;border-radius:13px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .onb-cta2{width:100%;background:none;border:none;color:#5B6573;font-size:13px;cursor:pointer;font-family:inherit;padding:12px 0 0;}
+    .onb-launch{position:fixed;bottom:18px;left:18px;z-index:95;background:#0A1628;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(10,22,40,.28);font-family:inherit;display:flex;align-items:center;gap:9px;}
+    .onb-launch .ring{width:22px;height:22px;border-radius:50%;background:conic-gradient(#E0B85F var(--p,0%),rgba(255,255,255,.22) 0);display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;}
+    .onb-panel{position:fixed;bottom:66px;left:18px;z-index:95;width:300px;max-width:calc(100vw - 36px);background:#fff;border-radius:18px;padding:16px;box-shadow:0 20px 60px rgba(10,22,40,.3);font-family:inherit;animation:onbPop .2s ease;}
+    .onb-panel h4{font-family:'Fraunces',serif;font-size:16px;color:#0A1628;margin:0 0 2px;}
+    .onb-panel .sub{font-size:12px;color:#8A8478;margin-bottom:12px;}
+    .onb-task{display:flex;gap:10px;align-items:flex-start;padding:9px;border-radius:11px;cursor:pointer;transition:background .15s;}
+    .onb-task:hover{background:#FAF5EA;}
+    .onb-task .ck{width:20px;height:20px;border-radius:50%;border:2px solid #D8CFBD;flex:none;display:grid;place-items:center;font-size:11px;color:#fff;margin-top:1px;}
+    .onb-task.done .ck{background:#2E9E5B;border-color:#2E9E5B;}
+    .onb-task.done .lbl{text-decoration:line-through;color:#9A9488;}
+    .onb-task .lbl{font-size:13.5px;color:#0A1628;font-weight:600;}
+    .onb-task .hint{font-size:11.5px;color:#8A8478;}
+    .onb-replay{width:100%;margin-top:8px;background:#FAF5EA;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#0A1628;cursor:pointer;font-family:inherit;}
+    .onb-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;color:#9A9488;cursor:pointer;}`;
   document.head.appendChild(st);
 }
 
-function runTour(steps, key, force) {
-  if (!force) { try { if (localStorage.getItem(key)) return; } catch (_) { } }
-  tourInjectCss();
-  let i = 0;
-  const ov = document.createElement('div'); ov.className = 'tour-ov';
-  const spot = document.createElement('div'); spot.className = 'tour-spot';
-  const bub = document.createElement('div'); bub.className = 'tour-bub';
+function runTour(force) {
+  onbInjectCss();
+  const steps = ONB_STEPS; let i = 0;
+  const ov = document.createElement('div'); ov.className = 'onb-ov';
+  const spot = document.createElement('div'); spot.className = 'onb-spot';
+  const bub = document.createElement('div'); bub.className = 'onb-bub';
   ov.appendChild(spot); document.body.appendChild(ov); document.body.appendChild(bub);
-  function end() { ov.remove(); bub.remove(); document.removeEventListener('keydown', onKey); try { localStorage.setItem(key, '1'); } catch (_) { } }
+  function end() { ov.remove(); bub.remove(); document.removeEventListener('keydown', onKey); const o = onbGet(); o.tourDone = true; onbSet(o); onbRenderLauncher(); }
   function onKey(e) { if (e.key === 'Escape') end(); else if (e.key === 'ArrowRight') next(); else if (e.key === 'ArrowLeft') prev(); }
   function next() { if (i < steps.length - 1) { i++; show(); } else end(); }
   function prev() { if (i > 0) { i--; show(); } }
   function show() {
-    const s = steps[i];
-    const el = s.selector ? document.querySelector(s.selector) : null;
-    const visible = el && el.offsetParent !== null && el.getClientRects().length;
-    if (visible) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => place(el, s), 240); }
-    else place(null, s);
+    const s = steps[i], el = s.selector ? document.querySelector(s.selector) : null;
+    const vis = el && el.offsetParent !== null && el.getClientRects().length;
+    if (vis) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => place(el, s), 260); } else place(null, s);
   }
   function place(el, s) {
+    const mobile = window.innerWidth < 480;
     if (el) {
-      const r = el.getBoundingClientRect(), pad = 8;
-      ov.style.background = 'transparent'; spot.style.display = 'block';
-      spot.style.top = (r.top - pad) + 'px'; spot.style.left = (r.left - pad) + 'px';
-      spot.style.width = (r.width + pad * 2) + 'px'; spot.style.height = (r.height + pad * 2) + 'px';
-    } else { spot.style.display = 'none'; ov.style.background = 'rgba(10,22,40,.62)'; }
+      const r = el.getBoundingClientRect(), pad = 8; ov.style.background = 'transparent'; spot.style.display = 'block';
+      spot.style.top = (r.top - pad) + 'px'; spot.style.left = (r.left - pad) + 'px'; spot.style.width = (r.width + pad * 2) + 'px'; spot.style.height = (r.height + pad * 2) + 'px';
+    } else { spot.style.display = 'none'; ov.style.background = 'rgba(10,22,40,.66)'; }
+    const pct = Math.round((i + 1) / steps.length * 100);
     bub.innerHTML = `
-      <div class="tour-step">${i + 1} / ${steps.length}</div>
-      <div class="tour-title">${s.title}</div>
-      <div class="tour-text">${s.text}</div>
-      <div class="tour-btns">
-        <button class="tour-skip" id="tour-skip">Passer</button>
+      <div class="onb-prog"><div style="width:${pct}%"></div></div>
+      ${s.ico ? `<div class="onb-ico">${s.ico}</div>` : ''}
+      <div class="onb-ey">Étape ${i + 1} / ${steps.length}</div>
+      <div class="onb-ti">${s.title}</div>
+      <div class="onb-tx">${s.text}</div>
+      ${s.tip ? `<div class="onb-tip">💡 ${s.tip}</div>` : ''}
+      <div class="onb-btns">
+        <button class="onb-skip" id="onb-skip">Passer</button>
         <div style="display:flex;gap:8px;">
-          ${i > 0 ? '<button class="tour-prev" id="tour-prev">Précédent</button>' : ''}
-          <button class="tour-next" id="tour-next">${i === steps.length - 1 ? 'Terminer' : 'Suivant'}</button>
+          ${i > 0 ? '<button class="onb-prev" id="onb-prev">‹</button>' : ''}
+          <button class="onb-next" id="onb-next">${i === steps.length - 1 ? 'Terminer ✓' : 'Suivant ›'}</button>
         </div>
       </div>`;
     bub.style.display = 'block';
-    const bw = bub.offsetWidth, bh = bub.offsetHeight;
-    let top, left;
-    if (el) {
-      const r = el.getBoundingClientRect();
-      top = r.bottom + 14; if (top + bh > window.innerHeight - 10) top = Math.max(10, r.top - bh - 14);
-      left = Math.min(Math.max(10, r.left), window.innerWidth - bw - 10);
-    } else { top = (window.innerHeight - bh) / 2; left = (window.innerWidth - bw) / 2; }
+    if (mobile) { bub.style.width = 'calc(100vw - 32px)'; }
+    else { bub.style.width = '330px'; }
+    const bw = bub.offsetWidth, bh = bub.offsetHeight; let top, left;
+    if (mobile) { left = 16; top = window.innerHeight - bh - 16; }
+    else if (el) { const r = el.getBoundingClientRect(); top = r.bottom + 16; if (top + bh > window.innerHeight - 12) top = Math.max(12, r.top - bh - 16); left = Math.min(Math.max(12, r.left + r.width / 2 - bw / 2), window.innerWidth - bw - 12); }
+    else { top = (window.innerHeight - bh) / 2; left = (window.innerWidth - bw) / 2; }
     bub.style.top = top + 'px'; bub.style.left = left + 'px';
-    $('tour-skip').onclick = end;
-    const nx = $('tour-next'); if (nx) nx.onclick = next;
-    const pv = $('tour-prev'); if (pv) pv.onclick = prev;
+    $('onb-skip').onclick = end; const nx = $('onb-next'); if (nx) nx.onclick = next; const pv = $('onb-prev'); if (pv) pv.onclick = prev;
   }
   document.addEventListener('keydown', onKey);
   show();
 }
 
-function initTour(steps, key) {
-  tourInjectCss();
-  if (!document.querySelector('.tour-help')) {
-    const b = document.createElement('button'); b.className = 'tour-help'; b.textContent = '?'; b.title = 'Revoir le guide';
-    b.onclick = () => runTour(steps, key, true);
-    document.body.appendChild(b);
-  }
-  setTimeout(() => runTour(steps, key, false), 900);
+function showWelcome() {
+  onbInjectCss();
+  if (document.querySelector('.onb-modal')) return;
+  const w = ONB_WELCOME, m = document.createElement('div'); m.className = 'onb-modal';
+  m.innerHTML = `<div class="onb-card">
+    <div class="onb-ey">${w.eyebrow}</div>
+    <h2>${w.title}</h2>
+    <div class="onb-intro">${w.intro}</div>
+    <div class="onb-pts">${w.points.map(p => `<div class="onb-pt"><span class="e">${p.ico}</span><div><b>${p.t}</b><span>${p.d}</span></div></div>`).join('')}</div>
+    <button class="onb-cta" id="onb-go">Visite guidée · 1 min</button>
+    <button class="onb-cta2" id="onb-explore">J'explore moi-même</button>
+  </div>`;
+  document.body.appendChild(m);
+  function dismiss() { const o = onbGet(); o.welcomeSeen = true; onbSet(o); m.remove(); }
+  $('onb-go').onclick = () => { dismiss(); runTour(true); };
+  $('onb-explore').onclick = () => { dismiss(); onbRenderLauncher(); };
 }
+
+function onbTogglePanel() {
+  const ex = document.querySelector('.onb-panel'); if (ex) { ex.remove(); return; }
+  const t = onbGet().tasks || {}, p = document.createElement('div'); p.className = 'onb-panel';
+  p.innerHTML = `<button class="onb-close" onclick="document.querySelector('.onb-panel')&&document.querySelector('.onb-panel').remove()">✕</button>
+    <h4>Pour bien démarrer</h4><div class="sub">${onbCountDone()}/${ONB_TASKS.length} — quelques pas pour profiter du club</div>
+    <div id="onb-tasklist"></div>
+    <button class="onb-replay" id="onb-replay">▶ Revoir la visite guidée</button>`;
+  document.body.appendChild(p);
+  const list = p.querySelector('#onb-tasklist');
+  list.innerHTML = ONB_TASKS.map((x, idx) => `<div class="onb-task ${t[x.id] ? 'done' : ''}" data-i="${idx}"><div class="ck">✓</div><div><div class="lbl">${x.label}</div><div class="hint">${x.hint}</div></div></div>`).join('');
+  list.querySelectorAll('.onb-task').forEach(el => { el.onclick = () => { const x = ONB_TASKS[+el.dataset.i]; p.remove(); x.run(); }; });
+  p.querySelector('#onb-replay').onclick = () => { p.remove(); runTour(true); };
+}
+
+function onbRenderLauncher() {
+  const old = document.querySelector('.onb-launch'); if (old) old.remove();
+  const done = onbCountDone(), total = ONB_TASKS.length, pill = document.createElement('button'); pill.className = 'onb-launch';
+  if (done >= total) { pill.innerHTML = '<span style="font-size:15px;">?</span>'; pill.style.padding = '11px 13px'; pill.title = 'Aide & visite guidée'; }
+  else { const pct = Math.round(done / total * 100); pill.innerHTML = `<span class="ring" style="--p:${pct}%">${done}</span><span>Pour bien démarrer</span>`; }
+  pill.onclick = onbTogglePanel;
+  document.body.appendChild(pill);
+}
+
+function onbInit() {
+  onbInjectCss();
+  onbRenderLauncher();
+  if (!onbGet().welcomeSeen) setTimeout(showWelcome, 700);
+}
+
 
 async function openFicheModal() {
   if (!MAGIC_TOKEN) return showToast('Session expirée — reconnectez-vous', 'error');
@@ -2425,6 +2509,7 @@ async function saveFiche() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('✓ Fiche mise à jour', 'success');
+    markTask('fiche');
     closeFicheModal();
     loadAnnuaire();
   } catch (e) { status.textContent = '❌ ' + e.message; status.style.color = 'var(--red)'; }
