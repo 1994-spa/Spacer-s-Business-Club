@@ -1503,6 +1503,10 @@ async function handleAdminOffreCreate(token, body, env) {
     titre, contrat_id, statut: insertData.statut,
   }, env);
 
+  if (insertData.statut === 'publie') {
+    try { await syncOffreToAnnonces_(created.id, env); }
+    catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', created.id, { detail: e.message }, env); }
+  }
   return jsonResponseNoCache({ ok: true, offre: created });
 }
 
@@ -1547,6 +1551,8 @@ async function handleAdminOffrePublish(token, offreId, env) {
 
   await logAudit_(admin.id, 'offre.publish', 'offres_emploi', offreId, {}, env);
 
+  try { await syncOffreToAnnonces_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
@@ -1564,6 +1570,8 @@ async function handleAdminOffreReject(token, offreId, body, env) {
 
   await logAudit_(admin.id, 'offre.reject', 'offres_emploi', offreId, { raison }, env);
 
+  try { await deactivateAnnonceForOffre_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
 }
 
@@ -1577,6 +1585,8 @@ async function handleAdminOffreArchive(token, offreId, env) {
 
   await logAudit_(admin.id, 'offre.archive', 'offres_emploi', offreId, {}, env);
 
+  try { await deactivateAnnonceForOffre_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
@@ -1605,6 +1615,82 @@ async function supabaseInsert_(table, data, env) {
 // ============================================================================
 //  PUBLICATIONS
 // ============================================================================
+
+// ============================================================================
+//  SYNC OFFRES EMPLOI -> BENEVOLES (annonces_emploi)
+// ============================================================================
+function benevolesReady_(env) {
+  return !!(env.BENEVOLES_SUPABASE_URL && env.BENEVOLES_SERVICE_ROLE_KEY);
+}
+function benevolesHeaders_(env) {
+  return {
+    'apikey': env.BENEVOLES_SERVICE_ROLE_KEY,
+    'Authorization': `Bearer ${env.BENEVOLES_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
+function normalizeLogo_(b64) {
+  if (!b64) return null;
+  const s = String(b64).trim();
+  if (s.startsWith('data:')) return s;
+  return `data:image/png;base64,${s}`;
+}
+async function bizSelectOne_(table, query, env) {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+  });
+  if (!res.ok) return null;
+  const arr = await res.json();
+  return Array.isArray(arr) && arr.length ? arr[0] : null;
+}
+async function syncOffreToAnnonces_(offreId, env) {
+  if (!benevolesReady_(env)) throw new Error('BENEVOLES creds non configures');
+  const offre = await bizSelectOne_('offres_emploi', `id=eq.${offreId}&select=*`, env);
+  if (!offre) throw new Error('offre introuvable: ' + offreId);
+  let nom = null, logo = null;
+  if (offre.contrat_id) {
+    const contrat = await bizSelectOne_('contrats', `id=eq.${encodeURIComponent(offre.contrat_id)}&select=partenaire_id`, env);
+    if (contrat && contrat.partenaire_id) {
+      const part = await bizSelectOne_('partenaires', `id=eq.${contrat.partenaire_id}&select=raison_sociale,logo_b64`, env);
+      if (part) { nom = part.raison_sociale || null; logo = normalizeLogo_(part.logo_b64); }
+    }
+  }
+  const payload = {
+    source_offre_id: offre.id,
+    type: 'emploi',
+    titre: offre.titre || null,
+    description: offre.description || null,
+    partenaire_nom: nom,
+    partenaire_logo_url: logo,
+    type_contrat: offre.type_contrat || null,
+    lieu: offre.lieu || null,
+    contact_nom: offre.contact_nom || null,
+    contact_email: offre.contact_email || null,
+    contact_tel: offre.contact_telephone || null,
+    contact_lien: offre.url_externe || null,
+    publiee_le: offre.date_publication || new Date().toISOString(),
+    expire_le: offre.date_expiration || null,
+    active: true,
+    statut_validation: 'valide',
+  };
+  const res = await fetch(`${env.BENEVOLES_SUPABASE_URL}/rest/v1/annonces_emploi?on_conflict=source_offre_id`, {
+    method: 'POST',
+    headers: { ...benevolesHeaders_(env), Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`Sync annonces_emploi ${res.status}: ${t.slice(0,300)}`); }
+  return res.json();
+}
+async function deactivateAnnonceForOffre_(offreId, env) {
+  if (!benevolesReady_(env)) throw new Error('BENEVOLES creds non configures');
+  const res = await fetch(`${env.BENEVOLES_SUPABASE_URL}/rest/v1/annonces_emploi?source_offre_id=eq.${offreId}`, {
+    method: 'PATCH',
+    headers: { ...benevolesHeaders_(env), Prefer: 'return=representation' },
+    body: JSON.stringify({ active: false }),
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`Desactivation annonce ${res.status}: ${t.slice(0,300)}`); }
+  return res.json();
+}
 
 const PUB_TYPES = ['forum', 'proposition', 'echange'];
 const PUB_STATUTS = ['en_attente', 'publie', 'refuse', 'expire', 'archive'];
@@ -1805,6 +1891,8 @@ async function handleAdminPublicationPublish(token, pubId, env) {
 
   await logAudit_(admin.id, 'publication.publish', 'publications', pubId, {}, env);
 
+  try { await syncOffreToAnnonces_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
@@ -1822,6 +1910,8 @@ async function handleAdminPublicationReject(token, pubId, body, env) {
 
   await logAudit_(admin.id, 'publication.reject', 'publications', pubId, { raison }, env);
 
+  try { await deactivateAnnonceForOffre_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
 }
 
@@ -1832,6 +1922,8 @@ async function handleAdminPublicationArchive(token, pubId, env) {
   await supabasePatch_('publications', `id=eq.${pubId}`, { statut: 'archive' }, env);
   await logAudit_(admin.id, 'publication.archive', 'publications', pubId, {}, env);
 
+  try { await deactivateAnnonceForOffre_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
@@ -2705,6 +2797,8 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
   if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(emailJob);
   else await emailJob;
 
+  try { await syncOffreToAnnonces_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
@@ -2712,6 +2806,8 @@ async function handleAdminCommunicationArchive(token, comId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
   await supabasePatch_('communications', `id=eq.${comId}`, { statut: 'archive' }, env);
+  try { await deactivateAnnonceForOffre_(offreId, env); }
+  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
