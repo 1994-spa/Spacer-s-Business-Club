@@ -1657,7 +1657,7 @@ async function syncOffreToAnnonces_(offreId, env) {
   }
   const payload = {
     source_offre_id: offre.id,
-    type: 'emploi',
+    type: 'partenaire',
     titre: offre.titre || null,
     description: offre.description || null,
     partenaire_nom: nom,
@@ -1671,7 +1671,7 @@ async function syncOffreToAnnonces_(offreId, env) {
     publiee_le: offre.date_publication || new Date().toISOString(),
     expire_le: offre.date_expiration || null,
     active: true,
-    statut_validation: 'valide',
+    statut_validation: 'validee',
   };
   const res = await fetch(`${env.BENEVOLES_SUPABASE_URL}/rest/v1/annonces_emploi?on_conflict=source_offre_id`, {
     method: 'POST',
