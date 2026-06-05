@@ -26,6 +26,7 @@ binding = "ASSETS"
 #  Variables d'environnement (NON secrètes) — versionnées ici
 # -----------------------------------------------------------------------------
 [vars]
+BENEVOLES_SUPABASE_URL = "https://xphuolvbamdkizydveij.supabase.co"
 SUPABASE_URL = "https://goaviqaevdkvptejrreo.supabase.co"
 # Clé publique "anon" — Supabase → Project Settings → API → Project API keys → "anon public".
 # C'est une clé PUBLIQUE (sans danger à committer) ET OBLIGATOIRE pour la connexion email/mot de passe.
