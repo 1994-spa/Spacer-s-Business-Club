@@ -468,6 +468,9 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">🏆</span><span class="label">Success stories</span>
         <span class="badge" id="sb-badge-stories" hidden>0</span>
       </button>
+      <button class="sb-link" data-tab="exports" onclick="switchTab('exports')">
+        <span class="ico">📤</span><span class="label">Exports</span>
+      </button>
     </nav>
 
     <div class="sb-admin">
@@ -745,6 +748,24 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
       </div>
       <div id="story-list" class="list"><div class="list-empty">Chargement…</div></div>
+    </section>
+
+    <!-- ===== TAB : Exports ===== -->
+    <section id="tab-exports" class="tab-section">
+      <div class="page-head">
+        <div>
+          <h1 class="display">Exp<em>orts</em></h1>
+          <p class="desc">Téléchargez vos données au format Excel (.xlsx)</p>
+        </div>
+      </div>
+      <div class="list" style="display:flex;flex-wrap:wrap;gap:10px;">
+        <button class="btn" onclick="exportDataset('partenaires','Annuaire partenaires')">📤 Annuaire partenaires</button>
+        <button class="btn" onclick="exportDataset('contacts','Contacts partenaires')">📤 Contacts partenaires</button>
+        <button class="btn" onclick="exportDataset('evenements','Evenements')">📤 Événements</button>
+        <button class="btn" onclick="exportDataset('presences','Presents aux evenements')">📤 Présents aux événements</button>
+        <button class="btn" onclick="exportDataset('packs','Packs de places')">📤 Packs de places</button>
+        <button class="btn" onclick="exportDataset('places-vip','Places VIP par match')">📤 Places VIP par match</button>
+      </div>
     </section>
 
   </main>
@@ -4670,6 +4691,43 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch(() => {});
   });
+}
+</script>
+<!-- ===== Exports Excel (.xlsx) — SheetJS + logique de téléchargement ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+async function exportDataset(dataset, label) {
+  if (!ADMIN_TOKEN || ADMIN_TOKEN.length < 16) { showToast('Session admin expirée', 'error'); return; }
+  if (typeof XLSX === 'undefined') { showToast('Librairie Excel non chargée, réessaie', 'error'); return; }
+  try {
+    showToast('Export en cours…');
+    const res = await fetch(`/api/admin/export/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(dataset)}`);
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erreur export', 'error'); return; }
+
+    // aplatit les valeurs objet/array pour Excel
+    const rows = (data.rows || []).map(function (r) {
+      const o = {};
+      for (const k in r) {
+        const v = r[k];
+        o[k] = (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+      }
+      return o;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ info: 'Aucune donnée' }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, String(label || dataset).slice(0, 31));
+
+    const d = new Date();
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    const stamp = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes());
+    XLSX.writeFile(wb, dataset + '_' + stamp + '.xlsx');
+
+    showToast((data.count || 0) + ' ligne(s) exportée(s)');
+  } catch (e) {
+    showToast('Erreur réseau pendant l\'export', 'error');
+  }
 }
 </script>
 </body>
