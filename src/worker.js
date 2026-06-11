@@ -4802,6 +4802,10 @@ async function handlePartnerFicheUpdate(token, body, env) {
     representant_tel: str(body.representant_tel, 40),
     representant_linkedin: str(body.representant_linkedin, 300),
   };
+  // Annuaire : on alimente aussi les colonnes génériques « email » / « telephone »
+  // (miroir des champs saisis) pour qu'elles se remplissent dès la sauvegarde de la fiche.
+  patch.email = patch.email_societe || patch.representant_email || null;
+  patch.telephone = patch.representant_tel || null;
   // Images : ne toucher que si le champ est fourni (string = nouvelle/actuelle, null = effacer)
   if (body.logo_b64 !== undefined) patch.logo_b64 = body.logo_b64 ? String(body.logo_b64).slice(0, 1500000) : null;
   if (body.representant_photo_b64 !== undefined) patch.representant_photo_b64 = body.representant_photo_b64 ? String(body.representant_photo_b64).slice(0, 1500000) : null;
