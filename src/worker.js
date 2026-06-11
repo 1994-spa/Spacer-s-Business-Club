@@ -341,6 +341,10 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/admin\/dashboard\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminDashboard(m[1], env);
 
+    // Admin export (données JSON → .xlsx généré côté navigateur)
+    m = path.match(/^\/api\/admin\/export\/([a-zA-Z0-9_-]{16,})\/([a-z-]+)$/);
+    if (m) return await handleAdminExport(m[1], m[2], env);
+
     // Admin partners list
     m = path.match(/^\/api\/admin\/partners\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminPartners(m[1], env);
@@ -666,6 +670,50 @@ async function handleAdminAuth(token, env) {
     admin: admins[0],
     meta: { version: 'V4-supabase', generated_at: new Date().toISOString() },
   });
+}
+
+// ============================================================================
+//  ADMIN EXPORT (renvoie les données en JSON ; le .xlsx est généré côté
+//  navigateur dans le Pilote admin, via SheetJS)
+// ============================================================================
+
+const ADMIN_EXPORT_DATASETS = {
+  'partenaires': { table: 'partenaires',               order: 'raison_sociale', label: 'Annuaire partenaires' },
+  'contacts':    { table: 'partenaire_contacts',                                label: 'Contacts partenaires' },
+  'evenements':  { table: 'invitations',                                        label: 'Evenements' },
+  'presences':   { table: 'invitation_destinataires',                           label: 'Presents aux evenements' },
+  'packs':       { table: 'packs_places',                                       label: 'Packs de places' },
+  'places-vip':  { table: 'rencontre_allocations',                              label: 'Places VIP par match' },
+};
+
+async function handleAdminExport(token, dataset, env) {
+  const admins = await supabaseQuery(
+    'admins',
+    `magic_token=eq.${token}&actif=eq.true&select=id&limit=1`,
+    env
+  );
+  if (!admins || admins.length === 0) {
+    return jsonResponse({ error: 'Invalid admin token' }, 401);
+  }
+
+  const cfg = ADMIN_EXPORT_DATASETS[dataset];
+  if (!cfg) {
+    return jsonResponse({ error: 'Unknown dataset', available: Object.keys(ADMIN_EXPORT_DATASETS) }, 400);
+  }
+
+  let qs = 'select=*';
+  if (cfg.order) qs += `&order=${encodeURIComponent(cfg.order)}`;
+  let rows = await supabaseQuery(cfg.table, qs, env);
+  if (!Array.isArray(rows)) rows = [];
+
+  // Retire les champs base64 volumineux (logos, photos) — inutiles en Excel.
+  rows = rows.map((r) => {
+    const o = {};
+    for (const k in r) { if (!/_b64$/.test(k)) o[k] = r[k]; }
+    return o;
+  });
+
+  return jsonResponse({ dataset, label: cfg.label, count: rows.length, rows });
 }
 
 // ============================================================================
