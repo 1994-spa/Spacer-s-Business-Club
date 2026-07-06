@@ -1,5 +1,5 @@
 /**
- * Spacers Business Club — Worker V4.38-stories (success stories : soumission partenaire + modération)
+ * Spacers Business Club — Worker V4.35-annuaire (profils enrichis: taille, LinkedIn, expertise/tags)
  * Source de vérité : Supabase (au lieu d'Apps Script)
  *
  * Variables d'environnement requises dans Cloudflare Worker Settings :
@@ -164,6 +164,9 @@ async function handleApi(request, env, path, ctx) {
       m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/archive$/);
       if (m) return await handleAdminOffreArchive(m[1], m[2], env);
 
+      m = path.match(/^\/api\/admin\/offres\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/delete$/);
+      if (m) return await handleAdminOffreDelete(m[1], m[2], env);
+
       // Publications (forum / proposition / echange) — admin CRUD + modération
       m = path.match(/^\/api\/admin\/publications\/([a-zA-Z0-9_-]{16,})\/create$/);
       if (m) return await handleAdminPublicationCreate(m[1], body || {}, env);
@@ -190,20 +193,6 @@ async function handleApi(request, env, path, ctx) {
       // Partenaire — mise à jour de sa fiche annuaire
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
       if (m) return await handlePartnerFicheUpdate(m[1], body || {}, env);
-
-      // Networking — demande de mise en relation (partenaire) + traitement (admin)
-      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/intro-request$/);
-      if (m) return await handlePartnerIntroRequest(m[1], body || {}, env);
-
-      m = path.match(/^\/api\/admin\/intro\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
-      if (m) return await handleAdminIntroUpdate(m[1], m[2], body || {}, env);
-
-      // Success stories — soumission partenaire + modération admin
-      m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/success-story$/);
-      if (m) return await handlePartnerSuccessStoryCreate(m[1], body || {}, env);
-
-      m = path.match(/^\/api\/admin\/success-story\/([a-zA-Z0-9_-]{16,})\/([0-9a-f-]{36})\/update$/);
-      if (m) return await handleAdminSuccessStoryUpdate(m[1], m[2], body || {}, env);
 
       // Partenaire — répondre à une publication du board (Sprint B.3)
       m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/publication\/([0-9a-f-]{36})\/reponse$/);
@@ -341,10 +330,6 @@ async function handleApi(request, env, path, ctx) {
     m = path.match(/^\/api\/admin\/dashboard\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminDashboard(m[1], env);
 
-    // Admin export (données JSON → .xlsx généré côté navigateur)
-    m = path.match(/^\/api\/admin\/export\/([a-zA-Z0-9_-]{16,})\/([a-z-]+)$/);
-    if (m) return await handleAdminExport(m[1], m[2], env);
-
     // Admin partners list
     m = path.match(/^\/api\/admin\/partners\/([a-zA-Z0-9_-]{16,})$/);
     if (m) return await handleAdminPartners(m[1], env);
@@ -380,27 +365,6 @@ async function handleApi(request, env, path, ctx) {
     // Partner — Annuaire des partenaires (networking) + sa propre fiche
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/annuaire$/);
     if (m) return await handlePartnerAnnuaire(m[1], env);
-
-    // Annuaire — backfill géocodage des adresses déjà en base (admin ; ouvrir l'URL dans le navigateur)
-    m = path.match(/^\/api\/admin\/geocode-backfill\/([a-zA-Z0-9_-]{16,})$/);
-    if (m) return await handleAdminGeocodeBackfill(m[1], env);
-
-    // Networking — suggestions + mes demandes de mise en relation
-    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/suggestions$/);
-    if (m) return await handlePartnerSuggestions(m[1], env);
-
-    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/mes-intros$/);
-    if (m) return await handlePartnerMesIntros(m[1], env);
-
-    m = path.match(/^\/api\/admin\/intros\/([a-zA-Z0-9_-]{16,})$/);
-    if (m) return await handleAdminIntrosList(m[1], env);
-
-    // Success stories — showcase partenaire + liste admin
-    m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/success-stories$/);
-    if (m) return await handlePartnerSuccessStories(m[1], env);
-
-    m = path.match(/^\/api\/admin\/success-stories\/([a-zA-Z0-9_-]{16,})$/);
-    if (m) return await handleAdminSuccessStoriesList(m[1], env);
 
     m = path.match(/^\/api\/partner\/([a-zA-Z0-9_-]{16,})\/ma-fiche$/);
     if (m) return await handlePartnerFicheGet(m[1], env);
@@ -670,50 +634,6 @@ async function handleAdminAuth(token, env) {
     admin: admins[0],
     meta: { version: 'V4-supabase', generated_at: new Date().toISOString() },
   });
-}
-
-// ============================================================================
-//  ADMIN EXPORT (renvoie les données en JSON ; le .xlsx est généré côté
-//  navigateur dans le Pilote admin, via SheetJS)
-// ============================================================================
-
-const ADMIN_EXPORT_DATASETS = {
-  'partenaires': { table: 'partenaires',               order: 'raison_sociale', label: 'Annuaire partenaires' },
-  'contacts':    { table: 'partenaire_contacts',                                label: 'Contacts partenaires' },
-  'evenements':  { table: 'invitations',                                        label: 'Evenements' },
-  'presences':   { table: 'invitation_destinataires',                           label: 'Presents aux evenements' },
-  'packs':       { table: 'packs_places',                                       label: 'Packs de places' },
-  'places-vip':  { table: 'rencontre_allocations',                              label: 'Places VIP par match' },
-};
-
-async function handleAdminExport(token, dataset, env) {
-  const admins = await supabaseQuery(
-    'admins',
-    `magic_token=eq.${token}&actif=eq.true&select=id&limit=1`,
-    env
-  );
-  if (!admins || admins.length === 0) {
-    return jsonResponse({ error: 'Invalid admin token' }, 401);
-  }
-
-  const cfg = ADMIN_EXPORT_DATASETS[dataset];
-  if (!cfg) {
-    return jsonResponse({ error: 'Unknown dataset', available: Object.keys(ADMIN_EXPORT_DATASETS) }, 400);
-  }
-
-  let qs = 'select=*';
-  if (cfg.order) qs += `&order=${encodeURIComponent(cfg.order)}`;
-  let rows = await supabaseQuery(cfg.table, qs, env);
-  if (!Array.isArray(rows)) rows = [];
-
-  // Retire les champs base64 volumineux (logos, photos) — inutiles en Excel.
-  rows = rows.map((r) => {
-    const o = {};
-    for (const k in r) { if (!/_b64$/.test(k)) o[k] = r[k]; }
-    return o;
-  });
-
-  return jsonResponse({ dataset, label: cfg.label, count: rows.length, rows });
 }
 
 // ============================================================================
@@ -1551,10 +1471,6 @@ async function handleAdminOffreCreate(token, body, env) {
     titre, contrat_id, statut: insertData.statut,
   }, env);
 
-  if (insertData.statut === 'publie') {
-    try { await syncOffreToAnnonces_(created.id, env); }
-    catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', created.id, { detail: e.message }, env); }
-  }
   return jsonResponseNoCache({ ok: true, offre: created });
 }
 
@@ -1599,8 +1515,6 @@ async function handleAdminOffrePublish(token, offreId, env) {
 
   await logAudit_(admin.id, 'offre.publish', 'offres_emploi', offreId, {}, env);
 
-  try { await syncOffreToAnnonces_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
@@ -1618,8 +1532,6 @@ async function handleAdminOffreReject(token, offreId, body, env) {
 
   await logAudit_(admin.id, 'offre.reject', 'offres_emploi', offreId, { raison }, env);
 
-  try { await deactivateAnnonceForOffre_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
 }
 
@@ -1633,9 +1545,46 @@ async function handleAdminOffreArchive(token, offreId, env) {
 
   await logAudit_(admin.id, 'offre.archive', 'offres_emploi', offreId, {}, env);
 
-  try { await deactivateAnnonceForOffre_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
+}
+
+async function handleAdminOffreDelete(token, offreId, env) {
+  const admin = await authAdmin_(token, env);
+  if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
+
+  // Trace l'offre supprimée dans l'audit AVANT effacement (pour garder la trace)
+  let snapshot = null;
+  try {
+    const rows = await supabaseQuery('offres_emploi', `id=eq.${offreId}&select=titre,statut,contrat_id,created_by&limit=1`, env);
+    if (rows && rows.length) snapshot = rows[0];
+  } catch (_) {}
+
+  // On efface d'abord les candidatures liées (contrainte FK offre_id), puis l'offre.
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/candidatures?offre_id=eq.${offreId}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders(env),
+    });
+  } catch (e) {
+    console.warn(`[Offre ${offreId}] suppression candidatures liées échouée:`, e.message);
+  }
+
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/offres_emploi?id=eq.${offreId}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders(env),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      return jsonResponseNoCache({ error: 'Erreur suppression', detail: detail.slice(0, 300) }, 500);
+    }
+  } catch (e) {
+    return jsonResponseNoCache({ error: 'Erreur suppression', detail: e.message }, 500);
+  }
+
+  await logAudit_(admin.id, 'offre.delete', 'offres_emploi', offreId, snapshot || {}, env);
+
+  return jsonResponseNoCache({ ok: true, deleted: true });
 }
 
 async function supabaseInsert_(table, data, env) {
@@ -1663,82 +1612,6 @@ async function supabaseInsert_(table, data, env) {
 // ============================================================================
 //  PUBLICATIONS
 // ============================================================================
-
-// ============================================================================
-//  SYNC OFFRES EMPLOI -> BENEVOLES (annonces_emploi)
-// ============================================================================
-function benevolesReady_(env) {
-  return !!(env.BENEVOLES_SUPABASE_URL && env.BENEVOLES_SERVICE_ROLE_KEY);
-}
-function benevolesHeaders_(env) {
-  return {
-    'apikey': env.BENEVOLES_SERVICE_ROLE_KEY,
-    'Authorization': `Bearer ${env.BENEVOLES_SERVICE_ROLE_KEY}`,
-    'Content-Type': 'application/json',
-  };
-}
-function normalizeLogo_(b64) {
-  if (!b64) return null;
-  const s = String(b64).trim();
-  if (s.startsWith('data:')) return s;
-  return `data:image/png;base64,${s}`;
-}
-async function bizSelectOne_(table, query, env) {
-  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
-  });
-  if (!res.ok) return null;
-  const arr = await res.json();
-  return Array.isArray(arr) && arr.length ? arr[0] : null;
-}
-async function syncOffreToAnnonces_(offreId, env) {
-  if (!benevolesReady_(env)) throw new Error('BENEVOLES creds non configures');
-  const offre = await bizSelectOne_('offres_emploi', `id=eq.${offreId}&select=*`, env);
-  if (!offre) throw new Error('offre introuvable: ' + offreId);
-  let nom = null, logo = null;
-  if (offre.contrat_id) {
-    const contrat = await bizSelectOne_('contrats', `id=eq.${encodeURIComponent(offre.contrat_id)}&select=partenaire_id`, env);
-    if (contrat && contrat.partenaire_id) {
-      const part = await bizSelectOne_('partenaires', `id=eq.${contrat.partenaire_id}&select=raison_sociale,logo_b64`, env);
-      if (part) { nom = part.raison_sociale || null; logo = normalizeLogo_(part.logo_b64); }
-    }
-  }
-  const payload = {
-    source_offre_id: offre.id,
-    type: 'partenaire',
-    titre: offre.titre || null,
-    description: offre.description || null,
-    partenaire_nom: nom,
-    partenaire_logo_url: logo,
-    type_contrat: offre.type_contrat || null,
-    lieu: offre.lieu || null,
-    contact_nom: offre.contact_nom || null,
-    contact_email: offre.contact_email || null,
-    contact_tel: offre.contact_telephone || null,
-    contact_lien: offre.url_externe || null,
-    publiee_le: offre.date_publication || new Date().toISOString(),
-    expire_le: offre.date_expiration || null,
-    active: true,
-    statut_validation: 'validee',
-  };
-  const res = await fetch(`${env.BENEVOLES_SUPABASE_URL}/rest/v1/annonces_emploi?on_conflict=source_offre_id`, {
-    method: 'POST',
-    headers: { ...benevolesHeaders_(env), Prefer: 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) { const t = await res.text(); throw new Error(`Sync annonces_emploi ${res.status}: ${t.slice(0,300)}`); }
-  return res.json();
-}
-async function deactivateAnnonceForOffre_(offreId, env) {
-  if (!benevolesReady_(env)) throw new Error('BENEVOLES creds non configures');
-  const res = await fetch(`${env.BENEVOLES_SUPABASE_URL}/rest/v1/annonces_emploi?source_offre_id=eq.${offreId}`, {
-    method: 'PATCH',
-    headers: { ...benevolesHeaders_(env), Prefer: 'return=representation' },
-    body: JSON.stringify({ active: false }),
-  });
-  if (!res.ok) { const t = await res.text(); throw new Error(`Desactivation annonce ${res.status}: ${t.slice(0,300)}`); }
-  return res.json();
-}
 
 const PUB_TYPES = ['forum', 'proposition', 'echange'];
 const PUB_STATUTS = ['en_attente', 'publie', 'refuse', 'expire', 'archive'];
@@ -1939,8 +1812,6 @@ async function handleAdminPublicationPublish(token, pubId, env) {
 
   await logAudit_(admin.id, 'publication.publish', 'publications', pubId, {}, env);
 
-  try { await syncOffreToAnnonces_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
@@ -1958,8 +1829,6 @@ async function handleAdminPublicationReject(token, pubId, body, env) {
 
   await logAudit_(admin.id, 'publication.reject', 'publications', pubId, { raison }, env);
 
-  try { await deactivateAnnonceForOffre_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'refuse', raison });
 }
 
@@ -1970,8 +1839,6 @@ async function handleAdminPublicationArchive(token, pubId, env) {
   await supabasePatch_('publications', `id=eq.${pubId}`, { statut: 'archive' }, env);
   await logAudit_(admin.id, 'publication.archive', 'publications', pubId, {}, env);
 
-  try { await deactivateAnnonceForOffre_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
@@ -2845,8 +2712,6 @@ async function handleAdminCommunicationPublish(token, comId, env, ctx) {
   if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(emailJob);
   else await emailJob;
 
-  try { await syncOffreToAnnonces_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'publie' });
 }
 
@@ -2854,8 +2719,6 @@ async function handleAdminCommunicationArchive(token, comId, env) {
   const admin = await authAdmin_(token, env);
   if (!admin) return jsonResponseNoCache({ error: 'Invalid admin token' }, 401);
   await supabasePatch_('communications', `id=eq.${comId}`, { statut: 'archive' }, env);
-  try { await deactivateAnnonceForOffre_(offreId, env); }
-  catch (e) { await logAudit_(admin.id, 'offre.sync_error', 'offres_emploi', offreId, { detail: e.message }, env); }
   return jsonResponseNoCache({ ok: true, statut: 'archive' });
 }
 
@@ -4494,7 +4357,7 @@ async function handlePartnerAnnuaire(token, env) {
   const partner = await authPartner_(token, env);
   if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
   const rows = await supabaseQuery('partenaires',
-    `interne=eq.false&select=id,raison_sociale,secteur,taille,ville,adresse,code_postal,site_web,email_societe,logo_b64,niveau,type_partenariat,expertise,representant,representant_fonction,representant_email,representant_tel,representant_linkedin,representant_photo_b64,latitude,longitude&order=raison_sociale.asc&limit=500`,
+    `interne=eq.false&select=id,raison_sociale,secteur,taille,ville,adresse,code_postal,site_web,email_societe,logo_b64,niveau,type_partenariat,expertise,representant,representant_fonction,representant_email,representant_tel,representant_linkedin,representant_photo_b64&order=raison_sociale.asc&limit=500`,
     env);
   const fiches = (rows || []).map(p => ({
     id: p.id,
@@ -4517,219 +4380,8 @@ async function handlePartnerAnnuaire(token, env) {
     representant_tel: p.representant_tel || '',
     representant_linkedin: p.representant_linkedin || '',
     representant_photo_b64: p.representant_photo_b64 || null,
-    latitude: p.latitude,
-    longitude: p.longitude,
   }));
   return jsonResponseNoCache({ fiches, count: fiches.length });
-}
-
-// ===== Mise en relation (networking) — suggestions + demandes (warm intro) =====
-
-// Suggestions "à découvrir" : exclut soi-même, l'entité interne et les partenaires déjà sollicités.
-// Score business : +2 expertise commune, +1 même ville, +1 secteur complémentaire (différent).
-async function handlePartnerSuggestions(token, env) {
-  const partner = await authPartner_(token, env);
-  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
-  const meId = partner.partenaire_id;
-  const meRows = await supabaseQuery('partenaires', `id=eq.${meId}&select=secteur,ville,expertise&limit=1`, env);
-  const me = (meRows && meRows[0]) || {};
-  const myTags = (me.expertise || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-  const all = await supabaseQuery('partenaires',
-    `interne=eq.false&id=neq.${meId}&select=id,raison_sociale,secteur,ville,logo_b64,expertise,representant,representant_fonction&order=raison_sociale.asc&limit=500`, env) || [];
-  const reqs = await supabaseQuery('mises_en_relation', `demandeur_partenaire_id=eq.${meId}&select=cible_partenaire_id`, env) || [];
-  const already = new Set(reqs.map(r => r.cible_partenaire_id));
-  const scored = all.filter(p => !already.has(p.id)).map(p => {
-    let score = 0, reason = 'À découvrir';
-    const tags = (p.expertise || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-    const shared = tags.filter(t => myTags.includes(t));
-    if (shared.length) { score += 2; reason = 'Expertise commune : ' + shared[0]; }
-    if (me.ville && p.ville && me.ville.toLowerCase() === p.ville.toLowerCase()) { score += 1; if (score < 2) reason = 'Même ville : ' + p.ville; }
-    if (me.secteur && p.secteur && me.secteur.toLowerCase() !== p.secteur.toLowerCase()) { score += 1; if (score === 1) reason = 'Secteur complémentaire'; }
-    return { p, score, reason };
-  });
-  scored.sort((a, b) => (b.score - a.score) || (Math.random() - 0.5));
-  const top = scored.slice(0, 3).map(({ p, reason }) => ({
-    id: p.id, raison_sociale: p.raison_sociale, secteur: p.secteur || '', ville: p.ville || '',
-    logo_b64: p.logo_b64 || null, representant: p.representant || '', representant_fonction: p.representant_fonction || '', reason,
-  }));
-  return jsonResponseNoCache({ suggestions: top, count: top.length });
-}
-
-// Le partenaire demande au club une mise en relation (warm intro) avec un autre partenaire.
-async function handlePartnerIntroRequest(token, body, env) {
-  const partner = await authPartner_(token, env);
-  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
-  const cible = String(body.cible_partenaire_id || '').trim();
-  if (!/^[0-9a-f-]{36}$/.test(cible)) return jsonResponseNoCache({ error: 'Cible invalide' }, 400);
-  if (cible === partner.partenaire_id) return jsonResponseNoCache({ error: 'Impossible de se demander soi-même' }, 400);
-  const cibleRows = await supabaseQuery('partenaires', `id=eq.${cible}&interne=eq.false&select=id,raison_sociale&limit=1`, env);
-  if (!cibleRows || !cibleRows.length) return jsonResponseNoCache({ error: 'Partenaire cible introuvable' }, 404);
-  const existing = await supabaseQuery('mises_en_relation',
-    `demandeur_partenaire_id=eq.${partner.partenaire_id}&cible_partenaire_id=eq.${cible}&statut=in.(nouvelle,en_cours)&select=id&limit=1`, env);
-  if (existing && existing.length) return jsonResponseNoCache({ error: 'Demande déjà en cours pour ce partenaire', already: true }, 409);
-  const message = (body.message == null ? '' : String(body.message)).trim().slice(0, 1000) || null;
-  try {
-    await supabaseInsert_('mises_en_relation', {
-      demandeur_partenaire_id: partner.partenaire_id,
-      demandeur_contrat_id: partner.contrat_id || null,
-      cible_partenaire_id: cible,
-      message,
-      statut: 'nouvelle',
-    }, env);
-  } catch (e) { return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500); }
-  try { await notifyAdminsNewIntro_(env, { demandeur: partner.raison_sociale, cible: cibleRows[0].raison_sociale, message }); } catch (_) { }
-  return jsonResponseNoCache({ ok: true });
-}
-
-async function notifyAdminsNewIntro_(env, { demandeur, cible, message }) {
-  const admins = await supabaseQuery('admins', `actif=eq.true&select=email&limit=10`, env) || [];
-  const to = admins.map(a => a.email).filter(Boolean);
-  if (!to.length) return;
-  const html = emailLayout('Mise en relation', 'Nouvelle demande', `${escEmail(demandeur)} → ${escEmail(cible)}`,
-    `<p><b>${escEmail(demandeur)}</b> souhaite être mis en relation avec <b>${escEmail(cible)}</b>.</p>${message ? `<p style="color:#555;font-style:italic;">« ${escEmail(message)} »</p>` : ''}<p>Traite la demande dans Pilote → <b>Mises en relation</b>.</p>`);
-  for (const addr of to) { try { await sendEmailViaResend(env, { to: addr, subject: `Demande de mise en relation — ${demandeur}`, html }); } catch (_) { } }
-}
-
-// Le partenaire voit l'état de ses propres demandes (pour griser les boutons déjà sollicités).
-async function handlePartnerMesIntros(token, env) {
-  const partner = await authPartner_(token, env);
-  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
-  const rows = await supabaseQuery('mises_en_relation',
-    `demandeur_partenaire_id=eq.${partner.partenaire_id}&select=cible_partenaire_id,statut,created_at&order=created_at.desc&limit=200`, env) || [];
-  return jsonResponseNoCache({ intros: rows });
-}
-
-// Admin : liste des demandes de mise en relation (avec noms/contacts résolus).
-async function handleAdminIntrosList(token, env) {
-  const admin = await authAdmin_(token, env);
-  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
-  const rows = await supabaseQuery('mises_en_relation',
-    `select=id,message,statut,note_admin,created_at,traite_at,traite_par,demandeur_partenaire_id,cible_partenaire_id&order=created_at.desc&limit=500`, env) || [];
-  const ids = [...new Set(rows.flatMap(r => [r.demandeur_partenaire_id, r.cible_partenaire_id]).filter(Boolean))];
-  let byId = {};
-  if (ids.length) {
-    const parts = await supabaseQuery('partenaires', `id=in.(${ids.join(',')})&select=id,raison_sociale,representant,representant_email,representant_tel`, env) || [];
-    byId = Object.fromEntries(parts.map(p => [p.id, p]));
-  }
-  const intros = rows.map(r => ({
-    id: r.id, message: r.message || '', statut: r.statut, note_admin: r.note_admin || '',
-    created_at: r.created_at, traite_at: r.traite_at, traite_par: r.traite_par || '',
-    demandeur: byId[r.demandeur_partenaire_id] || { raison_sociale: '?' },
-    cible: byId[r.cible_partenaire_id] || { raison_sociale: '?' },
-  }));
-  return jsonResponseNoCache({ intros, count: intros.length });
-}
-
-// Admin : met à jour le statut/la note d'une demande.
-async function handleAdminIntroUpdate(token, id, body, env) {
-  const admin = await authAdmin_(token, env);
-  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
-  if (!/^[0-9a-f-]{36}$/.test(id)) return jsonResponseNoCache({ error: 'id invalide' }, 400);
-  const allowed = ['nouvelle', 'en_cours', 'realisee', 'refusee'];
-  const statut = allowed.includes(body.statut) ? body.statut : null;
-  const patch = {};
-  if (statut) patch.statut = statut;
-  if (body.note_admin !== undefined) patch.note_admin = body.note_admin ? String(body.note_admin).slice(0, 1000) : null;
-  if (statut && statut !== 'nouvelle') { patch.traite_at = new Date().toISOString(); patch.traite_par = `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null; }
-  if (!Object.keys(patch).length) return jsonResponseNoCache({ error: 'rien à mettre à jour' }, 400);
-  try { await supabasePatch_('mises_en_relation', `id=eq.${id}`, patch, env); return jsonResponseNoCache({ ok: true }); }
-  catch (e) { return jsonResponseNoCache({ error: 'Erreur', detail: e.message }, 500); }
-}
-
-// ===== Success stories (preuve sociale) — soumises par les partenaires, validées par le club =====
-
-async function resolvePartenairesByIds_(ids, env, withLogo) {
-  const uniq = [...new Set((ids || []).filter(Boolean))];
-  if (!uniq.length) return {};
-  const sel = withLogo ? 'id,raison_sociale,secteur,logo_b64' : 'id,raison_sociale,secteur';
-  const parts = await supabaseQuery('partenaires', `id=in.(${uniq.join(',')})&select=${sel}`, env) || [];
-  return Object.fromEntries(parts.map(p => [p.id, p]));
-}
-
-async function handlePartnerSuccessStories(token, env) {
-  const partner = await authPartner_(token, env);
-  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
-  const published = await supabaseQuery('success_stories',
-    `statut=eq.publiee&select=id,titre,temoignage,montant,created_at,demandeur_partenaire_id,partenaire_cible_id&order=created_at.desc&limit=100`, env) || [];
-  const mine = await supabaseQuery('success_stories',
-    `demandeur_partenaire_id=eq.${partner.partenaire_id}&select=id,titre,temoignage,montant,statut,created_at,partenaire_cible_id&order=created_at.desc&limit=50`, env) || [];
-  const realizedReqs = await supabaseQuery('mises_en_relation',
-    `demandeur_partenaire_id=eq.${partner.partenaire_id}&statut=eq.realisee&select=cible_partenaire_id&order=created_at.desc`, env) || [];
-  const byId = await resolvePartenairesByIds_(
-    [...published.flatMap(s => [s.demandeur_partenaire_id, s.partenaire_cible_id]), ...mine.map(s => s.partenaire_cible_id), ...realizedReqs.map(r => r.cible_partenaire_id)], env, true);
-  const mapStory = s => ({
-    id: s.id, titre: s.titre || '', temoignage: s.temoignage || '', montant: s.montant != null ? Number(s.montant) : null,
-    statut: s.statut || 'publiee', created_at: s.created_at,
-    demandeur: s.demandeur_partenaire_id ? (byId[s.demandeur_partenaire_id] || { raison_sociale: '?' }) : null,
-    cible: s.partenaire_cible_id ? (byId[s.partenaire_cible_id] || { raison_sociale: '?' }) : null,
-  });
-  const seen = new Set(); const realized_partners = [];
-  for (const r of realizedReqs) { const p = byId[r.cible_partenaire_id]; if (p && !seen.has(p.id)) { seen.add(p.id); realized_partners.push({ id: p.id, raison_sociale: p.raison_sociale }); } }
-  return jsonResponseNoCache({
-    published: published.map(mapStory),
-    mine: mine.map(s => ({ ...mapStory(s), demandeur: null })),
-    realized_partners,
-  });
-}
-
-async function handlePartnerSuccessStoryCreate(token, body, env) {
-  const partner = await authPartner_(token, env);
-  if (!partner) return jsonResponseNoCache({ error: 'Invalid partner token' }, 401);
-  const titre = (body.titre == null ? '' : String(body.titre)).trim().slice(0, 160);
-  const temoignage = (body.temoignage == null ? '' : String(body.temoignage)).trim().slice(0, 2000);
-  if (!titre || !temoignage) return jsonResponseNoCache({ error: 'Titre et témoignage requis' }, 400);
-  let cible = String(body.cible_partenaire_id || '').trim(); if (cible && !/^[0-9a-f-]{36}$/.test(cible)) cible = '';
-  let intro_id = String(body.intro_id || '').trim(); if (intro_id && !/^[0-9a-f-]{36}$/.test(intro_id)) intro_id = '';
-  let montant = null;
-  if (body.montant != null && body.montant !== '') { const n = Number(body.montant); if (isFinite(n) && n >= 0) montant = n; }
-  try {
-    await supabaseInsert_('success_stories', {
-      demandeur_partenaire_id: partner.partenaire_id,
-      partenaire_cible_id: cible || null,
-      intro_id: intro_id || null,
-      titre, temoignage, montant, statut: 'en_attente',
-    }, env);
-  } catch (e) { return jsonResponseNoCache({ error: 'Erreur création', detail: e.message }, 500); }
-  try { await notifyAdminsNewStory_(env, { auteur: partner.raison_sociale, titre }); } catch (_) { }
-  return jsonResponseNoCache({ ok: true });
-}
-
-async function notifyAdminsNewStory_(env, { auteur, titre }) {
-  const admins = await supabaseQuery('admins', `actif=eq.true&select=email&limit=10`, env) || [];
-  const to = admins.map(a => a.email).filter(Boolean); if (!to.length) return;
-  const html = emailLayout('Success story', 'Nouvelle réussite à valider', escEmail(auteur),
-    `<p><b>${escEmail(auteur)}</b> a partagé une réussite : « ${escEmail(titre)} ».</p><p>À valider dans Pilote → <b>Success stories</b>.</p>`);
-  for (const addr of to) { try { await sendEmailViaResend(env, { to: addr, subject: `Success story à valider — ${auteur}`, html }); } catch (_) { } }
-}
-
-async function handleAdminSuccessStoriesList(token, env) {
-  const admin = await authAdmin_(token, env);
-  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
-  const rows = await supabaseQuery('success_stories',
-    `select=id,titre,temoignage,montant,statut,note_admin,created_at,traite_at,traite_par,demandeur_partenaire_id,partenaire_cible_id&order=created_at.desc&limit=500`, env) || [];
-  const byId = await resolvePartenairesByIds_(rows.flatMap(r => [r.demandeur_partenaire_id, r.partenaire_cible_id]), env, false);
-  const stories = rows.map(r => ({
-    id: r.id, titre: r.titre || '', temoignage: r.temoignage || '', montant: r.montant != null ? Number(r.montant) : null,
-    statut: r.statut, note_admin: r.note_admin || '', created_at: r.created_at, traite_at: r.traite_at, traite_par: r.traite_par || '',
-    demandeur: byId[r.demandeur_partenaire_id] || { raison_sociale: '?' },
-    cible: r.partenaire_cible_id ? (byId[r.partenaire_cible_id] || { raison_sociale: '?' }) : null,
-  }));
-  return jsonResponseNoCache({ stories, count: stories.length });
-}
-
-async function handleAdminSuccessStoryUpdate(token, id, body, env) {
-  const admin = await authAdmin_(token, env);
-  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
-  if (!/^[0-9a-f-]{36}$/.test(id)) return jsonResponseNoCache({ error: 'id invalide' }, 400);
-  const allowed = ['en_attente', 'publiee', 'refusee'];
-  const statut = allowed.includes(body.statut) ? body.statut : null;
-  const patch = {};
-  if (statut) patch.statut = statut;
-  if (body.note_admin !== undefined) patch.note_admin = body.note_admin ? String(body.note_admin).slice(0, 1000) : null;
-  if (statut && statut !== 'en_attente') { patch.traite_at = new Date().toISOString(); patch.traite_par = `${admin.prenom || ''} ${admin.nom || ''}`.trim() || null; }
-  if (!Object.keys(patch).length) return jsonResponseNoCache({ error: 'rien à mettre à jour' }, 400);
-  try { await supabasePatch_('success_stories', `id=eq.${id}`, patch, env); return jsonResponseNoCache({ ok: true }); }
-  catch (e) { return jsonResponseNoCache({ error: 'Erreur', detail: e.message }, 500); }
 }
 
 async function handlePartnerFicheGet(token, env) {
@@ -4740,46 +4392,6 @@ async function handlePartnerFicheGet(token, env) {
     env);
   if (!rows || !rows.length) return jsonResponseNoCache({ error: 'Fiche introuvable' }, 404);
   return jsonResponseNoCache({ fiche: rows[0] });
-}
-
-// Géocodage via l'API Adresse de l'État (BAN) — gratuit, France, sans clé.
-async function geocodeBAN_(q) {
-  try {
-    if (!q) return null;
-    const res = await fetch(`https://api-adresse.data.gouv.fr/search/?limit=1&q=${encodeURIComponent(q)}`,
-      { headers: { 'User-Agent': 'SpacersBusinessClub/1.0 (contact@spacerstoulouse.fr)' } });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const feat = data && data.features && data.features[0];
-    if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
-      const [lon, lat] = feat.geometry.coordinates;
-      if (isFinite(lat) && isFinite(lon)) return { lat, lon };
-    }
-  } catch (_) { }
-  return null;
-}
-
-// Backfill : géocode par lots de 20 les partenaires ayant une ville mais pas encore de coordonnées.
-// Déclenchable en ouvrant l'URL ; relancer jusqu'à "more": false.
-async function handleAdminGeocodeBackfill(token, env) {
-  const admin = await authAdmin_(token, env);
-  if (!admin) return jsonResponseNoCache({ error: 'unauthorized' }, 401);
-  const rows = await supabaseQuery('partenaires',
-    `latitude=is.null&ville=not.is.null&select=id,adresse,code_postal,ville&limit=20`, env);
-  let geocoded = 0, failed = 0;
-  for (const p of (rows || [])) {
-    const q = [p.adresse, p.code_postal, p.ville].filter(Boolean).join(' ');
-    const geo = await geocodeBAN_(q);
-    if (geo) {
-      try { await supabasePatch_('partenaires', `id=eq.${p.id}`, { latitude: geo.lat, longitude: geo.lon }, env); geocoded++; }
-      catch (_) { failed++; }
-    } else { failed++; }
-  }
-  const batch = rows ? rows.length : 0;
-  return jsonResponseNoCache({
-    ok: true, batch, geocoded, failed, more: batch === 20,
-    note: batch === 20 ? 'Lot de 20 traité — relance la même URL pour le lot suivant.' : "Terminé : plus d'adresses à géocoder.",
-  });
 }
 
 async function handlePartnerFicheUpdate(token, body, env) {
@@ -4802,24 +4414,12 @@ async function handlePartnerFicheUpdate(token, body, env) {
     representant_tel: str(body.representant_tel, 40),
     representant_linkedin: str(body.representant_linkedin, 300),
   };
-  // Annuaire : on alimente aussi les colonnes génériques « email » / « telephone »
-  // (miroir des champs saisis) pour qu'elles se remplissent dès la sauvegarde de la fiche.
-  patch.email = patch.email_societe || patch.representant_email || null;
-  patch.telephone = patch.representant_tel || null;
   // Images : ne toucher que si le champ est fourni (string = nouvelle/actuelle, null = effacer)
   if (body.logo_b64 !== undefined) patch.logo_b64 = body.logo_b64 ? String(body.logo_b64).slice(0, 1500000) : null;
   if (body.representant_photo_b64 !== undefined) patch.representant_photo_b64 = body.representant_photo_b64 ? String(body.representant_photo_b64).slice(0, 1500000) : null;
-  // Géocodage à la sauvegarde : on calcule lat/lng une seule fois ici (pas en direct sur la carte).
-  const addrStr = [patch.adresse, patch.code_postal, patch.ville].filter(Boolean).join(' ');
-  if (addrStr) {
-    const geo = await geocodeBAN_(addrStr);
-    if (geo) { patch.latitude = geo.lat; patch.longitude = geo.lon; }
-  } else {
-    patch.latitude = null; patch.longitude = null;
-  }
   try {
     await supabasePatch_('partenaires', `id=eq.${partner.partenaire_id}`, patch, env);
-    return jsonResponseNoCache({ ok: true, geocoded: patch.latitude != null });
+    return jsonResponseNoCache({ ok: true });
   } catch (e) { return jsonResponseNoCache({ error: 'Erreur mise à jour', detail: e.message }, 500); }
 }
 
