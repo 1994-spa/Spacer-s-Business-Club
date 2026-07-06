@@ -464,13 +464,6 @@ textarea.input { resize: vertical; min-height: 80px; }
         <span class="ico">🤝</span><span class="label">Mises en relation</span>
         <span class="badge" id="sb-badge-intros" hidden>0</span>
       </button>
-      <button class="sb-link" data-tab="stories" onclick="switchTab('stories')">
-        <span class="ico">🏆</span><span class="label">Success stories</span>
-        <span class="badge" id="sb-badge-stories" hidden>0</span>
-      </button>
-      <button class="sb-link" data-tab="exports" onclick="switchTab('exports')">
-        <span class="ico">📤</span><span class="label">Exports</span>
-      </button>
     </nav>
 
     <div class="sb-admin">
@@ -729,43 +722,6 @@ textarea.input { resize: vertical; min-height: 80px; }
         </div>
       </div>
       <div id="rel-list" class="list"><div class="list-empty">Chargement…</div></div>
-    </section>
-
-    <section id="tab-stories" class="tab-section">
-      <div class="page-head">
-        <div>
-          <h1 class="display">Success <em>stories</em></h1>
-          <p class="desc">Témoignages des partenaires — validez avant publication dans l'appli</p>
-        </div>
-        <button class="refresh-btn" onclick="loadStories(true)"><span class="ico">↻</span><span>Rafraîchir</span></button>
-      </div>
-      <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
-        <div class="segs" id="story-statut-segs">
-          <button class="seg on" data-statut="all" onclick="setStoryStatutFilter('all',this)">Toutes <span class="count" id="cnt-story-all">·</span></button>
-          <button class="seg warn" data-statut="en_attente" onclick="setStoryStatutFilter('en_attente',this)">En attente <span class="count" id="cnt-story-attente">·</span></button>
-          <button class="seg success" data-statut="publiee" onclick="setStoryStatutFilter('publiee',this)">Publiées</button>
-          <button class="seg danger" data-statut="refusee" onclick="setStoryStatutFilter('refusee',this)">Refusées</button>
-        </div>
-      </div>
-      <div id="story-list" class="list"><div class="list-empty">Chargement…</div></div>
-    </section>
-
-    <!-- ===== TAB : Exports ===== -->
-    <section id="tab-exports" class="tab-section">
-      <div class="page-head">
-        <div>
-          <h1 class="display">Exp<em>orts</em></h1>
-          <p class="desc">Téléchargez vos données au format Excel (.xlsx)</p>
-        </div>
-      </div>
-      <div class="list" style="display:flex;flex-wrap:wrap;gap:10px;">
-        <button class="btn" onclick="exportDataset('partenaires','Annuaire partenaires')">📤 Annuaire partenaires</button>
-        <button class="btn" onclick="exportDataset('contacts','Contacts partenaires')">📤 Contacts partenaires</button>
-        <button class="btn" onclick="exportDataset('evenements','Evenements')">📤 Événements</button>
-        <button class="btn" onclick="exportDataset('presences','Presents aux evenements')">📤 Présents aux événements</button>
-        <button class="btn" onclick="exportDataset('packs','Packs de places')">📤 Packs de places</button>
-        <button class="btn" onclick="exportDataset('places-vip','Places VIP par match')">📤 Places VIP par match</button>
-      </div>
     </section>
 
   </main>
@@ -1494,7 +1450,6 @@ function renderApp() {
   $('sb-admin-role').textContent = (CURRENT_ADMIN.role || 'pilote').toUpperCase();
   $('sb-admin-av').textContent = initials(name);
   loadDashboard();
-  onbInit();
 }
 
 // ============================================================================
@@ -1522,7 +1477,6 @@ function switchTab(tab) {
   if (tab === 'actus' && SOCIAL_CACHE.length === 0) loadSocialPosts();
   if (tab === 'tickie' && RENCONTRES_CACHE.length === 0) loadRencontres();
   if (tab === 'relations' && RELATIONS_CACHE.length === 0) loadRelations();
-  if (tab === 'stories' && STORIES_CACHE.length === 0) loadStories();
 }
 
 // ============================================================================
@@ -1625,277 +1579,6 @@ async function relNote(id) {
     loadRelations(true);
   } catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
-
-// ============================================================================
-//  SUCCESS STORIES (modération)
-// ============================================================================
-let STORIES_CACHE = [];
-let CURRENT_STORY_STATUT = 'all';
-const STORY_LABEL = { en_attente: 'En attente', publiee: 'Publiée', refusee: 'Refusée' };
-const STORY_TONE = { en_attente: 'warn', publiee: 'success', refusee: 'danger' };
-const STORY_BORDER = { en_attente: 'attente', publiee: 'publie', refusee: 'refuse' };
-const STORY_BTN = 'padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);';
-
-function fmtEuro(n) { return n != null ? new Intl.NumberFormat('fr-FR').format(n) + ' €' : ''; }
-
-async function loadStories(force) {
-  const listEl = $('story-list');
-  if (force) listEl.innerHTML = '<div class="list-empty">Chargement…</div>';
-  try {
-    const res = await fetch(`/api/admin/success-stories/${encodeURIComponent(ADMIN_TOKEN)}`);
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    STORIES_CACHE = data.stories || [];
-  } catch (e) { listEl.innerHTML = `<div class="list-empty"><h3>Erreur</h3><p>${escapeHtml(e.message)}</p></div>`; return; }
-  const cAll = STORIES_CACHE.length, cAtt = STORIES_CACHE.filter(s => s.statut === 'en_attente').length;
-  const eAll = $('cnt-story-all'), eAtt = $('cnt-story-attente'); if (eAll) eAll.textContent = cAll; if (eAtt) eAtt.textContent = cAtt;
-  const badge = $('sb-badge-stories'); if (badge) { if (cAtt > 0) { badge.textContent = cAtt; badge.hidden = false; } else badge.hidden = true; }
-  renderStories();
-}
-
-function setStoryStatutFilter(s, btn) {
-  CURRENT_STORY_STATUT = s;
-  document.querySelectorAll('#story-statut-segs .seg').forEach(b => b.classList.remove('on'));
-  if (btn) btn.classList.add('on');
-  renderStories();
-}
-
-function renderStories() {
-  const listEl = $('story-list');
-  let list = STORIES_CACHE;
-  if (CURRENT_STORY_STATUT !== 'all') list = list.filter(s => s.statut === CURRENT_STORY_STATUT);
-  if (!list.length) { listEl.innerHTML = `<div class="list-empty"><h3>Aucune réussite</h3><p>${CURRENT_STORY_STATUT === 'en_attente' ? 'Aucune en attente — tout est traité ✓' : 'Aucune pour ce filtre.'}</p></div>`; return; }
-  listEl.innerHTML = list.map(s => {
-    const tone = STORY_TONE[s.statut] || '', label = STORY_LABEL[s.statut] || s.statut;
-    const d = s.demandeur || {}, c = s.cible;
-    return `
-      <div class="offre-row ${STORY_BORDER[s.statut] || ''}">
-        <div class="offre-main">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-            <span class="status-badge ${tone}">${escapeHtml(label)}</span>
-            <span style="font-size:11px;color:var(--ink-muted);">Reçue ${formatRelative(s.created_at)}</span>
-            ${s.montant != null ? `<span class="tag">💶 ${escapeHtml(fmtEuro(s.montant))}</span>` : ''}
-          </div>
-          <div class="offre-titre">${escapeHtml(s.titre)}</div>
-          <div style="margin-top:6px;font-style:italic;color:var(--ink-soft);">« ${escapeHtml(s.temoignage)} »</div>
-          <div class="offre-meta" style="margin-top:8px;">${escapeHtml(d.raison_sociale || '?')}${c ? ` <span style="color:var(--gold);">↔</span> ${escapeHtml(c.raison_sociale)}` : ''}</div>
-          ${s.note_admin ? `<div style="margin-top:6px;font-size:12px;color:var(--ink-muted);">Note : ${escapeHtml(s.note_admin)}</div>` : ''}
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-            <button style="${STORY_BTN}" onclick="storyAction('${s.id}','publiee')">✓ Publier</button>
-            <button style="${STORY_BTN}" onclick="storyAction('${s.id}','refusee')">✕ Refuser</button>
-            <button style="${STORY_BTN}" onclick="storyAction('${s.id}','en_attente')">↩ En attente</button>
-            <button style="${STORY_BTN}" onclick="storyNote('${s.id}')">✎ Note</button>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-async function storyAction(id, statut) {
-  try {
-    const res = await fetch(`/api/admin/success-story/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut })
-    });
-    const data = await res.json(); if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast('✓ Mis à jour', 'success'); loadStories(true);
-  } catch (e) { showToast('❌ ' + e.message, 'error'); }
-}
-
-async function storyNote(id) {
-  const rec = STORIES_CACHE.find(s => s.id === id) || {};
-  const note = prompt('Note interne :', rec.note_admin || ''); if (note === null) return;
-  try {
-    const res = await fetch(`/api/admin/success-story/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(id)}/update`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note_admin: note })
-    });
-    const data = await res.json(); if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-    showToast('✓ Note enregistrée', 'success'); loadStories(true);
-  } catch (e) { showToast('❌ ' + e.message, 'error'); }
-}
-
-// ============================================================================
-//  ONBOARDING — accueil pédagogique : bienvenue + visite guidée + checklist
-// ============================================================================
-const ONB_KEY = 'bc_onb_pilote_v2';
-const ONB_WELCOME = {
-  eyebrow: "Spacer's Business Club · Pilote",
-  title: "Bienvenue dans votre console",
-  intro: "Le Pilote vous sert à animer le Business Club au quotidien. En une minute, voici les leviers à votre disposition.",
-  points: [
-    { ico: '👥', t: 'Gérer les partenaires', d: 'Fiches, accès à l\'appli, invitations' },
-    { ico: '✅', t: 'Modérer & valider', d: 'Publications, annonces, témoignages' },
-    { ico: '📈', t: 'Animer le réseau', d: 'Mises en relation, places VIP, communications' },
-  ],
-};
-const ONB_STEPS = [
-  { selector: '.sb-link[data-tab="dashboard"]', ico: '📊', title: 'Tableau de bord', text: "Vue d'ensemble : partenaires actifs, chiffre signé, packs VIP, modérations en attente." },
-  { selector: '.sb-link[data-tab="partenaires"]', ico: '👥', title: 'Partenaires', text: "Gérez les fiches et envoyez les invitations d'accès à l'application.", tip: "C'est ici que tout commence : un partenaire invité reçoit son lien magique." },
-  { selector: '.sb-link[data-tab="publications"]', ico: '💬', title: 'Publications', text: "Forum, propositions et demandes des partenaires.", tip: "Rien n'apparaît côté partenaire tant que vous n'avez pas publié." },
-  { selector: '.sb-link[data-tab="offres"]', ico: '💼', title: 'Annonces emploi', text: "Validez et gérez les annonces d'emploi du réseau." },
-  { selector: '.sb-link[data-tab="communications"]', ico: '📣', title: 'Communications & invitations', text: "Diffusez des messages et invitations aux partenaires, avec suivi des réponses." },
-  { selector: '.sb-link[data-tab="tickie"]', ico: '🎟️', title: 'Rencontres & places VIP', text: "Ouvrez les matchs et attribuez les contingents de places VIP par partenaire." },
-  { selector: '.sb-link[data-tab="relations"]', ico: '🤝', title: 'Mises en relation', text: "Les demandes d'intro des partenaires.", tip: "Vous réalisez l'intro vous-même et suivez le statut ici." },
-  { selector: '.sb-link[data-tab="stories"]', ico: '⭐', title: 'Success stories', text: "Validez les témoignages : une fois publiés, ils s'affichent dans l'appli partenaire." },
-];
-const ONB_TASKS = [
-  { id: 'partenaires', label: 'Parcourez vos partenaires', hint: 'Le cœur du club', run: () => { switchTab('partenaires'); markTask('partenaires'); } },
-  { id: 'publications', label: 'Découvrez la modération', hint: 'Forum, propositions, demandes', run: () => { switchTab('publications'); markTask('publications'); } },
-  { id: 'relations', label: 'Voyez les mises en relation', hint: 'Les demandes d\'intro', run: () => { switchTab('relations'); markTask('relations'); } },
-  { id: 'stories', label: 'Validez une success story', hint: 'Preuve sociale du réseau', run: () => { switchTab('stories'); markTask('stories'); } },
-];
-
-function onbGet() { try { return JSON.parse(localStorage.getItem(ONB_KEY) || '{}'); } catch (_) { return {}; } }
-function onbSet(o) { try { localStorage.setItem(ONB_KEY, JSON.stringify(o)); } catch (_) { } }
-function markTask(id) { const o = onbGet(); if (!o.tasks) o.tasks = {}; if (!o.tasks[id]) { o.tasks[id] = true; onbSet(o); onbRenderLauncher(); } }
-function onbScrollTo(id) { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-function onbCountDone() { const t = onbGet().tasks || {}; return ONB_TASKS.filter(x => t[x.id]).length; }
-
-function onbInjectCss() {
-  if (document.getElementById('onb-css')) return;
-  const st = document.createElement('style'); st.id = 'onb-css';
-  st.textContent = `
-    .onb-ov{position:fixed;inset:0;z-index:9998;transition:background .2s;}
-    .onb-spot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(10,22,40,.66);transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none;}
-    .onb-bub{position:fixed;z-index:9999;width:330px;max-width:calc(100vw - 32px);background:#fff;border-radius:18px;padding:20px;box-shadow:0 24px 70px rgba(10,22,40,.4);font-family:inherit;animation:onbPop .25s ease;}
-    @keyframes onbPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-    @keyframes onbFade{from{opacity:0}to{opacity:1}}
-    .onb-prog{height:4px;background:#EFE9DD;border-radius:2px;overflow:hidden;margin-bottom:12px;}
-    .onb-prog>div{height:100%;background:linear-gradient(90deg,#C8932B,#E0B85F);transition:width .3s ease;}
-    .onb-ico{font-size:24px;line-height:1;margin-bottom:6px;}
-    .onb-ey{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#C8932B;font-weight:700;}
-    .onb-ti{font-family:'Fraunces',serif;font-size:19px;margin:2px 0 6px;color:#0A1628;line-height:1.2;}
-    .onb-tx{font-size:13.5px;color:#5B6573;line-height:1.55;}
-    .onb-tip{font-size:12.5px;color:#0A1628;background:#FAF5EA;border-left:3px solid #C8932B;border-radius:0 8px 8px 0;padding:8px 10px;margin-top:10px;}
-    .onb-btns{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:8px;}
-    .onb-btns button{font-family:inherit;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;}
-    .onb-next{background:#0A1628;color:#E0B85F;border:none;padding:9px 16px;}
-    .onb-prev{background:#fff;color:#0A1628;border:1px solid #E5DED1;padding:9px 13px;}
-    .onb-skip{background:none;border:none;color:#9A9488;padding:8px 4px;font-size:12.5px;}
-    .onb-modal{position:fixed;inset:0;z-index:10000;background:rgba(10,22,40,.6);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px;animation:onbFade .25s ease;}
-    .onb-card{background:#fff;border-radius:22px;max-width:420px;width:100%;padding:30px 26px;text-align:center;box-shadow:0 30px 80px rgba(10,22,40,.4);animation:onbPop .3s ease;}
-    .onb-card h2{font-family:'Fraunces',serif;font-size:25px;color:#0A1628;margin:6px 0 8px;line-height:1.15;}
-    .onb-card .onb-intro{font-size:14px;color:#5B6573;line-height:1.5;margin-bottom:18px;}
-    .onb-pts{display:grid;gap:12px;text-align:left;margin-bottom:22px;}
-    .onb-pt{display:flex;gap:12px;align-items:flex-start;}
-    .onb-pt .e{font-size:22px;line-height:1;}
-    .onb-pt b{font-size:14px;color:#0A1628;display:block;}
-    .onb-pt span{font-size:12.5px;color:#5B6573;}
-    .onb-cta{width:100%;background:#0A1628;color:#E0B85F;border:none;border-radius:13px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
-    .onb-cta2{width:100%;background:none;border:none;color:#5B6573;font-size:13px;cursor:pointer;font-family:inherit;padding:12px 0 0;}
-    .onb-launch{position:fixed;bottom:18px;left:18px;z-index:95;background:#0A1628;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(10,22,40,.28);font-family:inherit;display:flex;align-items:center;gap:9px;}
-    .onb-launch .ring{width:22px;height:22px;border-radius:50%;background:conic-gradient(#E0B85F var(--p,0%),rgba(255,255,255,.22) 0);display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;}
-    .onb-panel{position:fixed;bottom:66px;left:18px;z-index:95;width:300px;max-width:calc(100vw - 36px);background:#fff;border-radius:18px;padding:16px;box-shadow:0 20px 60px rgba(10,22,40,.3);font-family:inherit;animation:onbPop .2s ease;}
-    .onb-panel h4{font-family:'Fraunces',serif;font-size:16px;color:#0A1628;margin:0 0 2px;}
-    .onb-panel .sub{font-size:12px;color:#8A8478;margin-bottom:12px;}
-    .onb-task{display:flex;gap:10px;align-items:flex-start;padding:9px;border-radius:11px;cursor:pointer;transition:background .15s;}
-    .onb-task:hover{background:#FAF5EA;}
-    .onb-task .ck{width:20px;height:20px;border-radius:50%;border:2px solid #D8CFBD;flex:none;display:grid;place-items:center;font-size:11px;color:#fff;margin-top:1px;}
-    .onb-task.done .ck{background:#2E9E5B;border-color:#2E9E5B;}
-    .onb-task.done .lbl{text-decoration:line-through;color:#9A9488;}
-    .onb-task .lbl{font-size:13.5px;color:#0A1628;font-weight:600;}
-    .onb-task .hint{font-size:11.5px;color:#8A8478;}
-    .onb-replay{width:100%;margin-top:8px;background:#FAF5EA;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#0A1628;cursor:pointer;font-family:inherit;}
-    .onb-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;color:#9A9488;cursor:pointer;}`;
-  document.head.appendChild(st);
-}
-
-function runTour(force) {
-  onbInjectCss();
-  const steps = ONB_STEPS; let i = 0;
-  const ov = document.createElement('div'); ov.className = 'onb-ov';
-  const spot = document.createElement('div'); spot.className = 'onb-spot';
-  const bub = document.createElement('div'); bub.className = 'onb-bub';
-  ov.appendChild(spot); document.body.appendChild(ov); document.body.appendChild(bub);
-  function end() { ov.remove(); bub.remove(); document.removeEventListener('keydown', onKey); const o = onbGet(); o.tourDone = true; onbSet(o); onbRenderLauncher(); }
-  function onKey(e) { if (e.key === 'Escape') end(); else if (e.key === 'ArrowRight') next(); else if (e.key === 'ArrowLeft') prev(); }
-  function next() { if (i < steps.length - 1) { i++; show(); } else end(); }
-  function prev() { if (i > 0) { i--; show(); } }
-  function show() {
-    const s = steps[i], el = s.selector ? document.querySelector(s.selector) : null;
-    const vis = el && el.offsetParent !== null && el.getClientRects().length;
-    if (vis) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => place(el, s), 260); } else place(null, s);
-  }
-  function place(el, s) {
-    const mobile = window.innerWidth < 480;
-    if (el) {
-      const r = el.getBoundingClientRect(), pad = 8; ov.style.background = 'transparent'; spot.style.display = 'block';
-      spot.style.top = (r.top - pad) + 'px'; spot.style.left = (r.left - pad) + 'px'; spot.style.width = (r.width + pad * 2) + 'px'; spot.style.height = (r.height + pad * 2) + 'px';
-    } else { spot.style.display = 'none'; ov.style.background = 'rgba(10,22,40,.66)'; }
-    const pct = Math.round((i + 1) / steps.length * 100);
-    bub.innerHTML = `
-      <div class="onb-prog"><div style="width:${pct}%"></div></div>
-      ${s.ico ? `<div class="onb-ico">${s.ico}</div>` : ''}
-      <div class="onb-ey">Étape ${i + 1} / ${steps.length}</div>
-      <div class="onb-ti">${s.title}</div>
-      <div class="onb-tx">${s.text}</div>
-      ${s.tip ? `<div class="onb-tip">💡 ${s.tip}</div>` : ''}
-      <div class="onb-btns">
-        <button class="onb-skip" id="onb-skip">Passer</button>
-        <div style="display:flex;gap:8px;">
-          ${i > 0 ? '<button class="onb-prev" id="onb-prev">‹</button>' : ''}
-          <button class="onb-next" id="onb-next">${i === steps.length - 1 ? 'Terminer ✓' : 'Suivant ›'}</button>
-        </div>
-      </div>`;
-    bub.style.display = 'block';
-    if (mobile) { bub.style.width = 'calc(100vw - 32px)'; } else { bub.style.width = '330px'; }
-    const bw = bub.offsetWidth, bh = bub.offsetHeight; let top, left;
-    if (mobile) { left = 16; top = window.innerHeight - bh - 16; }
-    else if (el) { const r = el.getBoundingClientRect(); top = r.bottom + 16; if (top + bh > window.innerHeight - 12) top = Math.max(12, r.top - bh - 16); left = Math.min(Math.max(12, r.left + r.width / 2 - bw / 2), window.innerWidth - bw - 12); }
-    else { top = (window.innerHeight - bh) / 2; left = (window.innerWidth - bw) / 2; }
-    bub.style.top = top + 'px'; bub.style.left = left + 'px';
-    $('onb-skip').onclick = end; const nx = $('onb-next'); if (nx) nx.onclick = next; const pv = $('onb-prev'); if (pv) pv.onclick = prev;
-  }
-  document.addEventListener('keydown', onKey);
-  show();
-}
-
-function showWelcome() {
-  onbInjectCss();
-  if (document.querySelector('.onb-modal')) return;
-  const w = ONB_WELCOME, m = document.createElement('div'); m.className = 'onb-modal';
-  m.innerHTML = `<div class="onb-card">
-    <div class="onb-ey">${w.eyebrow}</div>
-    <h2>${w.title}</h2>
-    <div class="onb-intro">${w.intro}</div>
-    <div class="onb-pts">${w.points.map(p => `<div class="onb-pt"><span class="e">${p.ico}</span><div><b>${p.t}</b><span>${p.d}</span></div></div>`).join('')}</div>
-    <button class="onb-cta" id="onb-go">Visite guidée · 1 min</button>
-    <button class="onb-cta2" id="onb-explore">J'explore moi-même</button>
-  </div>`;
-  document.body.appendChild(m);
-  function dismiss() { const o = onbGet(); o.welcomeSeen = true; onbSet(o); m.remove(); }
-  $('onb-go').onclick = () => { dismiss(); runTour(true); };
-  $('onb-explore').onclick = () => { dismiss(); onbRenderLauncher(); };
-}
-
-function onbTogglePanel() {
-  const ex = document.querySelector('.onb-panel'); if (ex) { ex.remove(); return; }
-  const t = onbGet().tasks || {}, p = document.createElement('div'); p.className = 'onb-panel';
-  p.innerHTML = `<button class="onb-close" onclick="document.querySelector('.onb-panel')&&document.querySelector('.onb-panel').remove()">✕</button>
-    <h4>Pour bien démarrer</h4><div class="sub">${onbCountDone()}/${ONB_TASKS.length} — prenez en main la console</div>
-    <div id="onb-tasklist"></div>
-    <button class="onb-replay" id="onb-replay">▶ Revoir la visite guidée</button>`;
-  document.body.appendChild(p);
-  const list = p.querySelector('#onb-tasklist');
-  list.innerHTML = ONB_TASKS.map((x, idx) => `<div class="onb-task ${t[x.id] ? 'done' : ''}" data-i="${idx}"><div class="ck">✓</div><div><div class="lbl">${x.label}</div><div class="hint">${x.hint}</div></div></div>`).join('');
-  list.querySelectorAll('.onb-task').forEach(el => { el.onclick = () => { const x = ONB_TASKS[+el.dataset.i]; p.remove(); x.run(); }; });
-  p.querySelector('#onb-replay').onclick = () => { p.remove(); runTour(true); };
-}
-
-function onbRenderLauncher() {
-  const old = document.querySelector('.onb-launch'); if (old) old.remove();
-  const done = onbCountDone(), total = ONB_TASKS.length, pill = document.createElement('button'); pill.className = 'onb-launch';
-  if (done >= total) { pill.innerHTML = '<span style="font-size:15px;">?</span>'; pill.style.padding = '11px 13px'; pill.title = 'Aide & visite guidée'; }
-  else { const pct = Math.round(done / total * 100); pill.innerHTML = `<span class="ring" style="--p:${pct}%">${done}</span><span>Pour bien démarrer</span>`; }
-  pill.onclick = onbTogglePanel;
-  document.body.appendChild(pill);
-}
-
-function onbInit() {
-  onbInjectCss();
-  onbRenderLauncher();
-  if (!onbGet().welcomeSeen) setTimeout(showWelcome, 700);
-}
-
 
 // ============================================================================
 //  RENCONTRES (places VIP) — Sprint Tickie
@@ -2175,6 +1858,7 @@ function renderOffresList() {
     if (o.candidatures_count > 0) {
       actions.push(`<button class="btn sm" style="border-color:var(--gold);color:var(--gold);" onclick="viewCandidaturesForOffre('${o.id}')">📩 ${o.candidatures_count} candidature${o.candidatures_count > 1 ? 's' : ''}</button>`);
     }
+    actions.push(`<button class="btn sm" style="border-color:var(--red);color:var(--red);" title="Supprimer définitivement" onclick="quickDelete('${o.id}')">🗑</button>`);
     return `
       <div class="offre-row ${statutClass}">
         <div class="offre-main">
@@ -2219,6 +1903,7 @@ function renderOffreDetail(o) {
   else if (isRefuse) banner = `<div class="banner danger"><b>Annonce refusée.</b>&nbsp;${o.raison_refus ? 'Motif : <i>' + escapeHtml(o.raison_refus) + '</i>' : 'Pas de motif renseigné.'}</div>`;
   else if (isArchive) banner = `<div class="banner info"><b>Annonce archivée.</b></div>`;
   const actions = [`<button class="btn ghost" onclick="closeOffreModal()">Fermer</button>`];
+  actions.push(`<button class="btn" style="border-color:var(--red);color:var(--red);" onclick="quickDelete('${o.id}')"><span class="ico">🗑</span>Supprimer</button>`);
   actions.push(`<button class="btn" onclick="generateFichePdf('${o.id}')"><span class="ico">📄</span>PDF fiche</button>`);
   if (isAttente) {
     actions.push(`<button class="btn danger" onclick="quickReject('${o.id}')">Refuser</button>`);
@@ -2307,6 +1992,29 @@ async function quickArchive(offreId) {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
     showToast('Annonce archivée', 'success'); closeOffreModal(); loadOffres();
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function quickDelete(offreId) {
+  const o = OFFRES_CACHE.find(x => x.id === offreId);
+  const titre = o?.titre ? `« ${o.titre} »` : 'cette annonce';
+  const nbCand = o?.candidatures_count || 0;
+  const warn = nbCand > 0
+    ? `⚠️ ${nbCand} candidature${nbCand > 1 ? 's' : ''} liée${nbCand > 1 ? 's' : ''} ${nbCand > 1 ? 'seront' : 'sera'} aussi supprimée${nbCand > 1 ? 's' : ''}. `
+    : '';
+  const ok = await confirmModal({
+    title: `Supprimer ${titre} ?`,
+    eyebrow: 'Suppression définitive',
+    message: `${warn}Cette action est irréversible. Pour simplement masquer l'annonce, utilisez « Archiver » à la place.`,
+    confirmText: 'Supprimer définitivement',
+    confirmStyle: 'danger',
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/offres/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(offreId)}/delete`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+    showToast('🗑 Annonce supprimée', 'success'); closeOffreModal(); loadOffres();
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
@@ -4691,43 +4399,6 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch(() => {});
   });
-}
-</script>
-<!-- ===== Exports Excel (.xlsx) — SheetJS + logique de téléchargement ===== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-async function exportDataset(dataset, label) {
-  if (!ADMIN_TOKEN || ADMIN_TOKEN.length < 16) { showToast('Session admin expirée', 'error'); return; }
-  if (typeof XLSX === 'undefined') { showToast('Librairie Excel non chargée, réessaie', 'error'); return; }
-  try {
-    showToast('Export en cours…');
-    const res = await fetch(`/api/admin/export/${encodeURIComponent(ADMIN_TOKEN)}/${encodeURIComponent(dataset)}`);
-    const data = await res.json();
-    if (!res.ok) { showToast(data.error || 'Erreur export', 'error'); return; }
-
-    // aplatit les valeurs objet/array pour Excel
-    const rows = (data.rows || []).map(function (r) {
-      const o = {};
-      for (const k in r) {
-        const v = r[k];
-        o[k] = (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
-      }
-      return o;
-    });
-
-    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ info: 'Aucune donnée' }]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, String(label || dataset).slice(0, 31));
-
-    const d = new Date();
-    const p = function (n) { return String(n).padStart(2, '0'); };
-    const stamp = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes());
-    XLSX.writeFile(wb, dataset + '_' + stamp + '.xlsx');
-
-    showToast((data.count || 0) + ' ligne(s) exportée(s)');
-  } catch (e) {
-    showToast('Erreur réseau pendant l\'export', 'error');
-  }
 }
 </script>
 </body>
